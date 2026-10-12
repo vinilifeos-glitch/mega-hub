@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, Text, View, useWindowDimensions } from 'react-native';
 import { DateField } from './DateField';
 import { Field, Notice, Button, useColors, useStyles } from './ui';
 import { useApp } from '../state/AppContext';
@@ -10,6 +10,7 @@ import { Unavailability } from '../types';
 /** From / To (optional) / note entry + list. `onAdd` returns an error string or null. */
 export function UnavailEditor({ entries, onAdd, onRemove, extra }: { entries: Unavailability[]; onAdd: (e: Unavailability) => string | null | void; onRemove: (from: string) => void; extra?: (e: Unavailability) => React.ReactNode }) {
   const colors = useColors(); const s = useStyles(); const { t } = useApp();
+  const narrow = useWindowDimensions().width < 480;
   const [from, setFrom] = useState(''); const [to, setTo] = useState(''); const [note, setNote] = useState(''); const [err, setErr] = useState<string | null>(null);
   const add = () => {
     const f = toIso(from); const tt = to.trim() ? toIso(to) : undefined;
@@ -22,9 +23,9 @@ export function UnavailEditor({ entries, onAdd, onRemove, extra }: { entries: Un
   const list = entries.filter(e => rangeEnd(e) >= todayIso());
   return (
     <View>
-      <View style={[s.row, { flexWrap: 'nowrap', alignItems: 'flex-start' }]}>
-        <View style={{ flex: 1, marginRight: 8 }}><DateField label={t('unav.from')} limit="future" value={from} onChange={setFrom} testID="unav-from" /></View>
-        <View style={{ flex: 1 }}><DateField label={t('unav.to')} limit="future" value={to} onChange={setTo} onSubmit={add} testID="unav-to" /></View>
+      <View style={narrow ? { width: '100%' } : [s.row, { flexWrap: 'nowrap', alignItems: 'flex-start' }]}>
+        <View style={narrow ? { width: '100%' } : { flex: 1, minWidth: 0, marginRight: 8 }}><DateField label={t('unav.from')} limit="future" value={from} onChange={setFrom} testID="unav-from" /></View>
+        <View style={narrow ? { width: '100%' } : { flex: 1, minWidth: 0 }}><DateField label={t('unav.to')} limit="future" value={to} onChange={setTo} onSubmit={add} testID="unav-to" /></View>
       </View>
       <Text style={[s.small, { marginBottom: 6 }]}>{t('unav.toHint')}</Text>
       <Field label={t('unav.note')} value={note} onChangeText={setNote} maxLength={NOTE_MAX} placeholder={t('availability.notePlaceholder')} testID="unav-note" />

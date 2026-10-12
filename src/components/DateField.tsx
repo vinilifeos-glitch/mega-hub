@@ -34,10 +34,10 @@ export function DateField({ label, value, onChange, testID, placeholder, limit, 
   return (
     <View style={{ marginBottom: 12 }}>
       <Text style={s.label}>{label}</Text>
-      <View style={[s.row, { flexWrap: 'nowrap' }]}>
+      <View style={[s.row, { flexWrap: 'nowrap', width: '100%' }]}>
         <TextInput value={value} onChangeText={t => { const v = fmtTyped(t); onChange(v); const p = parse(v); if (p) setView({ y: p.getFullYear(), m: p.getMonth() }); }}
           placeholder={placeholder ?? t('calendar.placeholder')} placeholderTextColor="#aaa" keyboardType="number-pad" maxLength={10} onSubmitEditing={onSubmit}
-          style={[s.input, { flex: 1 }]} testID={testID} />
+          style={[s.input, { flex: 1, minWidth: 0, width: '100%' }]} testID={testID} />
         <Pressable onPress={() => { if (sel) setView({ y: sel.getFullYear(), m: sel.getMonth() }); setOpen(!open); }} testID={testID ? `${testID}-cal` : undefined} accessibilityRole="button" accessibilityLabel={t(open ? 'dateField.closeFor' : 'dateField.openFor', { label })}
           style={{ marginLeft: 8, borderWidth: 1, borderColor: colors.border, borderRadius: 12, width: 48, height: 48, alignItems: 'center', justifyContent: 'center', marginTop: 6, backgroundColor: open ? colors.primarySoft : colors.card }}>
           <Icon name={open ? 'calendar' : 'calendar-outline'} size={22} color={colors.primary} />
