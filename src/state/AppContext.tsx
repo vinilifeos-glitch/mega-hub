@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { AppData, Department, Resource, Role, Service, SetlistItem, Song, Theme, Unavailability, User, Assignment } from '../types';
-import { planAssign, AssignMode } from '../data/rota';
+import { planAssign, AssignMode, roleConflict, newConflict } from '../data/rota';
 import { NOTE_MAX, awayOn, covers, getUnavailableFor, rangeError } from '../data/unavailability';
 import { todayIso as todayIsoFn } from '../data/dates';
 import { repository, newerFromOtherTab, DATA_STORAGE_KEY } from '../data/repository';
@@ -409,6 +409,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (!sv || !u || !u.active) return t('errors.notFound');
         if (!(u.positions?.[departmentId] ?? []).includes(position)) return t('errors.doesntHoldRole', { name: u.firstName, role: position });
         if (awayOn(u, sv.date)) return t('errors.unavailableThatDay', { name: u.firstName });
+        { const tgt = `${serviceId}:${departmentId}:${position}:${index}`; const c = roleConflict(d.assignments.filter(a => a.serviceId === serviceId), userId, departmentId, position, tgt);
+          if (c) return t('errors.roleConflict', { name: u.firstName, role: roleLabel(c.departmentId, c.position, language) }); }
         if (mode === 'swap') { const from = d.assignments.find(a => a.serviceId === serviceId && a.userId === userId && a.id !== `${serviceId}:${departmentId}:${position}:${index}`); if (from && !canManage(from.departmentId)) return t('errors.slotScope'); }
         const r = planAssign(d.assignments, { serviceId, departmentId, position, index, userId }, mode);
         if ('error' in r) return t('errors.alreadyServing', { name: u.firstName });
@@ -428,6 +430,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (prevSv && prevSv.status !== 'draft') { if (prevSv.status) clean.status = prevSv.status; else delete clean.status; } // published stays published
         else if (clean.status !== 'draft') clean.status = 'published';
         const sid = id ?? `svc-${Date.now().toString(36)}`;
+        if (picks) {
+          const nx = picks.map(pk => ({ id: `${sid}:${pk.departmentId}:${pk.position}:${pk.index}`, departmentId: pk.departmentId, position: pk.position, userId: pk.userId }));
+          const nc = newConflict(nx, x0().assignments.filter(a => a.serviceId === sid));
+          if (nc) { const u = x0().users.find(z => z.id === nc[0].userId); return t('errors.roleConflict', { name: u?.firstName ?? '?', role: roleLabel(nc[1].departmentId, nc[1].position, language) }); }
+        }
         update(x => ({
           ...x,
           services: id ? x.services.map(s => s.id === id ? { ...s, ...clean, id } : s) : [...x.services, { id: sid, ...clean }],
@@ -438,7 +445,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               const sl = slots.find(z => z.departmentId === pk.departmentId && z.position === pk.position);
               const u = x.users.find(z => z.id === pk.userId);
               return !!sl && pk.index < sl.count && !!u?.active && (u.positions?.[pk.departmentId] ?? []).includes(pk.position)
-                && !awayOn(u, clean.date) && arr.findIndex(o => o.userId === pk.userId) === i;
+                && !awayOn(u, clean.date);
             }).map(pk => ({ ...pk, serviceId: sid, id: `${sid}:${pk.departmentId}:${pk.position}:${pk.index}` })),
           ] : x.assignments.filter(a => {
             if (a.serviceId !== sid) return true;

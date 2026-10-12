@@ -44,3 +44,37 @@ export function pickStatus(as: Assignment[], serviceId: string, userId: string, 
   if (away) return 'away';
   return as.some(a => a.serviceId === serviceId && a.userId === userId && a.id !== slotId) ? 'busy' : 'free';
 }
+
+/** Roles a person may hold on top of their one main role in a service (matched by role id, not label). */
+export const EXEMPT_ROLES = new Set(['d-music:Desk', 'd-music:Assembly']);
+export const isExempt = (dep: string, role: string) => EXEMPT_ROLES.has(`${dep}:${role}`);
+type Slotish = { id: string; departmentId: string; position: string; userId: string };
+/**
+ * One-role rule within a service: a person may hold at most ONE non-exempt role (plus Desk and/or Assembly),
+ * and never two slots of the same role. Returns the entry `userId` already holds that conflicts with
+ * putting them into (dep, role), ignoring the slot `selfId`; null when allowed.
+ */
+export function roleConflict(list: Slotish[], userId: string, dep: string, role: string, selfId?: string): Slotish | null {
+  for (const o of list) {
+    if (o.userId !== userId || o.id === selfId) continue;
+    if (o.departmentId === dep && o.position === role) return o;
+    if (!isExempt(dep, role) && !isExempt(o.departmentId, o.position)) return o;
+  }
+  return null;
+}
+/** For each assignment that conflicts with another in the same service, the other one (legacy data warning). */
+export function conflictsIn(list: Slotish[]): Record<string, Slotish> {
+  const out: Record<string, Slotish> = {};
+  for (const a of list) { const c = roleConflict(list, a.userId, a.departmentId, a.position, a.id); if (c) out[a.id] = c; }
+  return out;
+}
+/** New conflicts only: a conflicting pair is tolerated when both entries already existed unchanged (legacy). */
+export function newConflict(next: Slotish[], prev: Slotish[]): [Slotish, Slotish] | null {
+  const had = (x: Slotish) => prev.some(p => p.id === x.id && p.userId === x.userId);
+  for (const a of next) for (const b of next) {
+    if (a.id >= b.id || a.userId !== b.userId) continue;
+    if (!roleConflict([b], a.userId, a.departmentId, a.position, a.id)) continue;
+    if (!(had(a) && had(b))) return [a, b];
+  }
+  return null;
+}

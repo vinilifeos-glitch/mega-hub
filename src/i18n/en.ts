@@ -44,7 +44,7 @@ export const en = {
   services: {
     title: 'Services', greeting: 'Hi {name}. Upcoming services and who\'s serving.', newService: 'New service', editService: 'Edit service',
 draft: 'Draft', saveDraft: 'Save draft', publish: 'Publish', published: 'Service published.', draftSaved: 'Draft saved.', deleteDraft: 'Delete draft', deleteDraftConfirm: 'Delete draft {title} on {date}? Its assignments will be removed too.', draftDeleted: 'Draft deleted.', draftHint: 'Draft — only the owner and admins can see it.',
-    deleteService: 'Delete service', deleteConfirmTitle: 'Delete service?', deleteConfirm: 'Delete {title} on {date}?', backToServices: 'Back to services',
+    alreadyServingAs: 'Already serving as {role}', conflictAlso: 'Conflict: also serving as {role}', deleteService: 'Delete service', deleteConfirmTitle: 'Delete service?', deleteConfirm: 'Delete {title} on {date}?', backToServices: 'Back to services',
     createService: 'Create service', saveService: 'Save service', created: 'Service created.', updated: 'Service updated.', deleted: 'Service deleted.',
     emptyOwner: 'No upcoming services yet. Tap “New service” to add one.', empty: 'No upcoming services yet. Check back soon.',
     youreServing: "You're serving: {roles}", defaultName: 'Sunday Service', formSubtitle: "Set the date, time and who's needed.",
@@ -99,7 +99,7 @@ draft: 'Draft', saveDraft: 'Save draft', publish: 'Publish', published: 'Service
   song: { composer: 'Composer', timeSignature: 'Time signature', bpm: 'BPM', originalKey: 'Key', major: 'Major', minor: 'Minor', transpose: 'Transpose to', resetKey: 'Back to {key}', sections: 'Chord sheet', addSection: '+ Add section', sectionName: 'Section name', cue: 'Lyric cue (optional)', bars: 'Bars', barsHint: "One chord per bar between bars: | FM7 | | CM7 | |  — an empty bar holds the previous chord.", barCount: '{n} bars', notes: 'Notes', legacy: 'Old text sheet', convert: 'Convert to sections', preset: { Intro: 'Intro', Verse: 'Verse', 'Pre-chorus': 'Pre-chorus', Chorus: 'Chorus', Bridge: 'Bridge', Outro: 'Outro' },
     title: 'Title', artist: 'Artist', key: 'Key', chords: 'Chords / lyrics', link: 'Link (optional)', edit: 'Edit song', save: 'Save song', cancel: 'Cancel', del: 'Delete song', delConfirm: 'Delete {title} from the library?', notFound: 'Song not found.', noChords: 'No chords yet.', smaller: 'Smaller text', bigger: 'Bigger text', pick: 'Pick from library', back: 'Back' },
   setlist: { title: 'Setlist', count: '{n} songs', key: 'Key', notes: 'Notes', songTitle: 'Song title', addSong: '+ Add song', edit: 'Edit', done: 'Done', empty: 'No songs yet.', more: '+{n} more', up: 'Move {title} up', down: 'Move {title} down', remove: 'Remove {title}', save: 'Save song', cancel: 'Cancel', customKey: 'Other key' },
-  errors: {
+  errors: { roleConflict: '{name} is already serving as {role} in this service. Desk and Assembly can be added on top of one role.', 
     rangeOrder: '"To" must be on or after "From".', rangeTooLong: 'A range can be at most one year.',
     deptScope: 'Only the owner and this department\'s admins can edit this page.', resTitle: 'Title is required.', urlInvalid: 'Enter a valid web link (https://…).',
     setlistScope: 'Only the owner and Music admins can edit the setlist.', songTitle: 'Song title is required.',
