@@ -21,10 +21,10 @@ export function Card({ children, style }: { children: React.ReactNode; style?: V
   return <View style={[s.card, style]}>{children}</View>;
 }
 
-export function Chip({ label, active, onPress, color }: { label: string; active?: boolean; onPress?: () => void; color?: string }) {
+export function Chip({ label, active, onPress, color, testID }: { label: string; active?: boolean; onPress?: () => void; color?: string; testID?: string }) {
   const c = color ?? colors.primary;
   return (
-    <Pressable onPress={onPress} style={[s.chip, { borderColor: c, backgroundColor: active ? c : 'transparent' }]}>
+    <Pressable testID={testID} onPress={onPress} style={[s.chip, { borderColor: c, backgroundColor: active ? c : 'transparent' }]}>
       <Text style={{ color: active ? '#fff' : c, fontWeight: '600', fontSize: 13 }}>{label}</Text>
     </Pressable>
   );

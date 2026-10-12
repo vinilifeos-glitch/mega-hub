@@ -4,7 +4,7 @@ import { useApp } from '../../src/state/AppContext';
 import { Card, Chip, Empty, Screen, colors, formatDate, s } from '../../src/components/ui';
 
 export default function Rotas() {
-  const { data, managedDepartments, isAvailable, assign, unassign } = useApp();
+  const { data, managedDepartments, isAvailable, assign, unassign, holdsRole } = useApp();
   const [serviceId, setServiceId] = useState(data.services[0]?.id);
   const [depId, setDepId] = useState<string | undefined>(managedDepartments[0]?.id);
   const dep = managedDepartments.find(d => d.id === depId) ?? managedDepartments[0];
@@ -37,7 +37,8 @@ export default function Rotas() {
             </View>
             <Text style={[s.small, { marginBottom: 8 }]}>{person ? `Assigned: ${person.name}` : 'Unfilled — tap a volunteer'}</Text>
             <View style={s.row}>
-              {members.map(m => {
+              {members.filter(m => holdsRole(m.id, dep.id, pos)).length === 0 && <Text style={s.small}>Nobody holds this role yet. The owner can add it to someone's profile.</Text>}
+              {members.filter(m => holdsRole(m.id, dep.id, pos)).map(m => {
                 const av = isAvailable(m.id, serviceId!);
                 const blocked = av === false || busy(m.id);
                 const tag = av === true ? '✓' : av === false ? '✕' : '?';
@@ -51,7 +52,7 @@ export default function Rotas() {
           </Card>
         );
       })}
-      <Text style={s.small}>✓ available · ? not answered · ✕ unavailable (can't be picked) · busy = already serving elsewhere that day</Text>
+      <Text style={s.small}>Only people who hold the role are listed. ✓ available · ? not answered · ✕ unavailable (can't be picked) · busy = already serving elsewhere that day</Text>
     </Screen>
   );
 }

@@ -20,6 +20,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="availability" options={{ title: 'Availability', tabBarIcon: icon('📅'), href: serves ? undefined : null }} />
       <Tabs.Screen name="my-rota" options={{ title: 'My Rota', tabBarIcon: icon('🙋'), href: serves ? undefined : null }} />
       <Tabs.Screen name="rotas" options={{ title: 'Build Rotas', tabBarIcon: icon('🗂️'), href: manager ? undefined : null }} />
+      <Tabs.Screen name="profile" options={{ title: 'Profile', headerTitle: 'My Profile', tabBarIcon: icon('👤') }} />
       <Tabs.Screen name="people" options={{ title: 'People', tabBarIcon: icon('👥'), href: canManageAccounts ? undefined : null }} />
     </Tabs>
   );

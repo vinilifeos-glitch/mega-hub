@@ -5,7 +5,13 @@ import { hashPassword, newSalt } from '../data/auth';
 
 export interface AccountInput { name: string; username: string; role: Role; departmentIds: string[]; tempPassword?: string; }
 
+export interface ProfileInput { firstName: string; middleNames: string; lastName: string; dob: string; departmentIds: string[]; positions: Record<string, string[]>; }
+export const fullName = (f: { firstName: string; middleNames: string; lastName: string }) =>
+  [f.firstName, f.middleNames, f.lastName].map(x => x.trim()).filter(Boolean).join(' ');
+
 interface Ctx {
+  saveProfile: (id: string, p: ProfileInput) => string | null;
+  holdsRole: (userId: string, departmentId: string, position: string) => boolean;
   ready: boolean;
   data: AppData;
   currentUser: User | null;
@@ -98,12 +104,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           const pw = input.tempPassword ?? '';
           if (pw.length < 4) return 'Temporary password must be at least 4 characters.';
           const salt = newSalt(); const passwordHash = await hashPassword(salt, pw);
-          const user: User = { id: `u-${Date.now().toString(36)}`, name, username, role: input.role, departmentIds, salt, passwordHash, mustChangePassword: true, active: true };
+          const parts = name.split(' ');
+          const user: User = { id: `u-${Date.now().toString(36)}`, name, firstName: parts[0], middleNames: parts.slice(1, -1).join(' '), lastName: parts.length > 1 ? parts[parts.length - 1] : '', dob: '', positions: {}, username, role: input.role, departmentIds, salt, passwordHash, mustChangePassword: true, active: true };
           update(x => ({ ...x, users: [...x.users, user], departments: x.departments.map(dep => user.role === 'leader' && departmentIds.includes(dep.id) ? { ...dep, leaderId: user.id } : dep) }));
         } else {
           update(x => ({
             ...x,
-            users: x.users.map(u => u.id === id ? { ...u, name, username, role: input.role, departmentIds } : u),
+            users: x.users.map(u => u.id === id ? { ...u, ...(name !== u.name ? { firstName: name.split(' ')[0], middleNames: name.split(' ').slice(1, -1).join(' '), lastName: name.split(' ').length > 1 ? name.split(' ').slice(-1)[0] : '' } : {}), name, username, role: input.role, departmentIds, positions: Object.fromEntries(departmentIds.map(dp => [dp, u.positions?.[dp] ?? []])) } : u),
             // leaving a department / no longer leader: clean up
             departments: x.departments.map(dep =>
               input.role === 'leader' && departmentIds.includes(dep.id) ? { ...dep, leaderId: id }
@@ -127,6 +134,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (t.id === currentUser?.id) return "You can't deactivate yourself.";
         if (t.role === 'owner') return "The owner account can't be deactivated.";
         update(x => ({ ...x, users: x.users.map(u => u.id === id ? { ...u, active } : u) }));
+        return null;
+      },
+      holdsRole: (uid, depId, pos) => !!d.users.find(u => u.id === uid)?.positions?.[depId]?.includes(pos),
+      saveProfile: (id, p) => {
+        if (role !== 'owner') return 'Only the owner can edit profiles.';
+        if (!p.firstName.trim()) return 'First name is required.';
+        if (p.dob && !/^\d{4}-\d{2}-\d{2}$/.test(p.dob)) return 'Date of birth must be YYYY-MM-DD.';
+        const departmentIds = p.departmentIds;
+        const positions: Record<string, string[]> = {};
+        departmentIds.forEach(dep => { positions[dep] = p.positions[dep] ?? []; });
+        update(x => ({
+          ...x,
+          users: x.users.map(u => u.id === id ? { ...u, firstName: p.firstName.trim(), middleNames: p.middleNames.trim(), lastName: p.lastName.trim(), name: fullName(p), dob: p.dob, departmentIds, positions } : u),
+          departments: x.departments.map(dep => dep.leaderId === id && !departmentIds.includes(dep.id) ? { ...dep, leaderId: null } : dep),
+          assignments: x.assignments.filter(a => a.userId !== id || (positions[a.departmentId] ?? []).includes(a.position)),
+        }));
         return null;
       },
       isAvailable: (u, s) => d.availability.find(a => a.userId === u && a.serviceId === s)?.available,

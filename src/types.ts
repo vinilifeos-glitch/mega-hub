@@ -1,6 +1,8 @@
 export type Role = 'owner' | 'admin' | 'leader' | 'volunteer';
 export interface User {
   id: string; username: string; name: string; role: Role; departmentIds: string[];
+  firstName: string; middleNames: string; lastName: string; dob: string; // YYYY-MM-DD or ''
+  positions: Record<string, string[]>; // departmentId -> roles held
   salt: string; passwordHash: string; mustChangePassword: boolean; active: boolean;
 }
 export interface Department { id: string; name: string; emoji: string; color: string; leaderId: string | null; positions: string[]; }

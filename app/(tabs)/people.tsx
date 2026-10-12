@@ -4,6 +4,7 @@ import { AccountInput, useMe } from '../../src/state/AppContext';
 import { Button, Card, Chip, Empty, Field, Screen, colors, s } from '../../src/components/ui';
 import { randomPassword } from '../../src/data/auth';
 import { Role, User } from '../../src/types';
+import { ProfileEditor, ProfileView } from '../../src/screens/Profile';
 
 const roleName: Record<Role, string> = { owner: 'Owner', admin: 'Admin', leader: 'Leader', volunteer: 'Volunteer' };
 const order: Role[] = ['owner', 'admin', 'leader', 'volunteer'];
@@ -13,7 +14,20 @@ export default function People() {
   const { data, canManageAccounts, canEditAccount, allowedRoles, saveAccount, resetPassword, setActive, currentUser } = app;
   const [editing, setEditing] = useState<User | 'new' | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [profile, setProfile] = useState<{ user: User; edit: boolean } | null>(null);
+  const isOwner = currentUser.role === 'owner';
   if (!canManageAccounts) return <Screen title="People"><Empty text="Only the owner and admins can manage accounts." /></Screen>;
+  if (profile) {
+    const fresh = data.users.find(u => u.id === profile.user.id) ?? profile.user;
+    if (profile.edit) return <ProfileEditor user={fresh} onClose={m => { setProfile(null); setNotice(m ?? null); }} />;
+    return (
+      <Screen title="Profile">
+        <ProfileView user={fresh} />
+        {isOwner && <Button label="Edit profile" onPress={() => setProfile({ user: fresh, edit: true })} testID="pf-edit" />}
+        <Button label="Back" outline onPress={() => setProfile(null)} />
+      </Screen>
+    );
+  }
   if (editing) return <AccountForm user={editing === 'new' ? null : editing} onClose={msg => { setEditing(null); setNotice(msg ?? null); }} />;
 
   const users = [...data.users].sort((a, b) => order.indexOf(a.role) - order.indexOf(b.role) || a.name.localeCompare(b.name));
@@ -33,14 +47,15 @@ export default function People() {
             </View>
             <Text style={s.small}>@{u.username} · {u.departmentIds.length ? u.departmentIds.map(depName).join(', ') : 'No department yet'}</Text>
             <Text style={s.small}>{!u.active ? 'Deactivated' : u.mustChangePassword ? 'Temporary password (not changed yet)' : 'Active'}</Text>
-            {editable && (
+            {(editable || isOwner) && (
               <View style={[s.row, { marginTop: 8 }]}>
-                <Chip label="Edit" onPress={() => { setNotice(null); setEditing(u); }} />
-                {u.id !== currentUser.id && <Chip label="Reset password" onPress={async () => {
+                <Chip testID={`profile-${u.username}`} label="Profile" onPress={() => { setNotice(null); setProfile({ user: u, edit: false }); }} />
+                {editable && <Chip label="Account" onPress={() => { setNotice(null); setEditing(u); }} />}
+                {editable && u.id !== currentUser.id && <Chip label="Reset password" onPress={async () => {
                   const pw = randomPassword(); const e = await resetPassword(u.id, pw);
                   setNotice(e ?? `New temporary password for @${u.username}: ${pw}\nShare it privately — they'll be asked to change it at sign-in.`);
                 }} />}
-                {u.id !== currentUser.id && u.role !== 'owner' && <Chip color={u.active ? colors.red : colors.green} label={u.active ? 'Deactivate' : 'Reactivate'}
+                {editable && u.id !== currentUser.id && u.role !== 'owner' && <Chip color={u.active ? colors.red : colors.green} label={u.active ? 'Deactivate' : 'Reactivate'}
                   onPress={() => setNotice(setActive(u.id, !u.active) ?? `@${u.username} ${u.active ? 'deactivated' : 'reactivated'}.`)} />}
               </View>
             )}
