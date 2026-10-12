@@ -6,7 +6,7 @@ import { PersonalInfo } from '../../src/screens/Profile';
 import { ChangePasswordScreen } from '../../src/screens/Auth';
 
 export default function MyProfile() {
-  const { currentUser: me, saveMyProfile } = useMe();
+  const { currentUser: me, saveMyProfile, signOut } = useMe();
   const [mode, setMode] = useState<'view' | 'edit' | 'password'>('view');
   const init = () => ({ firstName: me.firstName, middleNames: me.middleNames, lastName: me.lastName, dob: me.dob, contact: me.contact ?? '' });
   const [f, setF] = useState(init);
@@ -33,6 +33,7 @@ export default function MyProfile() {
       <PersonalInfo user={me} title={me.name} />
       <Button label="Edit my details" onPress={() => { setMsg(null); setF(init()); setMode('edit'); }} testID="edit-me" />
       <Button label="Change password" outline onPress={() => { setMsg(null); setMode('password'); }} testID="change-password" />
+      <Button label="Sign out" color={colors.red} outline onPress={signOut} testID="signout" />
     </Screen>
   );
 }

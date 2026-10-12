@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { AppData, Department, Role, User } from '../types';
+import { AppData, Department, Role, Service, User } from '../types';
 import { repository } from '../data/repository';
 import { hashPassword, newSalt } from '../data/auth';
 
@@ -38,7 +38,10 @@ interface Ctx {
   adminSaveMember: (id: string, p: { firstName: string; middleNames: string; lastName: string; dob: string; contact: string; departments: Record<string, string[] | null> }) => string | null;
   saveMyProfile: (p: { firstName: string; middleNames: string; lastName: string; dob: string; contact: string }) => string | null;
   ownerUpdateAccount: (id: string, a: { username: string; role: Role; active: boolean; newPassword: string; adminOf: string[] }) => Promise<string | null>;
-  assign: (serviceId: string, departmentId: string, position: string, userId: string) => void;
+  assign: (serviceId: string, departmentId: string, position: string, index: number, userId: string) => string | null;
+  whyBlocked: (serviceId: string, userId: string) => string | null;
+  saveService: (id: string | null, s: Omit<Service, 'id'>) => string | null;
+  deleteService: (id: string) => void;
   unassign: (assignmentId: string) => void;
   canManage: (departmentId: string) => boolean;
   managedDepartments: Department[];
@@ -70,7 +73,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const setSession = (id: string | null) => { setSessionId(id); repository.setSession(id); };
 
   const value = useMemo<Ctx>(() => {
-    const d = data ?? { users: [], departments: [], services: [], availability: [], assignments: [] };
+    const d: AppData = data ?? { users: [], departments: [], services: [], availability: [], assignments: [] };
     const found = d.users.find(u => u.id === sessionId && u.active);
     const currentUser = found ?? null;
     const role = currentUser?.role;
@@ -240,15 +243,50 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         availability: [...x.availability.filter(a => !(a.userId === userId && a.serviceId === serviceId)), { userId, serviceId, available }],
         assignments: available ? x.assignments : x.assignments.filter(a => !(a.userId === userId && a.serviceId === serviceId)),
       })),
-      assign: (serviceId, departmentId, position, userId) => {
-        if (!canManage(departmentId)) return;
+      whyBlocked: (serviceId, userId) => {
+        const sv = d.services.find(x => x.id === serviceId); const u = d.users.find(x => x.id === userId);
+        if (!sv || !u) return 'Not found';
+        if ((u.unavailable ?? []).includes(sv.date)) return 'unavailable';
+        if (d.assignments.some(a => a.serviceId === serviceId && a.userId === userId)) return 'busy';
+        return null;
+      },
+      assign: (serviceId, departmentId, position, index, userId) => {
+        if (!canManage(departmentId)) return 'You can only fill slots in departments you administer.';
+        const sv = d.services.find(x => x.id === serviceId); const u = d.users.find(x => x.id === userId);
+        if (!sv || !u || !u.active) return 'Not found.';
+        if (!(u.positions?.[departmentId] ?? []).includes(position)) return `${u.firstName} doesn't hold ${position}.`;
+        if ((u.unavailable ?? []).includes(sv.date)) return `${u.firstName} is unavailable that day.`;
+        if (d.assignments.some(a => a.serviceId === serviceId && a.userId === userId)) return `${u.firstName} is already serving in this service.`;
+        const id = `${serviceId}:${departmentId}:${position}:${index}`;
+        update(x => ({ ...x, assignments: [...x.assignments.filter(a => a.id !== id), { id, serviceId, departmentId, position, index, userId }] }));
+        return null;
+      },
+      saveService: (id, sv) => {
+        if (!isOwner) return 'Only the owner can create or edit services.';
+        if (!sv.title.trim()) return 'Name is required.';
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(sv.date)) return 'Enter a real date as DD/MM/YYYY.';
+        const hm = /^([01]\d|2[0-3]):[0-5]\d$/;
+        if (!hm.test(sv.start) || !hm.test(sv.end)) return 'Times must be HH:MM (24h).';
+        if (sv.end <= sv.start) return 'End time must be after start time.';
+        const slots = sv.slots.filter(sl => sl.count > 0);
+        const clean = { ...sv, title: sv.title.trim(), location: sv.location.trim(), slots };
+        const sid = id ?? `svc-${Date.now().toString(36)}`;
         update(x => ({
           ...x,
-          assignments: [...x.assignments.filter(a => !(a.serviceId === serviceId && a.departmentId === departmentId && a.position === position)),
-            { id: `${serviceId}:${departmentId}:${position}`, serviceId, departmentId, position, userId }],
+          services: id ? x.services.map(s => s.id === id ? { id, ...clean } : s) : [...x.services, { id: sid, ...clean }],
+          // drop assignments for removed / shrunk slots, or people now unavailable on a moved date
+          assignments: x.assignments.filter(a => {
+            if (a.serviceId !== sid) return true;
+            const sl = slots.find(z => z.departmentId === a.departmentId && z.position === a.position);
+            const u = x.users.find(z => z.id === a.userId);
+            return !!sl && a.index < sl.count && !(u?.unavailable ?? []).includes(clean.date);
+          }),
+          settings: { ...x.settings, lastLocation: clean.location || x.settings?.lastLocation },
         }));
+        return null;
       },
-      unassign: id => update(x => ({ ...x, assignments: x.assignments.filter(a => a.id !== id) })),
+      deleteService: id => isOwner && update(x => ({ ...x, services: x.services.filter(s => s.id !== id), assignments: x.assignments.filter(a => a.serviceId !== id) })),
+      unassign: id => { const a0 = d.assignments.find(a => a.id === id); if (!a0 || !canManage(a0.departmentId)) return; update(x => ({ ...x, assignments: x.assignments.filter(a => a.id !== id) })); },
     };
   }, [data, sessionId]);
 

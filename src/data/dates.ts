@@ -5,3 +5,9 @@ export const toIso = (ddmmyyyy: string) => {
   return `${m[3]}-${m[2]}-${m[1]}`;
 };
 export const todayIso = () => { const t = new Date(); return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`; };
+export const isoToDdmm = (iso: string) => iso.split('-').reverse().join('/');
+export const upcomingSundayIso = () => {
+  const t = new Date(); t.setDate(t.getDate() + ((7 - t.getDay()) % 7));
+  return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
+};
+export const formatTimeInput = (raw: string) => { const g = raw.replace(/\D/g, '').slice(0, 4); return g.length > 2 ? `${g.slice(0, 2)}:${g.slice(2)}` : g; };

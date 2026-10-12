@@ -32,7 +32,11 @@ export function migrate(d: AppData): AppData {
     };
   });
   const assignments = d.assignments.filter(a => departments.find(x => x.id === a.departmentId)?.positions.includes(a.position));
-  return { ...d, users, departments: departments.map(x => ({ ...x, leaderId: null })), assignments };
+  // v1 sample services (no slots) are replaced by owner-created services
+  const services = d.services.filter(s => Array.isArray((s as any).slots));
+  const keep = new Set(services.map(s => s.id));
+  const asg = assignments.filter(a => keep.has(a.serviceId) && typeof a.index === 'number');
+  return { ...d, users, services, departments: departments.map(x => ({ ...x, leaderId: null })), assignments: asg };
 }
 
 /**

@@ -8,7 +8,7 @@ export function SignInScreen() {
   const [u, setU] = useState(''); const [p, setP] = useState(''); const [err, setErr] = useState<string | null>(null);
   const go = async () => setErr(await signIn(u, p));
   return (
-    <Screen title="Mega Hub ⛪" subtitle="Sign in to see your rotas">
+    <Screen title="Mega Hub ⛪" subtitle="Sign in to see services and rotas">
       <Card>
         <Field label="Username" value={u} onChangeText={setU} testID="username" />
         <Field label="Password" value={p} onChangeText={setP} secureTextEntry onSubmitEditing={go} testID="password" />

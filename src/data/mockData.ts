@@ -1,22 +1,4 @@
-import { AppData, Service } from '../types';
-
-function upcomingSundays(n: number): Service[] {
-  const d = new Date(); d.setHours(0, 0, 0, 0);
-  d.setDate(d.getDate() + ((7 - d.getDay()) % 7));
-  const out: Service[] = [];
-  for (let i = 0; i < n; i++) {
-    const iso = d.toISOString().slice(0, 10);
-    out.push({ id: `sun-${iso}`, date: iso, title: 'Sunday Service', time: '10:30' });
-    if (i === 1) {
-      const fri = new Date(d); fri.setDate(fri.getDate() + 5);
-      out.push({ id: `evt-youth`, date: fri.toISOString().slice(0, 10), title: 'Youth Night', time: '19:00' });
-    }
-    d.setDate(d.getDate() + 7);
-  }
-  return out;
-}
-
-const SERVICES = upcomingSundays(4);
+import { AppData } from '../types';
 
 export const mockData: AppData = {
   // Passwords are stored only as salted SHA-256 hashes. Temp passwords were shared privately.
@@ -46,7 +28,7 @@ export const mockData: AppData = {
     { id: 'd-kids', name: 'Kids', emoji: '🧸', color: '#10B981', leaderId: null, positions: ['Teacher', 'Assistant'] },
     { id: 'd-obreiros', name: 'Obreiros', emoji: '🤝', color: '#F59E0B', leaderId: null, positions: ['Atalaia', 'Dízimo', 'Abertura', 'Projeção', 'Mídia'] },
   ],
-  services: SERVICES,
+  services: [],
   availability: [],
   assignments: [],
 };
