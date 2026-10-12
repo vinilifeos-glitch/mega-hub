@@ -201,25 +201,30 @@ function ServiceForm({ service, onClose }: { service?: Service; onClose: (msg?: 
         return (
           <Card key={d.id} style={{ borderLeftWidth: 3, borderLeftColor: d.color, opacity: manage ? 1 : 0.6 }}>
             <Pressable testID={`dept-toggle-${d.id}`} accessibilityRole="button" accessibilityState={{ expanded: open }} accessibilityLabel={t('services.slotsA11y', { dept: deptName(d.id) })} onPress={() => setOpenDept(open ? null : d.id)} style={[s.row, { justifyContent: 'space-between', flexWrap: 'nowrap', minHeight: 44 }]}>
-              <View style={{ flex: 1 }}>
+              <View style={{ flex: 1, marginRight: 8 }}>
                 <DeptTitle dep={d} />
-                <Text style={[s.small, { marginTop: 4 }]} testID={`dept-status-${d.id}`}>{mine.length ? t('services.assignedCount', { n: mine.filter(x => x.assigneeId).length, total: mine.length }) : t('services.noSlots')}{manage ? '' : ` · ${t('common.viewOnly')}`}</Text>
+                <View style={{ marginTop: 8, marginLeft: 42 }} testID={`dept-status-${d.id}`}>
+                  <Badge tone={mine.length && mine.every(x => x.assigneeId) ? 'success' : mine.some(x => x.assigneeId) ? 'warning' : 'neutral'} icon={mine.length && mine.every(x => x.assigneeId) ? 'checkmark-circle' : 'ellipse-outline'}
+                    label={`${mine.length ? t('services.assignedCount', { n: mine.filter(x => x.assigneeId).length, total: mine.length }) : t('services.noSlots')}${manage ? '' : ` · ${t('common.viewOnly')}`}`} />
+                </View>
               </View>
-              <Icon name={open ? 'chevron-up' : 'chevron-down'} size={20} />
+              <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.soft, alignItems: 'center', justifyContent: 'center' }}><Icon name={open ? 'chevron-up' : 'chevron-down'} size={18} /></View>
             </Pressable>
             {open && mine.map(x => {
               const same = mine.filter(y => y.role === x.role); const n = same.indexOf(x);
               const who = x.assigneeId ? userById(x.assigneeId) : undefined;
               const opts = eligibleFor(x.id);
               return (
-                <View key={x.id} testID={`row-${d.id}-${x.role}-${n}`} style={{ borderTopWidth: 1, borderTopColor: colors.border, paddingVertical: 6 }}>
+                <View key={x.id} testID={`row-${d.id}-${x.role}-${n}`} style={{ borderTopWidth: 1, borderTopColor: colors.border, paddingVertical: 6, minHeight: 56, justifyContent: 'center' }}>
                   <View style={[s.row, { flexWrap: 'nowrap', alignItems: 'center' }]}>
-                    <Text style={[s.small, { flex: 1, color: colors.text }]}>{roleName(d.id, x.role)}{same.length > 1 ? ` ${n + 1}` : ''}</Text>
+                    <Text style={{ flex: 1, fontSize: 15, fontWeight: '600', color: colors.text, marginRight: 8 }} numberOfLines={2}>{roleName(d.id, x.role)}{same.length > 1 ? ` ${n + 1}` : ''}</Text>
                     <Pressable testID={`fp-${d.id}-${x.role}-${n}`} disabled={!manage} onPress={() => setOpenPick(openPick === x.id ? null : x.id)}
-                      style={{ borderWidth: 1, borderColor: colors.border, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 6, marginRight: 6 }}>
-                      <Text style={{ color: who ? colors.text : colors.muted, fontWeight: '600' }}>{who ? `${displayName(who)} ▾` : t('services.assign')}</Text>
+                      accessibilityRole="button" accessibilityState={{ expanded: openPick === x.id }} accessibilityLabel={`${roleName(d.id, x.role)}: ${who ? displayName(who) : t('ui.assignPlaceholder')}`}
+                      style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', minHeight: 40, maxWidth: '55%', borderWidth: 1, borderColor: who ? colors.primary : colors.border, backgroundColor: openPick === x.id || pressed ? colors.soft : who ? colors.primarySoft : colors.card, borderRadius: 999, paddingLeft: 14, paddingRight: 10 })}>
+                      <Text numberOfLines={1} style={{ flexShrink: 1, color: who ? colors.primaryText : colors.muted, fontWeight: who ? '700' : '500', fontSize: 14 }}>{who ? displayName(who) : t('ui.assignPlaceholder')}</Text>
+                      <Icon name={openPick === x.id ? 'chevron-up' : 'chevron-down'} size={14} color={who ? colors.primaryText : colors.muted} style={{ marginLeft: 6 }} />
                     </Pressable>
-                    {manage && <IconButton testID={`rm-${d.id}-${x.role}-${n}`} icon="close" label={t('services.removeSlot')} color={colors.red} onPress={() => removeSlot(x.id)} />}
+                    {manage && <IconButton testID={`rm-${d.id}-${x.role}-${n}`} icon="remove-circle-outline" label={t('services.removeSlot')} color={colors.subtle} onPress={() => removeSlot(x.id)} style={{ marginLeft: 4 }} />}
                   </View>
                   {openPick === x.id && manage && <View style={[s.row, { marginTop: 8 }]}>
                     {opts.length === 0 && <Text style={s.small}>{t('services.noneAvailable')}</Text>}
@@ -231,8 +236,14 @@ function ServiceForm({ service, onClose }: { service?: Service; onClose: (msg?: 
               );
             })}
             {open && manage && <>
-              <Button label={t('services.addRole')} outline onPress={() => setOpenAdd(openAdd === d.id ? null : d.id)} testID={`add-role-${d.id}`} />
-              {openAdd === d.id && <View style={s.row}>{d.positions.map(p => <Chip key={p} testID={`sl-add-${d.id}-${p}`} label={`+ ${roleName(d.id, p)}`} color={d.color} onPress={() => { addSlot(d.id, p); setOpenAdd(null); }} />)}</View>}
+              <View style={{ borderTopWidth: 1, borderTopColor: colors.border, marginTop: 2, paddingTop: 8 }}>
+                <Pressable testID={`add-role-${d.id}`} accessibilityRole="button" accessibilityState={{ expanded: openAdd === d.id }} onPress={() => setOpenAdd(openAdd === d.id ? null : d.id)}
+                  style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', minHeight: 44, paddingHorizontal: 12, borderRadius: 12, backgroundColor: pressed ? colors.soft : 'transparent' })}>
+                  <Icon name="add" size={18} color={colors.primaryText} style={{ marginRight: 6 }} />
+                  <Text style={{ color: colors.primaryText, fontWeight: '700', fontSize: 15 }}>{t('ui.addRole')}</Text>
+                </Pressable>
+              </View>
+              {openAdd === d.id && <View style={[s.row, { marginTop: 6 }]}>{d.positions.map(p => <Chip key={p} testID={`sl-add-${d.id}-${p}`} label={`+ ${roleName(d.id, p)}`} color={d.color} onPress={() => { addSlot(d.id, p); setOpenAdd(null); }} />)}</View>}
             </>}
           </Card>
         );

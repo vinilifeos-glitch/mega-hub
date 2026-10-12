@@ -114,5 +114,5 @@ export const en = {
     profile: 'My profile', profileHint: 'Personal details, language and appearance', team: 'My team', teamHint: 'People in the departments you administer',
     accounts: 'Accounts', ownerOnlyField: 'Only the owner can change name and contact details.', accountsHint: "Create and manage everyone's sign-in", settings: 'Settings', admin: 'Admin tools',
   },
-  ui: { noDeptSection: 'Not in a department yet', rolesLabel: 'Roles' },
+  ui: { noDeptSection: 'Not in a department yet', rolesLabel: 'Roles', assignPlaceholder: 'Assign', addRole: 'Add role' },
 };
