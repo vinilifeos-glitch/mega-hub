@@ -12,7 +12,7 @@ export default function MyRota() {
     .sort((x, y) => (x.sv.date + x.sv.start).localeCompare(y.sv.date + y.sv.start));
   return (
     <Screen title="My Rota" subtitle="The services you're serving at.">
-      {mine.length === 0 && <Empty icon="🙌" text="You're not on any rota yet. Keep your away dates up to date so leaders can plan." />}
+      {mine.length === 0 && <Empty icon="🙌" text="You're not on any rota yet. Keep your unavailable dates up to date so admins can plan." />}
       {mine.map(({ a, sv, dep }) => (
         <Card key={a.id} style={{ borderLeftWidth: 3, borderLeftColor: dep.color }}>
           <Text style={s.h2}>{sv.title}</Text>

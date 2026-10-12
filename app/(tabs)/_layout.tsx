@@ -14,8 +14,8 @@ export default function TabsLayout() {
   return (
     <Tabs screenOptions={{ headerShown: false, tabBarActiveTintColor: colors.primary, tabBarInactiveTintColor: colors.muted, tabBarLabelStyle: { fontSize: 11, fontWeight: '600' }, tabBarStyle: { backgroundColor: colors.card, borderTopColor: colors.border, height: 64, paddingTop: 6, paddingBottom: 8 } }}>
       <Tabs.Screen name="index" options={{ title: 'Services', headerTitle: 'Mega Hub', tabBarIcon: icon('🗓️') }} />
-      <Tabs.Screen name="departments" options={{ title: 'Teams', headerTitle: 'Departments', tabBarIcon: icon('🏛️') }} />
-      <Tabs.Screen name="availability" options={{ title: 'Away', headerTitle: 'Availability', tabBarIcon: icon('🚫'), }} />
+      <Tabs.Screen name="departments" options={{ title: 'Depts', headerTitle: 'Departments', tabBarIcon: icon('🏛️') }} />
+      <Tabs.Screen name="availability" options={{ title: 'Available', headerTitle: 'Availability', tabBarIcon: icon('🚫'), }} />
       <Tabs.Screen name="my-rota" options={{ title: 'My Rota', tabBarIcon: icon('✋'), }} />
       <Tabs.Screen name="team" options={{ title: 'Team', headerTitle: 'My Team', tabBarIcon: icon('👥'), href: currentUser.role === 'admin' ? undefined : null }} />
       <Tabs.Screen name="profile" options={{ title: 'Profile', headerTitle: 'My Profile', tabBarIcon: icon('👤') }} />

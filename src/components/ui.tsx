@@ -57,9 +57,9 @@ export function Card({ children, style }: { children: React.ReactNode; style?: V
 export function Chip({ label, active, onPress, color, testID }: { label: string; active?: boolean; onPress?: () => void; color?: string; testID?: string }) {
   const c = color ?? colors.primary;
   return (
-    <Pressable testID={testID} onPress={onPress} disabled={!onPress && !active ? false : undefined}
+    <Pressable testID={testID} onPress={onPress} disabled={!onPress}
       style={({ pressed }) => [s.chip, active ? { backgroundColor: c, borderColor: c } : { borderColor: colors.border, backgroundColor: pressed ? colors.soft : colors.card }]}>
-      <Text style={{ color: active ? '#fff' : colors.text, fontWeight: '500', fontSize: 14 }}>{label}</Text>
+      <Text style={{ color: active ? '#fff' : !onPress ? colors.subtle : colors.text, fontWeight: '500', fontSize: 14 }}>{label}</Text>
     </Pressable>
   );
 }
