@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { Text, View } from 'react-native';
-import { fullName, ProfileInput, useMe } from '../state/AppContext';
+import { formatDobInput, fullName, ProfileInput, useMe } from '../state/AppContext';
 import { Button, Card, Chip, Field, Screen, colors, s } from '../components/ui';
 import { User } from '../types';
 
 const roleName = { owner: 'Owner', admin: 'Admin', leader: 'Department Leader', volunteer: 'Volunteer' };
-const fmtDob = (d: string) => d ? new Date(d + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : 'Not set';
+const fmtDob = (d: string) => d || 'Not set';
 
 function Row({ k, v }: { k: string; v: string }) {
   return <View style={{ marginBottom: 8 }}><Text style={s.small}>{k}</Text><Text style={{ fontSize: 16, color: colors.text }}>{v || '—'}</Text></View>;
@@ -62,7 +62,7 @@ export function ProfileEditor({ user, onClose }: { user: User; onClose: (msg?: s
         <Field label="First name" value={f.firstName} onChangeText={v => setF({ ...f, firstName: v })} autoCapitalize="words" testID="pf-first" />
         <Field label="Middle names (optional)" value={f.middleNames} onChangeText={v => setF({ ...f, middleNames: v })} autoCapitalize="words" testID="pf-middle" />
         <Field label="Last name" value={f.lastName} onChangeText={v => setF({ ...f, lastName: v })} autoCapitalize="words" testID="pf-last" />
-        <Field label="Date of birth (YYYY-MM-DD)" value={f.dob} placeholder="1995-04-21" onChangeText={v => setF({ ...f, dob: v })} testID="pf-dob" />
+        <Field label="Date of birth (DD/MM/YYYY)" value={f.dob} placeholder="21/04/1995" keyboardType="number-pad" maxLength={10} onChangeText={v => setF({ ...f, dob: formatDobInput(v) })} testID="pf-dob" />
       </Card>
       <Text style={s.section}>Departments & roles</Text>
       {data.departments.map(d => {

@@ -4,8 +4,16 @@ import { mockData } from './mockData';
 
 /** Upgrade data saved by older app versions in place (keeps accounts & passwords). */
 export function migrate(d: AppData): AppData {
-  const music = mockData.departments.find(x => x.id === 'd-music')!;
-  const users = d.users.map(u => {
+  const seedPos = (id: string) => mockData.departments.find(x => x.id === id)?.positions;
+  const departments = d.departments.map(x => ({ ...x, positions: seedPos(x.id) ?? x.positions }));
+  const valid = (dep: string, r: string) => !!departments.find(x => x.id === dep)?.positions.includes(r);
+  const users = d.users.map(u0 => {
+    const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(u0.dob ?? '');
+    const u = {
+      ...u0,
+      ...(iso ? { dob: `${iso[3]}/${iso[2]}/${iso[1]}` } : {}),
+      ...(u0.positions ? { positions: Object.fromEntries(Object.entries(u0.positions).map(([k, v]) => [k, v.filter(r => valid(k, r))])) } : {}),
+    };
     if (u.firstName !== undefined && u.positions) return u;
     const seed = mockData.users.find(s => s.id === u.id);
     const parts = u.name.split(' ');
@@ -15,7 +23,6 @@ export function migrate(d: AppData): AppData {
       lastName: seed?.lastName ?? '', dob: '', positions: {},
     };
   });
-  const departments = d.departments.map(x => x.id === 'd-music' ? { ...x, positions: music.positions } : x);
   const assignments = d.assignments.filter(a => departments.find(x => x.id === a.departmentId)?.positions.includes(a.position));
   return { ...d, users, departments, assignments };
 }

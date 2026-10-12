@@ -43,8 +43,8 @@ export const mockData: AppData = {
   ],
   departments: [
     { id: 'd-music', name: 'Music', emoji: '🎵', color: '#7C3AED', leaderId: null, positions: ['Keys', 'Bass', 'Drums', 'Guitar', 'Desk', 'Lead Singer', 'Backing Vocals'] },
-    { id: 'd-kids', name: 'Kids', emoji: '🧸', color: '#10B981', leaderId: null, positions: ['Teacher', 'Helper'] },
-    { id: 'd-obreiros', name: 'Obreiros', emoji: '🤝', color: '#F59E0B', leaderId: null, positions: ['Front Door', 'Altar', 'Offering'] },
+    { id: 'd-kids', name: 'Kids', emoji: '🧸', color: '#10B981', leaderId: null, positions: ['Teacher', 'Assistant'] },
+    { id: 'd-obreiros', name: 'Obreiros', emoji: '🤝', color: '#F59E0B', leaderId: null, positions: ['Atalaia', 'Dízimo', 'Abertura', 'Projeção', 'Mídia'] },
   ],
   services: SERVICES,
   availability: [],
