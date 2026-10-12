@@ -30,14 +30,12 @@ console.log(n, 'passed');
   console.log(n, 'passed'); }
 { const S = (id, dep, pos, u) => ({ id, departmentId: dep, position: pos, userId: u });
   const L = [S('k', 'd-music', 'Keys', 'm'), S('a1', 'd-music', 'Assembly', 'm')];
-  ok(!!R.roleConflict(L, 'm', 'd-kids', 'Teacher'), 'second non-exempt role blocked');
-  ok(!R.roleConflict(L, 'm', 'd-music', 'Desk'), 'Desk exempt alongside main role');
-  ok(!!R.roleConflict(L, 'm', 'd-music', 'Assembly', 'a2'), 'two Assembly slots blocked');
-  ok(!R.roleConflict([S('d', 'd-music', 'Desk', 'm'), S('a', 'd-music', 'Assembly', 'm')], 'm', 'd-kids', 'Teacher'), 'Desk+Assembly + one main role ok');
-  ok(!R.roleConflict(L, 'm', 'd-music', 'Keys', 'k'), 'own slot ignored');
-  const legacy = [S('k', 'd-music', 'Keys', 'm'), S('t', 'd-kids', 'Teacher', 'm')];
-  ok(Object.keys(R.conflictsIn(legacy)).length === 2, 'legacy conflict detected');
-  ok(R.newConflict(legacy, legacy) === null, 'unchanged legacy conflict tolerated');
-  ok(R.newConflict([...legacy.slice(0, 1), S('b', 'd-music', 'Bass', 'm')], legacy.slice(0, 1)) !== null, 'new conflict blocked');
-  ok(R.newConflict([...legacy, S('z', 'd-music', 'Desk', 'x')], legacy) === null, 'other edits alongside legacy conflict allowed');
+  ok(!R.sameRoleSlot(L, 'm', 'd-kids', 'Teacher'), 'different role: not a same-role dup (double booking allowed)');
+  ok(!!R.sameRoleSlot(L, 'm', 'd-music', 'Assembly', 'a2'), 'same role twice detected');
+  ok(R.otherSlots(L, 'm', 'k').length === 1, 'otherSlots');
+  ok(R.newSameRoleDup([S('a1', 'd-music', 'Assembly', 'm'), S('a2', 'd-music', 'Assembly', 'm')], []) !== null, 'new same-role dup flagged');
+  ok(R.newSameRoleDup([S('k', 'd-music', 'Keys', 'm'), S('t', 'd-kids', 'Teacher', 'm')], []) === null, 'double booking in other roles allowed on save');
+  const A3 = [{ id: 's:m:Keys:0', serviceId: 's', departmentId: 'm', position: 'Keys', index: 0, userId: 'u1' }, { id: 's:m:Desk:0', serviceId: 's', departmentId: 'm', position: 'Desk', index: 0, userId: 'u1' }];
+  const re = R.planAssign(A3, { serviceId: 's', departmentId: 'k', position: 'T', index: 0, userId: 'u1' }, 'swap').assignments;
+  ok(re.length === 1 && re[0].id === 's:k:T:0', 'Reassign clears ALL other slots');
   console.log(n, 'passed'); }
