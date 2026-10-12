@@ -124,5 +124,5 @@ draft: 'Rascunho', saveDraft: 'Salvar rascunho', publish: 'Publicar', published:
     profile: 'Meu perfil', profileHint: 'Dados pessoais, idioma e aparência', team: 'Minha equipe', teamHint: 'Pessoas dos departamentos que você administra',
     accounts: 'Contas', ownerOnlyField: 'Somente o proprietário pode alterar nome e telefone.', accountsHint: 'Crie e gerencie o acesso de todos', settings: 'Configurações', admin: 'Administração',
   },
-  ui: { noDeptSection: 'Ainda sem departamento', rolesLabel: 'Funções', assignPlaceholder: 'Atribuir', addRole: 'Adicionar função', addSong: 'Adicionar música' },
+  ui: { noDeptSection: 'Ainda sem departamento', rolesLabel: 'Funções', assignPlaceholder: 'Atribuir', addRole: 'Adicionar função', addSong: 'Adicionar música', textSmaller: 'Texto menor', textBigger: 'Texto maior' },
 };

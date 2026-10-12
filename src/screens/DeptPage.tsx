@@ -3,7 +3,7 @@ import { Linking, Platform, Pressable, Text, TextInput, View } from 'react-nativ
 import { router } from 'expo-router';
 import { useMe } from '../state/AppContext';
 import { displayName } from '../display';
-import { Badge, Button, Card, DeptTitle, Field, Icon, IconButton, Notice, Screen, useColors, useStyles } from '../components/ui';
+import { CardHeader, GhostButton, SearchField, Badge, Button, Card, DeptTitle, Field, Icon, IconButton, Notice, Screen, useColors, useStyles } from '../components/ui';
 import { Resource } from '../types';
 import { MUSIC_DEPT } from '../state/permissions';
 
@@ -31,43 +31,48 @@ export function DeptPage({ id }: { id: string }) {
       <View testID={`dept-page-${d.id}`}>
         <View style={[s.row, { justifyContent: 'space-between', marginBottom: 8 }]}>
           <DeptTitle dep={d} />
-          {editor && <Pressable testID="dept-edit" onPress={() => { setEditing(!editing); setAbout(null); setRes(null); setErr(null); }}><Text style={{ color: colors.primary, fontWeight: '700' }}>{editing ? t('dept.done') : t('dept.edit')}</Text></Pressable>}
+          {editor && <Pressable testID="dept-edit" accessibilityRole="button" onPress={() => { setEditing(!editing); setAbout(null); setRes(null); setErr(null); }}
+            style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', minHeight: 40, paddingHorizontal: 14, borderRadius: 999, backgroundColor: editing ? colors.primary : pressed ? colors.soft : colors.card, borderWidth: 1, borderColor: editing ? colors.primary : colors.border })}>
+            <Icon name={editing ? 'checkmark' : 'create-outline'} size={16} color={editing ? colors.onPrimary : colors.primaryText} style={{ marginRight: 6 }} />
+            <Text style={{ color: editing ? colors.onPrimary : colors.primaryText, fontWeight: '700' }}>{editing ? t('dept.done') : t('dept.edit')}</Text>
+          </Pressable>}
         </View>
         <Card>
-          <Text style={s.h2}>{t('dept.about')}</Text>
+          <CardHeader icon="information-circle-outline" title={t('dept.about')} />
           {editing && about !== null ? <>
             <Field label={t('dept.description')} value={about} onChangeText={setAbout} multiline maxLength={1000} testID="dept-about-input" />
             <Button label={t('dept.save')} onPress={() => { const e = setDeptAbout(d.id, about); setErr(e); if (!e) setAbout(null); }} testID="dept-about-save" />
           </> : <Pressable disabled={!editing} onPress={() => setAbout(d.description ?? '')} testID="dept-about">
-            <Text style={{ color: d.description ? colors.text : colors.muted, marginTop: 4 }}>{d.description || t('dept.noAbout')}</Text>
+            <Text style={{ color: d.description ? colors.text : colors.muted, fontSize: 15, lineHeight: 22 }}>{d.description || t('dept.noAbout')}</Text>
           </Pressable>}
-          <Text style={[s.small, { marginTop: 8 }]}>{leaders.length ? t('dept.leaders', { names: leaders.map(displayName).join(', ') }) : t('dept.noLeaders')}</Text>
+          <View style={[s.row, { flexWrap: 'nowrap', marginTop: 12, paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.border }]}><Icon name="shield-checkmark-outline" size={16} style={{ marginRight: 6 }} /><Text style={[s.small, { flexShrink: 1 }]}>{leaders.length ? t('dept.leaders', { names: leaders.map(displayName).join(', ') }) : t('dept.noLeaders')}</Text></View>
         </Card>
         <Card>
-          <Text style={s.h2}>{t('dept.resources')}</Text>
+          <CardHeader icon="link-outline" title={t('dept.resources')} />
           {list.length === 0 && <Text style={[s.small, { marginTop: 4 }]}>{t('dept.noResources')}</Text>}
           {list.map((r: Resource) => (
             <View key={r.id} style={{ borderTopWidth: 1, borderTopColor: colors.border, paddingVertical: 8 }}>
               <View style={[s.row, { flexWrap: 'nowrap', alignItems: 'center' }]}>
                 <Pressable testID={`res-row-${r.id}`} style={{ flex: 1 }} onPress={() => editing ? setRes({ id: r.id, title: r.title, url: r.url }) : openUrl(r.url)} accessibilityRole="link">
-                  <Text style={{ color: colors.primary, fontWeight: '600' }}>{r.title}</Text>
+                  <Text style={{ color: colors.text, fontWeight: '600' }}>{r.title}</Text>
                   <Text style={s.small}>{domain(r.url)}</Text>
                 </Pressable>
+                {!editing && <Icon name="open-outline" size={18} color={colors.primaryText} />}
                 {editing && <>
-                  <IconButton testID={`res-up-${r.id}`} icon="chevron-up" label={t('dept.up', { title: r.title })} onPress={() => moveResource(d.id, r.id, 'up')} />
-                  <IconButton testID={`res-down-${r.id}`} icon="chevron-down" label={t('dept.down', { title: r.title })} onPress={() => moveResource(d.id, r.id, 'down')} />
-                  <IconButton testID={`res-rm-${r.id}`} icon="close" color={colors.red} label={t('dept.remove', { title: r.title })} onPress={() => removeResource(d.id, r.id)} />
+                  <IconButton testID={`res-up-${r.id}`} icon="chevron-up" color={colors.muted} label={t('dept.up', { title: r.title })} onPress={() => moveResource(d.id, r.id, 'up')} />
+                  <IconButton testID={`res-down-${r.id}`} icon="chevron-down" color={colors.muted} label={t('dept.down', { title: r.title })} onPress={() => moveResource(d.id, r.id, 'down')} />
+                  <IconButton testID={`res-rm-${r.id}`} icon="remove-circle-outline" color={colors.red} label={t('dept.remove', { title: r.title })} onPress={() => removeResource(d.id, r.id)} />
                 </>}
               </View>
             </View>
           ))}
-          {editing && res && <View style={{ marginTop: 8 }}>
+          {editing && res && <View style={{ marginTop: 10, padding: 14, borderRadius: 14, backgroundColor: colors.soft, borderWidth: 1, borderColor: colors.border }}>
             <Field label={t('dept.resTitle')} value={res.title} onChangeText={v => setRes({ ...res, title: v })} testID="res-title" />
             <Field label={t('dept.resUrl')} value={res.url} onChangeText={v => setRes({ ...res, url: v })} autoCapitalize="none" keyboardType="url" testID="res-url" />
             <Button label={t('dept.save')} onPress={saveRes} testID="res-save" />
             <Button label={t('dept.cancel')} outline onPress={() => setRes(null)} />
           </View>}
-          {editing && !res && <Button label={t('dept.addResource')} outline onPress={() => setRes({ id: null, title: '', url: '' })} testID="add-resource" />}
+          {editing && !res && <GhostButton label={t('dept.addResource')} onPress={() => setRes({ id: null, title: '', url: '' })} testID="add-resource" />}
         </Card>
         {err && <Notice tone="error" text={err} />}
         {d.id === MUSIC_DEPT && <SongLibrary />}
@@ -85,21 +90,22 @@ function SongLibrary() {
   const shown = n ? songs.filter(x => x.title.toLowerCase().includes(n) || (x.composer ?? x.artist ?? '').toLowerCase().includes(n)) : songs;
   return (
     <Card>
-      <Text style={s.h2}>{t('dept.library')}</Text>
-      <TextInput value={q} onChangeText={setQ} placeholder={t('dept.search')} placeholderTextColor={colors.muted} testID="song-search"
-        style={{ borderWidth: 1, borderColor: colors.border, borderRadius: 10, padding: 10, marginVertical: 8, color: colors.text }} />
-      {shown.length === 0 && <Text style={s.small}>{t('dept.noSongs')}</Text>}
+      <CardHeader icon="library-outline" title={t('dept.library')} right={<Badge label={String(songs.length)} />} />
+      <SearchField value={q} onChangeText={setQ} placeholder={t('dept.search')} testID="song-search" />
+      {shown.length === 0 && <View style={{ alignItems: 'center', paddingVertical: 20 }}><Icon name="musical-note-outline" size={28} color={colors.subtle} style={{ marginBottom: 6 }} /><Text style={[s.small, { textAlign: 'center' }]}>{t('dept.noSongs')}</Text></View>}
       {shown.map(x => (
-        <Pressable key={x.id} testID={`song-row-${x.id}`} onPress={() => router.push(`/song/${x.id}` as any)} style={[s.row, { flexWrap: 'nowrap', alignItems: 'center', borderTopWidth: 1, borderTopColor: colors.border, paddingVertical: 8 }]}>
-          <View style={{ flex: 1 }}>
-            <Text style={{ color: colors.text, fontWeight: '600' }}>{x.title}</Text>
+        <Pressable key={x.id} testID={`song-row-${x.id}`} onPress={() => router.push(`/song/${x.id}` as any)} style={({ pressed }) => [s.row, { flexWrap: 'nowrap', alignItems: 'center', borderTopWidth: 1, borderTopColor: colors.border, minHeight: 56, paddingVertical: 8, backgroundColor: pressed ? colors.soft : 'transparent' }]}>
+          <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: colors.soft, alignItems: 'center', justifyContent: 'center', marginRight: 12 }}><Icon name="musical-note" size={18} color={colors.primaryText} /></View>
+          <View style={{ flex: 1, marginRight: 8 }}>
+            <Text style={{ color: colors.text, fontWeight: '700' }} numberOfLines={1}>{x.title}</Text>
             {(x.composer ?? x.artist) ? <Text style={s.small}>{x.composer ?? x.artist}</Text> : null}
           </View>
           {x.key ? <Badge label={x.key} tone="accent" /> : null}
-          {x.chords ? <Icon name="musical-notes-outline" size={18} style={{ marginLeft: 8 }} /> : null}
+          {x.chords || x.sections?.length ? <Icon name="musical-notes-outline" size={16} style={{ marginLeft: 8 }} /> : null}
+          <Icon name="chevron-forward" size={18} style={{ marginLeft: 4 }} />
         </Pressable>
       ))}
-      {canEditSongs && <Button label={t('dept.addSong')} outline onPress={() => router.push('/song/new' as any)} testID="lib-add-song" />}
+      {canEditSongs && <GhostButton label={t('dept.addSong')} onPress={() => router.push('/song/new' as any)} testID="lib-add-song" />}
     </Card>
   );
 }

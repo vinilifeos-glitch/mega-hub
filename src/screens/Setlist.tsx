@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
 import { useMe } from '../state/AppContext';
-import { Badge, Button, Card, Chip, Field, Icon, IconButton, Notice, useColors, useStyles } from '../components/ui';
+import { CardHeader, GhostButton, SearchField, Badge, Button, Card, Chip, Field, Icon, IconButton, Notice, useColors, useStyles } from '../components/ui';
 import { Service, SetlistItem } from '../types';
 
 const KEYS = ['C', 'D', 'E', 'F', 'G', 'A', 'B', 'Bb', 'Eb', 'Ab'];
@@ -81,14 +81,19 @@ export function SetlistCard({ service: sv }: { service: Service }) {
         </Pressable>
       </View>}
       {editing && !form && <View style={{ marginTop: 4 }}>
-        {pick === null ? <Button label={t('song.pick')} outline onPress={() => setPick('')} testID="pick-library" /> : <View style={{ marginTop: 8 }} testID="library-picker">
-          <TextInput value={pick} onChangeText={setPick} placeholder={t('dept.search')} placeholderTextColor={colors.muted} testID="pick-search"
-            style={{ borderWidth: 1, borderColor: colors.border, borderRadius: 10, padding: 10, marginBottom: 8, color: colors.text }} />
+        {pick === null ? <GhostButton icon="library-outline" label={t('song.pick')} onPress={() => setPick('')} testID="pick-library" /> : <View style={{ marginTop: 10, padding: 12, borderRadius: 14, backgroundColor: colors.soft, borderWidth: 1, borderColor: colors.border }} testID="library-picker">
+          <CardHeader icon="library-outline" title={t('song.pick')} />
+          <SearchField value={pick} onChangeText={setPick} placeholder={t('dept.search')} testID="pick-search" />
           {(data.songs ?? []).filter(z => !pick.trim() || (z.title + ' ' + (z.composer ?? z.artist ?? '')).toLowerCase().includes(pick.trim().toLowerCase())).sort((a, b) => a.title.localeCompare(b.title)).map(z => (
-            <Chip key={z.id} testID={`pick-${z.id}`} label={`${z.title}${z.key ? ` (${z.key})` : ''}`} onPress={() => { addSong(sv.id, { title: z.title, key: z.key, songId: z.id }); setPick(null); }} />
+            <Pressable key={z.id} testID={`pick-${z.id}`} accessibilityRole="button" onPress={() => { addSong(sv.id, { title: z.title, key: z.key, songId: z.id }); setPick(null); }}
+              style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', minHeight: 48, paddingHorizontal: 10, borderRadius: 10, backgroundColor: pressed ? colors.border : 'transparent' })}>
+              <Icon name="add-circle-outline" size={18} color={colors.primaryText} style={{ marginRight: 10 }} />
+              <View style={{ flex: 1 }}><Text style={{ color: colors.text, fontWeight: '600' }} numberOfLines={1}>{z.title}</Text>{(z.composer ?? z.artist) ? <Text style={s.small} numberOfLines={1}>{z.composer ?? z.artist}</Text> : null}</View>
+              {z.key ? <Badge label={z.key} tone="accent" /> : null}
+            </Pressable>
           ))}
           {(data.songs ?? []).length === 0 && <Text style={s.small}>{t('dept.noSongs')}</Text>}
-          <Button label={t('setlist.cancel')} outline onPress={() => setPick(null)} />
+          <GhostButton icon="close" color={colors.muted} label={t('setlist.cancel')} onPress={() => setPick(null)} />
         </View>}
       </View>}
     </Card></View>

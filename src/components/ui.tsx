@@ -256,6 +256,55 @@ export function ThemeToggle({ value, onChange }: { value: ThemeMode; onChange: (
   return <Segmented testIDPrefix="theme" value={value} onChange={onChange} options={[{ v: 'light', label: t('appearance.light'), icon: 'sunny-outline' }, { v: 'dark', label: t('appearance.dark'), icon: 'moon-outline' }]} />;
 }
 
+/** Search input with a leading icon (themed). */
+export function SearchField(props: React.ComponentProps<typeof TextInput>) {
+  const colors = useColors(); const s = useStyles(); const { style, ...rest } = props;
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, backgroundColor: colors.card, paddingLeft: 12, marginVertical: space.sm }}>
+      <Icon name="search" size={18} color={colors.subtle} />
+      <TextInput autoCapitalize="none" autoCorrect={false} placeholderTextColor={colors.subtle} style={[s.input, { flex: 1, borderWidth: 0, marginTop: 0, backgroundColor: 'transparent' }, style]} {...rest} />
+    </View>
+  );
+}
+
+/** Low-emphasis text button with a leading icon (e.g. "+ Add song"). */
+export function GhostButton({ label, icon = 'add', onPress, testID, color }: { label: string; icon?: IconName; onPress?: () => void; testID?: string; color?: string }) {
+  const colors = useColors(); const c = color ?? colors.primaryText;
+  return (
+    <Pressable testID={testID} onPress={onPress} accessibilityRole="button"
+      style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', minHeight: 44, paddingHorizontal: 12, marginTop: space.xs, borderRadius: radius.md, backgroundColor: pressed ? colors.soft : 'transparent' })}>
+      <Icon name={icon} size={18} color={c} style={{ marginRight: 6 }} />
+      <Text style={{ color: c, fontWeight: '700', fontSize: 15 }}>{label.replace(/^\+\s*/, '')}</Text>
+    </Pressable>
+  );
+}
+
+/** Card heading: accent icon tile + title + optional right-hand content. */
+export function CardHeader({ icon, title, right }: { icon: IconName; title: string; right?: React.ReactNode }) {
+  const colors = useColors(); const s = useStyles();
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: space.sm }}>
+      <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center', marginRight: 10 }}>
+        <Icon name={icon} size={18} color={colors.primaryText} />
+      </View>
+      <Text style={[s.h2, { flex: 1 }]}>{title}</Text>
+      {right}
+    </View>
+  );
+}
+
+/** Compact A−/A+ text size control. */
+export function SizeControl({ onSmaller, onBigger, smallerID, biggerID, smallerLabel, biggerLabel }: { onSmaller: () => void; onBigger: () => void; smallerID: string; biggerID: string; smallerLabel: string; biggerLabel: string }) {
+  const colors = useColors();
+  const btn = (label: string, a11y: string, id: string, on: () => void, first?: boolean) => (
+    <Pressable testID={id} onPress={on} accessibilityRole="button" accessibilityLabel={a11y}
+      style={({ pressed }) => ({ minWidth: 48, minHeight: 40, alignItems: 'center', justifyContent: 'center', backgroundColor: pressed ? colors.border : 'transparent', borderRightWidth: first ? 1 : 0, borderRightColor: colors.border })}>
+      <Text style={{ color: colors.text, fontWeight: '800', fontSize: first ? 14 : 17 }}>{label}</Text>
+    </Pressable>
+  );
+  return <View style={{ flexDirection: 'row', alignSelf: 'flex-end', borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.soft, overflow: 'hidden', marginBottom: space.sm }}>{btn('A−', smallerLabel, smallerID, onSmaller, true)}{btn('A+', biggerLabel, biggerID, onBigger)}</View>;
+}
+
 /* ── Feedback ───────────────────────────────────────────────── */
 export function Empty({ text, icon }: { text: string; icon?: IconName }) {
   const colors = useColors(); const s = useStyles();
