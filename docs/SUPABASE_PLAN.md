@@ -94,3 +94,8 @@ Run tests: `npm run test:supabase` (no account or Docker needed).
 - `songs.artist` renamed to `composer`; new `time_signature`, `bpm` (1–400), `sections jsonb` (array of `{id, name, cue?, bars[], notes?}`; chords written in `songs.key`, transposed client-side). `key` must look like `C`, `F#`, `Bbm`. Legacy `chords` text kept.
 - `can_live(service_id)`: owner / Music admin, or Music member assigned on that (visible) service. No new table — Live mode reads setlist_items + songs under existing RLS.
 - Adapter maps composer (legacy `artist` accepted), timeSignature, bpm, sections.
+
+## Unavailability ranges + STRICT admin scoping (migration 20261012050000_ranges_strict.sql)
+- `unavailability.date_to` (nullable, `>= date`); `unavailable_on(user, date)` covers ranges; `can_fill` and the clear-assignments trigger (insert or date change) use it. `unavailable_days` view adds `date_to` (still no notes). Note RLS unchanged.
+- STRICT: `views_dept(dep)` = owner, that dept's admins, or its members. `department_resources` and `songs` read via `views_dept`; `can_see_setlist` = visible service AND `views_dept('d-music')` — assigned non-Music people no longer read setlists/songs. Assignments/services stay readable as before.
+- Known gap: `departments.description` is a column on the publicly-readable `departments` table; if it must be private, move it to a `department_pages` table with `views_dept` RLS before switch-over.

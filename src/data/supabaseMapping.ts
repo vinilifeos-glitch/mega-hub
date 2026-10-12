@@ -7,7 +7,7 @@ export type Rows = {
   user_departments: { user_id: string; department_id: string }[];
   user_positions: { user_id: string; department_id: string; role: string }[];
   admin_of: { user_id: string; department_id: string }[];
-  unavailability: { user_id: string; date: string; note: string | null }[];
+  unavailability: { user_id: string; date: string; date_to?: string | null; note: string | null }[];
   services: { id: string; title: string; location: string; date: string; start_time: string; end_time: string; status?: 'draft' | 'published' }[];
   service_slots: { service_id: string; department_id: string; role: string; count: number }[];
   assignments: { service_id: string; department_id: string; role: string; idx: number; user_id: string }[];
@@ -53,7 +53,7 @@ export function toRows(d: AppData, idMap: (id: string) => string = x => x): Rows
       for (const role of u.positions?.[dep] ?? []) r.user_positions.push({ user_id: id, department_id: dep, role });
     }
     if (u.role === 'admin') for (const dep of u.adminOf ?? []) r.admin_of.push({ user_id: id, department_id: dep });
-    for (const x of u.unavailable ?? []) r.unavailability.push({ user_id: id, date: x.date, note: blank(x.note) });
+    for (const x of u.unavailable ?? []) r.unavailability.push({ user_id: id, date: x.date, date_to: x.to && x.to > x.date ? x.to : null, note: blank(x.note) });
   }
   for (const s of d.services) {
     r.services.push({ id: s.id, title: s.title, location: s.location ?? '', date: s.date, start_time: s.start, end_time: s.end, status: s.status ?? 'published' });
@@ -79,7 +79,7 @@ export function fromRows(r: Rows): AppData {
       dob: isoToDdmm(v?.dob ?? null), contact: v?.contact ?? '', ...(v?.email ? { email: v.email } : {}),
       ...(p.language ? { language: p.language as 'pt' | 'en' } : {}), ...(p.theme ? { theme: p.theme as 'light' | 'dark' } : {}),
       departmentIds, positions, adminOf: r.admin_of.filter(x => x.user_id === p.id).map(x => x.department_id),
-      unavailable: r.unavailability.filter(x => x.user_id === p.id).map(x => ({ date: x.date.slice(0, 10), ...(x.note ? { note: x.note } : {}) })).sort((a, b) => a.date.localeCompare(b.date)),
+      unavailable: r.unavailability.filter(x => x.user_id === p.id).map(x => ({ date: x.date.slice(0, 10), ...(x.date_to ? { to: String(x.date_to).slice(0, 10) } : {}), ...(x.note ? { note: x.note } : {}) })).sort((a, b) => a.date.localeCompare(b.date)),
       salt: '', passwordHash: '',
     };
   });
