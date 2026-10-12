@@ -89,3 +89,8 @@ Run tests: `npm run test:supabase` (no account or Docker needed).
 - `department_resources(id, department_id, position, title, url, kind 'link'|'file' default 'link', file_ref nullable)`. Only links are built; `kind='file'` + `file_ref` (Storage path) reserved for uploads after the switch-over. Read: staff + department members. Write: owner + that department's admins.
 - `songs(id, department_id default 'd-music', title, artist, key, chords, link)`; `setlist_items.song_id` now FK → songs on delete set null. Read: staff, Music members, or anyone who can see a setlist using the song. Write: owner + Music admins.
 - Adapter maps `Department.description/resources` and `AppData.songs` both ways.
+
+## Songs v2 + Live mode (migration 20261012040000_songs_v2.sql)
+- `songs.artist` renamed to `composer`; new `time_signature`, `bpm` (1–400), `sections jsonb` (array of `{id, name, cue?, bars[], notes?}`; chords written in `songs.key`, transposed client-side). `key` must look like `C`, `F#`, `Bbm`. Legacy `chords` text kept.
+- `can_live(service_id)`: owner / Music admin, or Music member assigned on that (visible) service. No new table — Live mode reads setlist_items + songs under existing RLS.
+- Adapter maps composer (legacy `artist` accepted), timeSignature, bpm, sections.

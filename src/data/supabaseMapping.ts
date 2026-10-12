@@ -1,5 +1,5 @@
 // Pure mapping between the app's AppData and Supabase table rows (no network; unit-testable).
-import { AppData, Assignment, User } from '../types';
+import { AppData, Assignment, User, SongSection } from '../types';
 
 export type Rows = {
   profiles: { id: string; username: string; tier: string; active: boolean; must_change_password: boolean; language: string | null; theme: string | null }[];
@@ -13,7 +13,7 @@ export type Rows = {
   assignments: { service_id: string; department_id: string; role: string; idx: number; user_id: string }[];
   departments: { id: string; name: string; emoji: string; color: string; sort: number; description?: string | null }[];
   department_resources: { id: string; department_id: string; position: number; title: string; url: string | null; kind: 'link' | 'file'; file_ref: string | null }[];
-  songs: { id: string; department_id: string; title: string; artist: string | null; key: string | null; chords: string | null; link: string | null }[];
+  songs: { id: string; department_id: string; title: string; composer: string | null; key: string | null; chords: string | null; link: string | null; time_signature: string | null; bpm: number | null; sections: SongSection[] }[];
   department_roles: { department_id: string; role: string; sort: number }[];
   setlist_items: { id: string; service_id: string; position: number; title: string; key: string | null; notes: string | null; song_id: string | null }[];
 };
@@ -60,7 +60,7 @@ export function toRows(d: AppData, idMap: (id: string) => string = x => x): Rows
     (s.setlist ?? []).forEach((x, i) => r.setlist_items.push({ id: x.id, service_id: s.id, position: i, title: x.title, key: blank(x.key), notes: blank(x.notes), song_id: x.songId ?? null }));
     for (const sl of s.slots) r.service_slots.push({ service_id: s.id, department_id: sl.departmentId, role: sl.position, count: sl.count });
   }
-  for (const g of d.songs ?? []) r.songs.push({ id: g.id, department_id: g.deptId, title: g.title, artist: blank(g.artist), key: blank(g.key), chords: g.chords?.trim() ? g.chords : null, link: blank(g.link) });
+  for (const g of d.songs ?? []) r.songs.push({ id: g.id, department_id: g.deptId, title: g.title, composer: blank(g.composer ?? g.artist), key: blank(g.key), time_signature: blank(g.timeSignature), bpm: g.bpm ?? null, sections: g.sections ?? [], chords: g.chords?.trim() ? g.chords : null, link: blank(g.link) });
   for (const a of d.assignments) r.assignments.push({ service_id: a.serviceId, department_id: a.departmentId, role: a.position, idx: a.index, user_id: idMap(a.userId) });
   return r;
 }
@@ -92,7 +92,7 @@ export function fromRows(r: Rows): AppData {
       .map(x => ({ id: x.id, title: x.title, ...(x.key ? { key: x.key } : {}), ...(x.notes ? { notes: x.notes } : {}), ...(x.song_id ? { songId: x.song_id } : {}) }))),
     slots: r.service_slots.filter(x => x.service_id === s.id).map(x => ({ departmentId: x.department_id, position: x.role, count: x.count })) }));
   const assignments: Assignment[] = r.assignments.map(a => ({ id: `${a.service_id}:${a.department_id}:${a.role}:${a.idx}`, serviceId: a.service_id, departmentId: a.department_id, position: a.role, index: a.idx, userId: a.user_id }));
-  const songs = (r.songs ?? []).map(g => ({ id: g.id, deptId: g.department_id, title: g.title, ...(g.artist ? { artist: g.artist } : {}), ...(g.key ? { key: g.key } : {}), ...(g.chords ? { chords: g.chords } : {}), ...(g.link ? { link: g.link } : {}) }));
+  const songs = (r.songs ?? []).map(g => ({ id: g.id, deptId: g.department_id, title: g.title, ...(g.composer ? { composer: g.composer } : {}), ...(g.time_signature ? { timeSignature: g.time_signature } : {}), ...(g.bpm ? { bpm: g.bpm } : {}), ...(g.sections?.length ? { sections: g.sections } : {}), ...(g.key ? { key: g.key } : {}), ...(g.chords ? { chords: g.chords } : {}), ...(g.link ? { link: g.link } : {}) }));
   return { users, departments, services, availability: [], assignments, ...(songs.length ? { songs } : {}) };
 }
 
