@@ -36,3 +36,17 @@ export function visibleServiceData<D extends { services: { id: string; status?: 
   if (!drafts.size) return d;
   return { ...d, services: d.services.filter(s => !drafts.has(s.id)), assignments: d.assignments.filter(a => !drafts.has(a.serviceId)) };
 }
+
+export const MUSIC_DEPT = 'd-music';
+/** Owner, or an admin of Music, may edit setlists. */
+export const canEditSetlistRule = (actor: { role: Tier; adminOf?: string[] } | null | undefined) =>
+  !!actor && (actor.role === 'owner' || (actor.role === 'admin' && (actor.adminOf ?? []).includes(MUSIC_DEPT)));
+/** Owner, admins, Music members, or anyone assigned on that service may see its setlist. */
+export const canSeeSetlistRule = (actor: { id: string; role: Tier; departmentIds?: string[] } | null | undefined, serviceId: string, assignments: { serviceId: string; userId: string }[]) =>
+  !!actor && (actor.role === 'owner' || actor.role === 'admin' || (actor.departmentIds ?? []).includes(MUSIC_DEPT)
+    || assignments.some(a => a.serviceId === serviceId && a.userId === actor.id));
+/** Strip setlists the actor may not see (applied after draft filtering). */
+export function visibleSetlists<D extends { services: { id: string; setlist?: unknown }[]; assignments: { serviceId: string; userId: string }[] }>(actor: Parameters<typeof canSeeSetlistRule>[0], d: D): D {
+  if (!d.services.some(s => s.setlist && !canSeeSetlistRule(actor, s.id, d.assignments))) return d;
+  return { ...d, services: d.services.map(s => s.setlist && !canSeeSetlistRule(actor, s.id, d.assignments) ? (({ setlist, ...r }) => r)(s) as typeof s : s) };
+}

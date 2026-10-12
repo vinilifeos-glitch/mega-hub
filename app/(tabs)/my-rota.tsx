@@ -1,5 +1,7 @@
 import { Text, View } from 'react-native';
 import { useMe } from '../../src/state/AppContext';
+import { router } from 'expo-router';
+import { SetlistPreview } from '../../src/screens/Setlist';
 import { DeptBadge, StatusBadge, Card, Icon, deptIcon, Empty, Screen, useColors, useStyles } from '../../src/components/ui';
 import { isoToDdmm, todayIso } from '../../src/data/dates';
 
@@ -21,6 +23,7 @@ export default function MyRota() {
           {sv.location ? <Text style={s.small}>{sv.location}</Text> : null}
           <Text style={[s.h2, { marginTop: 10, marginBottom: 6 }]}>{roleName(dep.id, a.position)}</Text>
           <View style={s.row}><DeptBadge dep={dep} /><StatusBadge status="assigned" /></View>
+          {mine.findIndex(m => m.sv.id === sv.id) === mine.findIndex(m => m.a.id === a.id) && <SetlistPreview service={sv} onOpen={() => router.navigate({ pathname: '/', params: { svc: sv.id } })} />}
         </Card>
       ))}
     </Screen>

@@ -1,9 +1,9 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { AppData, Department, Role, Service, Theme, Unavailability, User } from '../types';
+import { AppData, Department, Role, Service, SetlistItem, Theme, Unavailability, User } from '../types';
 import { NOTE_MAX, awayOn, getUnavailableFor } from '../data/unavailability';
 import { repository } from '../data/repository';
 import { hashPassword, newSalt } from '../data/auth';
-import { canEditMemberRule, canEditPersonal, changedProtected, pickPref, visibleServiceData } from './permissions';
+import { canEditMemberRule, canEditPersonal, changedProtected, pickPref, visibleServiceData, visibleSetlists, canEditSetlistRule } from './permissions';
 import { DEFAULT_LANG, Lang, TKey, TParams, deptLabel, formatDateShort, roleLabel, tierLabel, translate } from '../i18n';
 
 export interface AccountInput { name: string; username: string; role: Role; departmentIds: string[]; tempPassword?: string;
@@ -67,6 +67,11 @@ interface Ctx {
   saveService: (id: string | null, s: Omit<Service, 'id'>, picks?: { departmentId: string; position: string; index: number; userId: string }[]) => string | null;
   deleteService: (id: string) => void;
   publishService: (id: string) => void;
+  canEditSetlist: (service?: Service) => boolean;
+  addSong: (serviceId: string, song: { title: string; key?: string; notes?: string; songId?: string | null }) => string | null;
+  updateSong: (serviceId: string, id: string, patch: Partial<Omit<SetlistItem, 'id'>>) => string | null;
+  removeSong: (serviceId: string, id: string) => void;
+  moveSong: (serviceId: string, id: string, dir: 'up' | 'down') => void;
   unassign: (assignmentId: string) => void;
   canManage: (departmentId: string) => boolean;
   managedDepartments: Department[];
@@ -101,11 +106,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo<Ctx>(() => {
     const x0 = () => raw;
+    const editSetlist = (sid: string, fn: (l: SetlistItem[]) => SetlistItem[]) =>
+      update(x => ({ ...x, services: x.services.map(s => s.id === sid ? { ...s, setlist: fn(s.setlist ?? []) } : s) }));
+    const cleanSong = (p: { key?: string; notes?: string; songId?: string | null }) => {
+      const o: Partial<SetlistItem> = {}; const k = p.key?.trim().slice(0, 8); const n = p.notes?.trim().slice(0, 200);
+      if (k) o.key = k; if (n) o.notes = n; if (p.songId) o.songId = p.songId; return o;
+    };
     const raw: AppData = data ?? { users: [], departments: [], services: [], availability: [], assignments: [] };
     const found = raw.users.find(u => u.id === sessionId && u.active);
     // Privacy: screens only ever receive notes they may see (owner, any admin, or the person themself).
     // Drafts: volunteers / signed-out never receive draft services or their assignments.
-    const d: AppData = visibleServiceData(found, { ...raw, users: raw.users.map(u => ({ ...u, unavailable: getUnavailableFor(found, u) })) });
+    const d: AppData = visibleSetlists(found, visibleServiceData(found, { ...raw, users: raw.users.map(u => ({ ...u, unavailable: getUnavailableFor(found, u) })) }));
     const currentUser = found ?? null;
     const role = currentUser?.role;
     const language: Lang = pickPref<Lang>(!!currentUser, currentUser?.language, deviceLang, DEFAULT_LANG);
@@ -340,7 +351,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const sid = id ?? `svc-${Date.now().toString(36)}`;
         update(x => ({
           ...x,
-          services: id ? x.services.map(s => s.id === id ? { id, ...clean } : s) : [...x.services, { id: sid, ...clean }],
+          services: id ? x.services.map(s => s.id === id ? { ...s, ...clean, id } : s) : [...x.services, { id: sid, ...clean }],
           // drop assignments for removed / shrunk slots, or people now unavailable on a moved date
           assignments: picks ? [
             ...x.assignments.filter(a => a.serviceId !== sid),
@@ -360,6 +371,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }));
         return null;
       },
+      canEditSetlist: _sv => canEditSetlistRule(currentUser),
+      addSong: (sid, song) => {
+        if (!canEditSetlistRule(currentUser)) return t('errors.setlistScope');
+        const title = song.title.trim(); if (!title) return t('errors.songTitle');
+        const item: SetlistItem = { id: `so-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`, title, ...cleanSong(song) };
+        editSetlist(sid, l => [...l, item]); return null;
+      },
+      updateSong: (sid, id, patch) => {
+        if (!canEditSetlistRule(currentUser)) return t('errors.setlistScope');
+        if (patch.title !== undefined && !patch.title.trim()) return t('errors.songTitle');
+        editSetlist(sid, l => l.map(x => x.id === id ? (({ key, notes, ...r }) => ({ ...r, ...(patch.title !== undefined ? { title: patch.title.trim() } : {}), ...cleanSong({ key, notes, songId: x.songId, ...patch }) }))(x) : x)); return null;
+      },
+      removeSong: (sid, id) => { if (canEditSetlistRule(currentUser)) editSetlist(sid, l => l.filter(x => x.id !== id)); },
+      moveSong: (sid, id, dir) => { if (canEditSetlistRule(currentUser)) editSetlist(sid, l => { const i = l.findIndex(x => x.id === id); const j = dir === 'up' ? i - 1 : i + 1; if (i < 0 || j < 0 || j >= l.length) return l; const n = [...l]; [n[i], n[j]] = [n[j], n[i]]; return n; }); },
       publishService: id => isOwner && update(x => ({ ...x, services: x.services.map(s => s.id === id ? { ...s, status: 'published' } : s) })),
       deleteService: id => isOwner && update(x => ({ ...x, services: x.services.filter(s => s.id !== id), assignments: x.assignments.filter(a => a.serviceId !== id) })),
       unassign: id => { const a0 = d.assignments.find(a => a.id === id); if (!a0 || !canManage(a0.departmentId)) return; update(x => ({ ...x, assignments: x.assignments.filter(a => a.id !== id) })); },
