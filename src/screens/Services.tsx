@@ -125,13 +125,13 @@ function ServiceDetail({ service: sv, msg, onBack, onEdit, onDeleted }: { servic
                     return (
                       <View testID={`picker-${key}`} style={{ marginTop: 8 }}>
                         {holders.length === 0 && <Text style={s.small}>{t('services.nobodyHoldsDept', { dept: deptName(d.id), role: roleName(d.id, sl.position) })}</Text>}
-                        {(['free', 'busy', 'away', 'same'] as const).map(k => { const g = rows.filter(r => r.st === k); if (!g.length) return null; return (
+                        {a && (() => { const cu = holders.find(h => h.id === a.userId) ?? data.users.find(u => u.id === a.userId); return cu ? <View style={{ marginBottom: 6 }}><Chip testID={`pick-current-${cu.username}`} label={`${displayName(cu)} · ${t('services.tapToRemove')}`} color={d.color} active icon="checkmark-circle" onPress={() => { unassign(a.id); setOpen(null); }} /></View> : null; })()}
+                        {(['free', 'busy', 'away', 'same'] as const).map(k => { const g = rows.filter(r => r.st === k && r.m.id !== a?.userId); if (!g.length) return null; return (
                           <View key={k} testID={`pick-section-${k}`}>
                             {k !== 'same' && <PickerSectionLabel kind={k} count={g.length} />}
                             {g.map(r => <PickerRow key={r.m.id} name={displayName(r.m).replace(/^@/, '')} status={k === 'same' ? 'away' : k} detail={r.detail} testID={`pick-${k}-${r.m.username}`}
                               onPress={k === 'free' ? () => pick(r.m) : k === 'busy' ? () => setBusyPick({ m: r.m, detail: r.detail ?? '', run: (mode: 'double' | 'swap') => pick(r.m, mode) }) : undefined} />)}
                           </View>); })}
-                        {a && <Chip label={t('common.clear')} color={colors.red} onPress={() => { unassign(a.id); setOpen(null); }} testID="pick-clear" />}
                       </View>
                     );
                   })()}
@@ -266,6 +266,8 @@ function ServiceForm({ service, onClose, onDeleted }: { service?: Service; onClo
                   {openPick === x.id && manage && <View style={[s.row, { marginTop: 8 }]}>
                     {opts.length === 0 && <Text style={s.small}>{t('services.noneAvailable')}</Text>}
                     {opts.map(u => {
+                      if (u.id === who?.id) return <Chip key={u.id} testID={`fpick-current-${u.username}`} label={`${displayName(u)} · ${t('services.tapToRemove')}`} color={d.color} active icon="checkmark-circle"
+                        onPress={() => { assign(x.id, null); setOpenPick(null); }} />;
                       const others = u.id === who?.id ? [] : rows.filter(r => r.id !== x.id && r.assigneeId === u.id);
                       const sameR = others.find(r => r.dep === x.dep && r.role === x.role);
                       if (sameR) return <Chip key={u.id} testID={`fpick-same-${u.username}`} label={`${displayName(u)} · ${t('services.alreadyInRole')}`} color={colors.subtle} icon="remove-circle-outline" />;
@@ -275,7 +277,6 @@ function ServiceForm({ service, onClose, onDeleted }: { service?: Service; onClo
                       return <Chip key={u.id} testID={`fpick-${u.username}`} label={displayName(u)} color={d.color} active={who?.id === u.id}
                         onPress={() => { assign(x.id, u.id); setOpenPick(null); setNotice(null); }} />; })}
                     {awayHolders(x.id).map(u => <Chip key={u.id} testID={`fpick-away-${u.username}`} label={`${displayName(u)} · ${(iso ? noteOn(u, iso) : null) ?? t('rota.away')}`} color={colors.red} icon="close-circle-outline" />)}
-                    {who && <Chip label={t('services.leaveUnfilled')} color={colors.red} onPress={() => { assign(x.id, null); setOpenPick(null); }} />}
                   </View>}
                 </View>
               );

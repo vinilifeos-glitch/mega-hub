@@ -50,7 +50,7 @@ draft: 'Draft', saveDraft: 'Save draft', publish: 'Publish', published: 'Service
     youreServing: "You're serving: {roles}", defaultName: 'Sunday Service', formSubtitle: "Set the date, time and who's needed.",
     requiredSlots: 'Required slots', slotsAndPeople: 'Slots & people', addRole: '+ Add role', removeSlot: 'Remove slot', addSlot: 'Add a slot:', fewer: 'Fewer {role}', more: 'More {role}',
     assignPeople: 'Assign people (optional)', assignHint: "Only people who hold the role, aren't away on {date} and aren't already in another slot are listed. Leave slots empty for admins to fill later.",
-    thatDate: 'that date', assign: 'Assign ▾', leaveUnfilled: 'Leave unfilled', noneEligible: 'No one eligible for {role}.', nobodyHolds: 'Nobody holds {role} yet.',
+    thatDate: 'that date', assign: 'Assign ▾', tapToRemove: 'Tap to remove', noneEligible: 'No one eligible for {role}.', nobodyHolds: 'Nobody holds {role} yet.',
     removedPicks: 'Removed {names} — unavailable on the new date or slot removed.',
     legendAvailable: 'Available', legendAway: 'Away that day', legendBusy: 'Already serving', onlyHolders: 'Only people who hold the role are listed.',
     busy: '(busy)', away: '(away)', awayNote: 'Away: {note}',
