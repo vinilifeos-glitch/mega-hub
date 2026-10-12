@@ -15,7 +15,7 @@ grant select, insert, update, delete on public.department_pages to authenticated
 --    (can_fill checks role, active and unavailability only). Swap: atomic RPC, runs as the caller so RLS applies to every write.
 create or replace function public.assign_swap(p_service text, p_dep text, p_role text, p_idx int, p_user uuid) returns void
 language plpgsql security invoker set search_path = public as $$
-declare f assignments%rowtype; prev uuid; k int;
+declare f assignments%rowtype; prev uuid; k int;  -- swap = move in + clear the other slot; any occupant here is replaced, never traded
 begin
   select * into f from assignments where service_id = p_service and user_id = p_user
     and not (department_id = p_dep and role = p_role and idx = p_idx) order by department_id, role, idx limit 1;
@@ -27,9 +27,6 @@ begin
   end if;
   delete from assignments where service_id = p_service and department_id = p_dep and role = p_role and idx = p_idx;
   insert into assignments (service_id, department_id, role, idx, user_id) values (p_service, p_dep, p_role, p_idx, p_user);
-  if f.id is not null and prev is not null and can_fill(prev, p_service, f.department_id, f.role) then
-    insert into assignments (service_id, department_id, role, idx, user_id) values (p_service, f.department_id, f.role, f.idx, prev);
-  end if;
 end $$;
 revoke all on function public.assign_swap(text, text, text, int, uuid) from public, anon;
 grant execute on function public.assign_swap(text, text, text, int, uuid) to authenticated;
