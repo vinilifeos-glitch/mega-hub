@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { AppData, Department, Role, Service, User } from '../types';
+import { AppData, Department, Role, Service, Theme, Unavailability, User } from '../types';
+import { NOTE_MAX, awayOn, getUnavailableFor } from '../data/unavailability';
 import { repository } from '../data/repository';
 import { hashPassword, newSalt } from '../data/auth';
 import { DEFAULT_LANG, Lang, TKey, TParams, deptLabel, formatDateShort, roleLabel, tierLabel, translate } from '../i18n';
@@ -25,6 +26,11 @@ interface Ctx {
   /** Current UI language: signed-in user's choice, else last used on this device, else 'pt'. */
   language: Lang;
   setLanguage: (lang: Lang) => void;
+  /** Current UI theme: signed-in user's choice, else last used on this device, else 'light'. */
+  theme: Theme;
+  setTheme: (theme: Theme) => void;
+  /** Unavailable days for `userId` as the current user may see them (notes stripped unless owner/admin/self). */
+  getUnavailableFor: (userId: string) => Unavailability[];
   t: (key: TKey, params?: TParams) => string;
   /** Display helpers in the current language (stored ids/role names are unchanged). */
   deptName: (deptId: string) => string;
@@ -44,7 +50,7 @@ interface Ctx {
   changePassword: (oldPw: string, newPw: string) => Promise<string | null>;
   isAvailable: (userId: string, serviceId: string) => boolean | undefined;
   setAvailability: (userId: string, serviceId: string, available: boolean) => void;
-  addUnavailable: (isoDate: string, userId?: string) => void;
+  addUnavailable: (isoDate: string, userId?: string, note?: string) => void;
   removeUnavailable: (isoDate: string, userId?: string) => void;
   canEditMember: (target: User) => boolean;
   myAdminDeps: string[];
@@ -73,11 +79,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [data, setData] = useState<AppData | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [deviceLang, setDeviceLang] = useState<Lang | null>(null);
+  const [deviceTheme, setDeviceThemeState] = useState<Theme | null>(null);
 
   useEffect(() => {
     (async () => {
-      const [d, sid, dl] = await Promise.all([repository.load(), repository.getSession(), repository.getDeviceLanguage()]);
-      setSessionId(sid); setDeviceLang(dl); setData(d);
+      const [d, sid, dl, dt] = await Promise.all([repository.load(), repository.getSession(), repository.getDeviceLanguage(), repository.getDeviceTheme()]);
+      setSessionId(sid); setDeviceLang(dl); setDeviceThemeState(dt); setData(d);
     })();
   }, []);
 
@@ -87,11 +94,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const setSession = (id: string | null) => { setSessionId(id); repository.setSession(id); };
 
   const value = useMemo<Ctx>(() => {
-    const d: AppData = data ?? { users: [], departments: [], services: [], availability: [], assignments: [] };
-    const found = d.users.find(u => u.id === sessionId && u.active);
+    const raw: AppData = data ?? { users: [], departments: [], services: [], availability: [], assignments: [] };
+    const found = raw.users.find(u => u.id === sessionId && u.active);
+    // Privacy: screens only ever receive notes they may see (owner, any admin, or the person themself).
+    const d: AppData = { ...raw, users: raw.users.map(u => ({ ...u, unavailable: getUnavailableFor(found, u) })) };
     const currentUser = found ?? null;
     const role = currentUser?.role;
     const language: Lang = currentUser?.language ?? deviceLang ?? DEFAULT_LANG;
+    const theme: Theme = currentUser?.theme ?? deviceTheme ?? 'light';
     const t = (key: TKey, params?: TParams) => translate(language, key, params);
     const isOwner = role === 'owner';
     const myAdminDeps = isOwner ? d.departments.map(x => x.id) : role === 'admin' ? (currentUser?.adminOf ?? []) : [];
@@ -105,7 +115,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       d.users.some(u => norm(u.username) === norm(username) && u.id !== exceptId);
 
     return {
-      ready: !!data, data: d, currentUser, canManage, language, t,
+      ready: !!data, data: d, currentUser, canManage, language, t, theme,
+      setTheme: th => {
+        setDeviceThemeState(th); repository.setDeviceTheme(th);
+        if (currentUser) update(x => ({ ...x, users: x.users.map(u => u.id === currentUser.id ? { ...u, theme: th } : u) }));
+      },
+      getUnavailableFor: uid => d.users.find(u => u.id === uid)?.unavailable ?? [],
       deptName: id => deptLabel(id, language, d.departments.find(x => x.id === id)?.name),
       roleName: (dep, r) => roleLabel(dep, r, language),
       tierName: tr => tierLabel(tr, language),
@@ -124,7 +139,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setSession(u.id); return null;
       },
       // keep the language this person was using for the sign-in screen (device's last language)
-      signOut: () => { setDeviceLang(language); repository.setDeviceLanguage(language); setSession(null); },
+      signOut: () => { setDeviceLang(language); repository.setDeviceLanguage(language); setDeviceThemeState(theme); repository.setDeviceTheme(theme); setSession(null); },
       changePassword: async (oldPw, newPw) => {
         if (!currentUser) return t('errors.notSignedIn');
         if ((await hashPassword(currentUser.salt, oldPw)) !== currentUser.passwordHash) return t('errors.currentPasswordWrong');
@@ -229,19 +244,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         return null;
       },
       canEditMember, myAdminDeps,
-      addUnavailable: (iso, userId) => {
+      addUnavailable: (iso, userId, note) => {
+        const n = (note ?? '').trim().slice(0, NOTE_MAX);
         const uid = userId ?? currentUser?.id; const t0 = d.users.find(u => u.id === uid);
         if (!t0 || !canEditMember(t0)) return;
         update(x => ({
           ...x,
-          users: x.users.map(u => u.id === uid ? { ...u, unavailable: [...new Set([...(u.unavailable ?? []), iso])].sort() } : u),
+          users: x.users.map(u => u.id === uid ? { ...u, unavailable: [...(u.unavailable ?? []).filter(e => e.date !== iso), n ? { date: iso, note: n } : { date: iso }].sort((a, b) => a.date.localeCompare(b.date)) } : u),
           assignments: x.assignments.filter(a => !(a.userId === uid && x.services.find(s => s.id === a.serviceId)?.date === iso)),
         }));
       },
       removeUnavailable: (iso, userId) => {
         const uid = userId ?? currentUser?.id; const t0 = d.users.find(u => u.id === uid);
         if (!t0 || !canEditMember(t0)) return;
-        update(x => ({ ...x, users: x.users.map(u => u.id === uid ? { ...u, unavailable: (u.unavailable ?? []).filter(v => v !== iso) } : u) }));
+        update(x => ({ ...x, users: x.users.map(u => u.id === uid ? { ...u, unavailable: (u.unavailable ?? []).filter(e => e.date !== iso) } : u) }));
       },
       adminSaveMember: (id, p) => {
         const t0 = d.users.find(u => u.id === id);
@@ -271,7 +287,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       },
       isAvailable: (u, s) => {
         const date = d.services.find(x => x.id === s)?.date;
-        return !(d.users.find(x => x.id === u)?.unavailable ?? []).includes(date ?? '');
+        return !awayOn(d.users.find(x => x.id === u), date);
       },
       setAvailability: (userId, serviceId, available) => update(x => ({
         ...x,
@@ -281,7 +297,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       whyBlocked: (serviceId, userId) => {
         const sv = d.services.find(x => x.id === serviceId); const u = d.users.find(x => x.id === userId);
         if (!sv || !u) return 'Not found';
-        if ((u.unavailable ?? []).includes(sv.date)) return 'unavailable';
+        if (awayOn(u, sv.date)) return 'unavailable';
         if (d.assignments.some(a => a.serviceId === serviceId && a.userId === userId)) return 'busy';
         return null;
       },
@@ -290,7 +306,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const sv = d.services.find(x => x.id === serviceId); const u = d.users.find(x => x.id === userId);
         if (!sv || !u || !u.active) return t('errors.notFound');
         if (!(u.positions?.[departmentId] ?? []).includes(position)) return t('errors.doesntHoldRole', { name: u.firstName, role: position });
-        if ((u.unavailable ?? []).includes(sv.date)) return t('errors.unavailableThatDay', { name: u.firstName });
+        if (awayOn(u, sv.date)) return t('errors.unavailableThatDay', { name: u.firstName });
         if (d.assignments.some(a => a.serviceId === serviceId && a.userId === userId)) return t('errors.alreadyServing', { name: u.firstName });
         const id = `${serviceId}:${departmentId}:${position}:${index}`;
         update(x => ({ ...x, assignments: [...x.assignments.filter(a => a.id !== id), { id, serviceId, departmentId, position, index, userId }] }));
@@ -316,13 +332,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               const sl = slots.find(z => z.departmentId === pk.departmentId && z.position === pk.position);
               const u = x.users.find(z => z.id === pk.userId);
               return !!sl && pk.index < sl.count && !!u?.active && (u.positions?.[pk.departmentId] ?? []).includes(pk.position)
-                && !(u.unavailable ?? []).includes(clean.date) && arr.findIndex(o => o.userId === pk.userId) === i;
+                && !awayOn(u, clean.date) && arr.findIndex(o => o.userId === pk.userId) === i;
             }).map(pk => ({ ...pk, serviceId: sid, id: `${sid}:${pk.departmentId}:${pk.position}:${pk.index}` })),
           ] : x.assignments.filter(a => {
             if (a.serviceId !== sid) return true;
             const sl = slots.find(z => z.departmentId === a.departmentId && z.position === a.position);
             const u = x.users.find(z => z.id === a.userId);
-            return !!sl && a.index < sl.count && !(u?.unavailable ?? []).includes(clean.date);
+            return !!sl && a.index < sl.count && !awayOn(u, clean.date);
           }),
           settings: { ...x.settings, lastLocation: clean.location || x.settings?.lastLocation },
         }));

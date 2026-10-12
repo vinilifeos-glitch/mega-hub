@@ -2,6 +2,7 @@ import { DateField } from '../components/DateField';
 import { useEffect, useState } from 'react';
 import { Alert, Platform, Pressable, Text, View } from 'react-native';
 import { formatDobInput, useMe } from '../state/AppContext';
+import { awayOn, noteOn } from '../data/unavailability';
 import { Button, DeptTitle, Icon, IconButton, deptIcon, Card, Chip, Empty, Field, Screen, colors, s, Notice } from '../components/ui';
 import { Service, Slot } from '../types';
 import { formatTimeInput, isoToDdmm, toIso, todayIso, upcomingSundayIso } from '../data/dates';
@@ -96,7 +97,7 @@ function ServiceDetail({ service: sv, msg, onBack, onEdit, onDeleted }: { servic
                       {holders.map(m => {
                         const why = m.id === who?.id ? null : whyBlocked(sv.id, m.id);
                         return <Chip key={m.id} testID={`pick-${m.username}`} color={why ? colors.subtle : d.color} active={m.id === who?.id}
-                          icon={why === 'unavailable' ? 'close-circle-outline' : why === 'busy' ? 'time-outline' : 'checkmark-circle-outline'} label={`${m.name}${why === 'busy' ? ` ${t('services.busy')}` : why === 'unavailable' ? ` ${t('services.away')}` : ''}`}
+                          icon={why === 'unavailable' ? 'close-circle-outline' : why === 'busy' ? 'time-outline' : 'checkmark-circle-outline'} label={`${m.name}${why === 'busy' ? ` ${t('services.busy')}` : why === 'unavailable' ? ` ${noteOn(m, sv.date) ? `· ${t('services.awayNote', { note: noteOn(m, sv.date)! })}` : t('services.away')}` : ''}`}
                           onPress={why ? undefined : () => { const e = assign(sv.id, d.id, sl.position, i, m.id); setErr(e); if (!e) setOpen(null); }} />;
                       })}
                       {a && <Chip label={t('common.clear')} color={colors.red} onPress={() => { unassign(a.id); setOpen(null); }} />}
@@ -136,7 +137,7 @@ function ServiceForm({ service, onClose }: { service?: Service; onClose: (msg?: 
   const iso = toIso(date);
   const userById = (id: string) => data.users.find(u => u.id === id);
   const eligible = (dep: string, pos: string, key: string) => data.users.filter(u => u.active && u.departmentIds.includes(dep)
-    && (u.positions?.[dep] ?? []).includes(pos) && !(iso && (u.unavailable ?? []).includes(iso))
+    && (u.positions?.[dep] ?? []).includes(pos) && !awayOn(u, iso)
     && !Object.entries(picks).some(([k, v]) => v === u.id && k !== key));
   // re-check picks whenever the date or slots change
   useEffect(() => {
@@ -144,7 +145,7 @@ function ServiceForm({ service, onClose }: { service?: Service; onClose: (msg?: 
     const next = Object.fromEntries(Object.entries(picks).filter(([k, uid]) => {
       const [dep, pos, idx] = k.split(':'); const sl = slots.find(z => z.departmentId === dep && z.position === pos);
       const u = userById(uid);
-      const ok = !!sl && +idx < sl.count && !!u && !(iso && (u.unavailable ?? []).includes(iso));
+      const ok = !!sl && +idx < sl.count && !!u && !awayOn(u, iso);
       if (!ok && u) bad.push(`${u.name} (${roleName(dep, pos)})`);
       return ok;
     }));

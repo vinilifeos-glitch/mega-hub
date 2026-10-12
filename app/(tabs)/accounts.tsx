@@ -3,7 +3,8 @@ import { useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { AccountInput, formatDobInput, useMe, validContact, validDob } from '../../src/state/AppContext';
 import { Button, Icon, deptIcon, Card, Chip, Empty, Field, Screen, colors, s, Notice } from '../../src/components/ui';
-import { Role, User } from '../../src/types';
+import { Role, Unavailability, User } from '../../src/types';
+import { NOTE_MAX } from '../../src/data/unavailability';
 import { toIso, todayIso } from '../../src/data/dates';
 
 const order: Role[] = ['owner', 'admin', 'volunteer'];
@@ -90,8 +91,8 @@ function FullEditor({ user, onClose }: { user: User; onClose: (m?: string) => vo
   const [adminOf, setAdminOf] = useState<string[]>(user.adminOf ?? []);
   const [depIds, setDepIds] = useState<string[]>([...user.departmentIds]);
   const [positions, setPositions] = useState<Record<string, string[]>>(JSON.parse(JSON.stringify(user.positions ?? {})));
-  const [dates, setDates] = useState<string[]>((user.unavailable ?? []).filter(x => x >= todayIso()));
-  const [newDate, setNewDate] = useState('');
+  const [dates, setDates] = useState<Unavailability[]>((user.unavailable ?? []).filter(x => x.date >= todayIso()));
+  const [newDate, setNewDate] = useState(''); const [newNote, setNewNote] = useState('');
   const [err, setErr] = useState<string | null>(null);
   const self = user.id === currentUser.id;
   const toggle = <T,>(arr: T[], v: T) => arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v];
@@ -103,9 +104,9 @@ function FullEditor({ user, onClose }: { user: User; onClose: (m?: string) => vo
     if (e) return setErr(e);
     const e2 = saveProfile(user.id, { ...f, departmentIds: depIds, positions });
     if (e2) return setErr(e2);
-    const old = (user.unavailable ?? []).filter(x => x >= todayIso());
-    old.filter(x => !dates.includes(x)).forEach(x => removeUnavailable(x, user.id));
-    dates.filter(x => !old.includes(x)).forEach(x => addUnavailable(x, user.id));
+    const old = (user.unavailable ?? []).filter(x => x.date >= todayIso());
+    old.filter(x => !dates.some(y => y.date === x.date)).forEach(x => removeUnavailable(x.date, user.id));
+    dates.filter(x => { const o = old.find(y => y.date === x.date); return !o || (o.note ?? '') !== (x.note ?? ''); }).forEach(x => addUnavailable(x.date, user.id, x.note));
     onClose(t(pw ? 'accounts.savedPw' : 'accounts.saved', { name: f.firstName }));
   };
   const sec = (label: string) => <Text style={[s.section, { marginTop: 18 }]}>{label}</Text>;
@@ -154,14 +155,15 @@ function FullEditor({ user, onClose }: { user: User; onClose: (m?: string) => vo
       {sec(t('availability.unavailableDates'))}
       <Card>
         <DateField label={t('availability.add')} limit="future" value={newDate} onChange={setNewDate} testID="e-unavail" />
+        <Field label={t('availability.noteLabel')} value={newNote} onChangeText={setNewNote} maxLength={NOTE_MAX} placeholder={t('availability.notePlaceholder')} testID="e-unavail-note" />
         <Button label={t('availability.addShort')} outline testID="e-unavail-add" onPress={() => {
           const iso = toIso(newDate); if (!iso || iso < todayIso()) return setErr(t('errors.futureDateInvalid'));
-          setDates([...new Set([...dates, iso])].sort()); setNewDate(''); setErr(null);
+          const n = newNote.trim(); setDates([...dates.filter(x => x.date !== iso), n ? { date: iso, note: n } : { date: iso }].sort((a, b) => a.date.localeCompare(b.date))); setNewDate(''); setNewNote(''); setErr(null);
         }} />
-        {dates.length === 0 ? <Text style={[s.small, { marginTop: 8 }]}>{t('availability.noDates')}</Text> : dates.map(iso => (
+        {dates.length === 0 ? <Text style={[s.small, { marginTop: 8 }]}>{t('availability.noDates')}</Text> : dates.map(({ date: iso, note: n }) => (
           <View key={iso} style={[s.row, { justifyContent: 'space-between', marginTop: 8 }]}>
-            <Text style={{ color: colors.text }}>{iso.split('-').reverse().join('/')}</Text>
-            <Pressable onPress={() => setDates(dates.filter(x => x !== iso))}><Text style={{ color: colors.red, fontWeight: '700' }}>{t('common.remove')}</Text></Pressable>
+            <View style={{ flex: 1 }}><Text style={{ color: colors.text }}>{iso.split('-').reverse().join('/')}</Text>{n ? <Text style={s.small}>{n}</Text> : null}</View>
+            <Pressable onPress={() => setDates(dates.filter(x => x.date !== iso))}><Text style={{ color: colors.red, fontWeight: '700' }}>{t('common.remove')}</Text></Pressable>
           </View>
         ))}
       </Card>

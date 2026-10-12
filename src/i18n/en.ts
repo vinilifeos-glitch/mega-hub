@@ -2,7 +2,7 @@
 export const en = {
   common: {
     appName: 'Mega Hub', save: 'Save', saveChanges: 'Save changes', cancel: 'Cancel', back: 'Back', edit: 'Edit', editArrow: 'Edit ›',
-    delete: 'Delete', remove: 'Remove', clear: 'Clear', change: 'Change', fill: 'Fill', add: 'Add', all: 'All', any: 'Any',
+    delete: 'Delete', remove: 'Remove', clear: 'Clear', change: 'Change', fill: 'Assign', add: 'Add', all: 'All', any: 'Any',
     active: 'Active', deactivated: 'Deactivated', yes: 'Yes', no: 'No', none: 'None', notSet: 'Not set', optional: '(optional)',
     you: '(you)', viewOnly: 'View only', youManage: 'You manage', unfilled: 'Unfilled', results: '{count} results', result: '1 result',
     loading: 'Loading…',
@@ -52,7 +52,7 @@ export const en = {
     thatDate: 'that date', assign: 'Assign ▾', leaveUnfilled: 'Leave unfilled', noneEligible: 'No one eligible for {role}.', nobodyHolds: 'Nobody holds {role} yet.',
     removedPicks: 'Removed {names} — unavailable on the new date or slot removed.',
     legendAvailable: 'Available', legendAway: 'Away that day', legendBusy: 'Already serving', onlyHolders: 'Only people who hold the role are listed.',
-    busy: '(busy)', away: '(away)',
+    busy: '(busy)', away: '(away)', awayNote: 'Away: {note}',
     nobodyHoldsDept: 'No one in {dept} holds {role} yet. Add the role to a member on the Team or Accounts screen.',
     noneAvailable: 'No one available for this role on this date. Check Availability or department members.',
     assignedCount: '{n} of {total} assigned', noSlots: 'No slots', slotsA11y: '{dept} slots', assignA11y: 'Assign people in {dept}', slotNumber: '{role} {n}',
@@ -60,6 +60,7 @@ export const en = {
   availability: {
     title: 'Availability', subtitle: "Add the days you can't serve. Every other day you're available.", dateLabel: "Date I'm unavailable",
     add: 'Add unavailable date', addShort: 'Add date', mine: 'My unavailable dates', empty: "No dates added. You're available for every service.",
+    noteLabel: 'Note (optional)', notePlaceholder: 'e.g. travelling', noteA11y: 'Note: {note}',
     misses: 'Misses: {services}', noServices: 'No services scheduled that day', unavailableDates: 'Unavailable dates', noDates: 'No unavailable dates.',
   },
   myRota: { title: 'My Rota', subtitle: "Services you're scheduled to serve.", empty: "You're not on any rota yet. Keep your unavailable dates up to date so admins can plan." },
