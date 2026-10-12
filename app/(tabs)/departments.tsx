@@ -1,5 +1,6 @@
 import { displayName } from '../../src/display';
-import { Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
+import { router } from 'expo-router';
 import { useMe } from '../../src/state/AppContext';
 import { Badge, Card, DeptTitle, Screen, useColors, useStyles } from '../../src/components/ui';
 import { RolesView } from '../../src/screens/Profile';
@@ -12,6 +13,9 @@ export default function Departments() {
     <Screen title={t('departmentsScreen.title')} subtitle={t('departmentsScreen.subtitle')}>
       <Text style={s.section}>{t('departmentsScreen.mine')}</Text>
       <RolesView user={currentUser} />
+      {!seesAll && data.departments.filter(d => currentUser.departmentIds.includes(d.id)).map(d => (
+        <Pressable key={d.id} testID={`open-dept-${d.id}`} onPress={() => router.push(`/dept/${d.id}` as any)}><Card style={{ borderLeftWidth: 3, borderLeftColor: d.color }}><View style={[s.row, { justifyContent: 'space-between' }]}><DeptTitle dep={d} /><Text style={{ color: colors.primary, fontWeight: '700' }}>{t('dept.open')} ›</Text></View></Card></Pressable>
+      ))}
       {currentUser.role !== 'owner' && <Text style={[s.small, { marginBottom: 8 }]}>{t('departmentsScreen.assignedBy', { owner: ownerName })}</Text>}
       {seesAll && <>
         <Text style={s.section}>{t('departmentsScreen.all')}</Text>
@@ -19,7 +23,7 @@ export default function Departments() {
           const admins = data.users.filter(u => u.active && u.role === 'admin' && (u.adminOf ?? []).includes(d.id));
           const members = data.users.filter(u => u.active && u.departmentIds.includes(d.id));
           return (
-            <Card key={d.id} style={{ borderLeftWidth: 3, borderLeftColor: d.color }}>
+            <Pressable key={d.id} testID={`open-dept-${d.id}`} onPress={() => router.push(`/dept/${d.id}` as any)}><Card style={{ borderLeftWidth: 3, borderLeftColor: d.color }}>
               <View style={[s.row, { justifyContent: 'space-between' }]}>
                 <DeptTitle dep={d} />
                 {canManage(d.id) && <Badge tone="accent" icon="shield-checkmark" label={t('common.youManage')} />}
@@ -27,7 +31,8 @@ export default function Departments() {
               <Text style={[s.small, { marginTop: 4 }]}>{admins.length ? t('departmentsScreen.admins', { names: admins.map(displayName).join(', ') }) : t('departmentsScreen.noAdmins', { owner: ownerName })}</Text>
               <Text style={s.small}>{t('departmentsScreen.roles', { roles: d.positions.map(p => roleName(d.id, p)).join(', ') })}</Text>
               <Text style={{ marginTop: 6, color: colors.text }}>{members.length ? t(members.length === 1 ? 'departmentsScreen.member' : 'departmentsScreen.members', { count: members.length, names: members.map(displayName).join(', ') }) : t('departmentsScreen.noMembers')}</Text>
-            </Card>
+              <Text style={{ marginTop: 6, color: colors.primary, fontWeight: '700' }}>{t('dept.open')} ›</Text>
+            </Card></Pressable>
           );
         })}
       </>}

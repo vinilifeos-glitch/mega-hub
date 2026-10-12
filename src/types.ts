@@ -15,7 +15,12 @@ export interface User {
   positions: Record<string, string[]>; // departmentId -> roles held
   salt: string; passwordHash: string; mustChangePassword: boolean; active: boolean;
 }
-export interface Department { id: string; name: string; emoji: string; color: string; leaderId: string | null; positions: string[]; }
+export interface Department { id: string; name: string; emoji: string; color: string; leaderId: string | null; positions: string[];
+  /** About text (optional). */ description?: string;
+  /** Ordered links. kind 'file' + fileRef reserved for uploads after Supabase (not built). */ resources?: Resource[]; }
+export interface Resource { id: string; title: string; url: string; kind?: 'link' | 'file'; fileRef?: string | null; }
+/** Department song library (Music). Referenced by SetlistItem.songId. */
+export interface Song { id: string; deptId: string; title: string; artist?: string; key?: string; chords?: string; link?: string; }
 export interface Slot { departmentId: string; position: string; count: number; }
 export interface Service { id: string; title: string; location: string; date: string /* ISO YYYY-MM-DD */; start: string; end: string; slots: Slot[]; /** missing = published */ status?: 'draft' | 'published';
   /** Ordered (array index = position). Missing = empty. */ setlist?: SetlistItem[]; }
@@ -23,4 +28,4 @@ export interface Service { id: string; title: string; location: string; date: st
 export interface SetlistItem { id: string; title: string; key?: string; notes?: string; songId?: string | null; }
 export interface Availability { userId: string; serviceId: string; available: boolean; }
 export interface Assignment { id: string; serviceId: string; departmentId: string; position: string; index: number; userId: string; }
-export interface AppData { users: User[]; departments: Department[]; services: Service[]; availability: Availability[]; assignments: Assignment[]; settings?: { lastLocation?: string }; }
+export interface AppData { users: User[]; departments: Department[]; services: Service[]; availability: Availability[]; assignments: Assignment[]; songs?: Song[]; settings?: { lastLocation?: string }; }
