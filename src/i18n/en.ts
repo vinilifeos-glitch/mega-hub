@@ -99,7 +99,7 @@ export const en = {
     usernameTaken: 'That username is already taken.', roleNotAllowed: 'You are not allowed to give that role.', editNotAllowed: 'You are not allowed to edit this account.',
     notAllowed: 'Not allowed.', ownerOnlyProfiles: 'Only the owner can edit profiles.', firstNameRequired: 'First name is required.',
     contactInvalid: 'Contact number looks invalid.', dobInvalid: 'Date of birth must be a real date as DD/MM/YYYY.', accountNotFound: 'Account not found.',
-    selfOwnerLock: "You can't remove your own owner access or deactivate yourself.", memberScope: 'You can only edit people in departments you administer.',
+    selfOwnerLock: "You can't remove your own owner access or deactivate yourself.", memberScope: 'You can only edit people in departments you administer.', personalOwnerOnly: "Only the owner can change someone else's name, contact number or password.",
     slotScope: 'You can only fill slots in departments you administer.', notFound: 'Not found.', doesntHoldRole: "{name} doesn't hold {role}.",
     unavailableThatDay: '{name} is unavailable that day.', alreadyServing: '{name} is already serving in this service.',
     ownerOnlyServices: 'Only the owner can create or edit services.', nameRequired: 'Name is required.', dateInvalid: 'Enter a real date as DD/MM/YYYY.',
