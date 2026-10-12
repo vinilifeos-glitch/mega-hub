@@ -21,7 +21,7 @@ const SERVICES = upcomingSundays(4);
 export const mockData: AppData = {
   // Passwords are stored only as salted SHA-256 hashes. Temp passwords were shared privately.
   users: [
-    { id: "u-vini", username: "Vini", name: "Marcos Alves", role: "owner", departmentIds: [], salt: "5f58e27c8ad66fe802f38f1f04b0ee5e", passwordHash: "435e21a06426dc1c013365bda4bce81876154b54cdd61e90266d0bce41be7537", mustChangePassword: true, active: true },
+    { id: "u-vini", username: "Vini", name: "Marcos Alves", role: "owner", departmentIds: [], salt: "09e3054bd20fd48043b37d13ae81108d", passwordHash: "cb5743f694c53eb2d4a1ea2d1720819364efa615945924aba22250f14c964c11", mustChangePassword: false, active: true },
     { id: "u-lucas", username: "Lucas", name: "Lucas", role: "admin", departmentIds: [], salt: "1d269175121ef36af3246f4b2ddd7932", passwordHash: "ac816454296ea2605edebabb777268f446a1a2a71519268f0399b3025e4b2304", mustChangePassword: true, active: true },
     { id: "u-camila", username: "Camila", name: "Camila", role: "admin", departmentIds: [], salt: "290099e5bab11fa3cbf1d2caa7c2438d", passwordHash: "425dd074abd7200a983759da4caf760f1b39f7631e700f91cc2d824019a004bf", mustChangePassword: true, active: true },
     { id: "u-miguel", username: "Miguel", name: "Miguel", role: "volunteer", departmentIds: [], salt: "c5ffc6a18d929438b9dfe675adb6bebb", passwordHash: "4f02aa4823aba1e7444396c5a0e5f2dbe078b9cc15726d44bc1c88dcc2514c65", mustChangePassword: true, active: true },

@@ -14,8 +14,8 @@ export interface Repository {
   setSession(userId: string | null): Promise<void>;
 }
 
-const DATA_KEY = 'megahub:data:v2';
-const SESSION_KEY = 'megahub:session:v2';
+const DATA_KEY = 'megahub:data:v3';
+const SESSION_KEY = 'megahub:session:v3';
 
 class DeviceRepository implements Repository {
   async load() {
