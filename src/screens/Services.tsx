@@ -5,6 +5,7 @@ import { displayName } from '../display';
 import { DateField } from '../components/DateField';
 import { useEffect, useState } from 'react';
 import { Alert, Modal, Platform, Pressable, Text, View } from 'react-native';
+import { confirmAsk } from '../components/confirm';
 import { PickerRow, PickerSectionLabel, BusyChoiceSheet } from '../components/rota';
 import { pickStatus } from '../data/rota';
 import { formatDobInput, useMe } from '../state/AppContext';
@@ -13,11 +14,6 @@ import { Badge, DeptBadge, StatusBadge, Button, DeptTitle, Icon, IconButton, dep
 import { Service, Slot } from '../types';
 import { formatTimeInput, isoToDdmm, toIso, todayIso, upcomingSundayIso } from '../data/dates';
 
-/** Cross-platform confirm: window.confirm on web, Alert on native. */
-function confirmAsk(title: string, msg: string, okLabel: string, cancelLabel: string, go: () => void) {
-  if (Platform.OS === 'web') { if (globalThis.confirm?.(msg)) go(); }
-  else Alert.alert(title, msg, [{ text: cancelLabel, style: 'cancel' }, { text: okLabel, style: 'destructive', onPress: go }]);
-}
 
 const DOUBLE: Record<string, number> = { 'd-kids:Assistant': 2, 'd-music:Backing Vocals': 2 };
 
@@ -81,7 +77,7 @@ function ServiceDetail({ service: sv, msg, onBack, onEdit, onDeleted }: { servic
     t('common.delete'), t('common.cancel'), () => { deleteService(sv.id); onDeleted(draft ? t('services.draftDeleted') : t('services.deleted')); });
   const [pubMsg, setPubMsg] = useState<string | null>(null);
   return (
-    <Screen title={sv.title} subtitle={`${fmtDate(sv.date)} · ${isoToDdmm(sv.date)} · ${sv.start}–${sv.end}${sv.location ? ` · ${sv.location}` : ''}`}>
+    <Screen title={sv.title} subtitle={`${fmtDate(sv.date)} · ${isoToDdmm(sv.date)} · ${sv.start}–${sv.end}${sv.location ? ` · ${sv.location}` : ''}`} backTo={{ label: t('services.title'), onPress: onBack }}>
       {msg && <Notice text={msg} />}
       {pubMsg && <Notice text={pubMsg} />}
       {draft && <View style={[s.row, { marginBottom: 8 }]}><StatusBadge status="draft" label={t('services.draft')} testID="draft-badge" /><Text style={[s.small, { marginLeft: 8, flex: 1 }]}>{t('services.draftHint')}</Text></View>}
@@ -148,8 +144,7 @@ function ServiceDetail({ service: sv, msg, onBack, onEdit, onDeleted }: { servic
       <Text style={s.small}>{t('services.onlyHolders')}</Text>
       {isOwner && draft && <Button label={t('services.publish')} onPress={() => { publishService(sv.id); setPubMsg(t('services.published')); }} testID="publish-service" />}
       {isOwner && <Button label={t('services.editService')} outline onPress={onEdit} testID="edit-service" />}
-      {isOwner && <Button label={draft ? t('services.deleteDraft') : t('services.deleteService')} color={colors.red} outline onPress={del} testID={draft ? 'delete-draft' : 'delete-service'} />}
-      <Button label={t('services.backToServices')} outline onPress={onBack} testID="back-services" />
+      {isOwner && <Button label={draft ? t('services.deleteDraft') : t('services.deleteService')} color={colors.red} outline onPress={del} testID={draft ? 'delete-draft' : 'svc-delete'} />}
     </Screen>
   );
 }

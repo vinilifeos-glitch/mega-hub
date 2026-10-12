@@ -64,7 +64,7 @@ function MemberEditor({ user, onClose }: { user: User; onClose: (m?: string) => 
   const toggleRole = (dep: string, r: string) => setDm(p => ({ ...p, [dep]: (p[dep] ?? []).includes(r) ? p[dep]!.filter(x => x !== r) : [...(p[dep] ?? []), r] }));
   const lock = !canEditPersonal(currentUser, user.id);
   return (
-    <Screen title={t('team.editTitle', { name: displayName(user) })} subtitle={t('team.editSubtitle', { owner: ownerName })}>
+    <Screen title={t('team.editTitle', { name: displayName(user) })} subtitle={t('team.editSubtitle', { owner: ownerName })} backTo={{ label: t('team.title'), onPress: () => onClose() }}>
       <Card>
         <Field label={t('fields.firstName')} value={f.firstName} onChangeText={v => setF({ ...f, firstName: v })} editable={!lock} autoCapitalize="words" testID="m-first" />
         <Field label={t('fields.middleNames')} value={f.middleNames} onChangeText={v => setF({ ...f, middleNames: v })} editable={!lock} autoCapitalize="words" />
@@ -89,7 +89,6 @@ function MemberEditor({ user, onClose }: { user: User; onClose: (m?: string) => 
       <Card>
         <UnavailEditor entries={dates} onAdd={e => addUnavailable(e.date, user.id, e.note, e.to)} onRemove={d => removeUnavailable(d, user.id)} />
       </Card>
-      <Button label={t('common.back')} outline onPress={() => onClose()} />
     </Screen>
   );
 }

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { confirmAsk } from '../components/confirm';
 import { Alert, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { useMe } from '../state/AppContext';
@@ -38,7 +39,7 @@ export function SongView({ id, keyParam }: { id: string; keyParam?: string }) {
   const del = () => {
     const go = () => { removeLibSong(song!.id); goBack('/departments'); };
     const msg = t('song.delConfirm', { title: song!.title });
-    if (Platform.OS === 'web') { if (globalThis.confirm?.(msg)) go(); } else Alert.alert(t('song.del'), msg, [{ text: t('song.cancel'), style: 'cancel' }, { text: t('song.del'), style: 'destructive', onPress: go }]);
+    confirmAsk(t('song.del'), msg, t('song.del'), t('song.cancel'), go);
   };
 
   if (form) {

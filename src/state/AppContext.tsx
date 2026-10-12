@@ -446,7 +446,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       removeLibSong: id => { if (canEditSetlistRule(currentUser)) update(x => ({ ...x, songs: (x.songs ?? []).filter(z => z.id !== id),
         services: x.services.map(s => s.setlist?.some(i => i.songId === id) ? { ...s, setlist: s.setlist.map(i => i.songId === id ? (({ songId, ...r }) => r)(i) : i) } : s) })); },
       publishService: id => isOwner && update(x => ({ ...x, services: x.services.map(s => s.id === id ? { ...s, status: 'published' } : s) })),
-      deleteService: id => isOwner && update(x => ({ ...x, services: x.services.filter(s => s.id !== id), assignments: x.assignments.filter(a => a.serviceId !== id) })),
+      deleteService: id => isOwner && update(x => ({ ...x, services: x.services.filter(s => s.id !== id), assignments: x.assignments.filter(a => a.serviceId !== id), availability: x.availability.filter(a => a.serviceId !== id) })),
       unassign: id => { const a0 = d.assignments.find(a => a.id === id); if (!a0 || !canManage(a0.departmentId)) return; update(x => ({ ...x, assignments: x.assignments.filter(a => a.id !== id) })); },
     };
   }, [data, sessionId, deviceLang, deviceTheme]);
