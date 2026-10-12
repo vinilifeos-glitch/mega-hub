@@ -60,6 +60,7 @@ draft: 'Rascunho', saveDraft: 'Salvar rascunho', publish: 'Publicar', published:
     noneAvailable: 'Ninguém disponível para esta função nesta data. Verifique a disponibilidade ou os membros do departamento.',
     assignedCount: '{n} de {total} atribuídos', noSlots: 'Sem vagas', slotsA11y: 'Vagas de {dept}', assignA11y: 'Atribuir pessoas em {dept}', slotNumber: '{role} {n}',
   },
+  unav: { from: 'De', to: 'Até (opcional)', toHint: 'Deixe vazio para um único dia.', note: 'Observação (opcional)', add: 'Adicionar', remove: 'Remover', days: '{n} dias' },
   availability: {
     title: 'Disponibilidade', subtitle: 'Adicione os dias em que você não pode servir. Nos outros dias você está disponível.', dateLabel: 'Data em que estou indisponível',
     add: 'Adicionar data indisponível', addShort: 'Adicionar data', mine: 'Minhas datas indisponíveis', empty: 'Nenhuma data adicionada. Você está disponível para todos os cultos.',
@@ -100,6 +101,7 @@ draft: 'Rascunho', saveDraft: 'Salvar rascunho', publish: 'Publicar', published:
     title: 'Título', artist: 'Artista', key: 'Tom', chords: 'Cifra / letra', link: 'Link (opcional)', edit: 'Editar música', save: 'Salvar música', cancel: 'Cancelar', del: 'Excluir música', delConfirm: 'Excluir {title} da biblioteca?', notFound: 'Música não encontrada.', noChords: 'Sem cifra ainda.', smaller: 'Texto menor', bigger: 'Texto maior', pick: 'Escolher da biblioteca', back: 'Voltar' },
   setlist: { title: 'Repertório', count: '{n} músicas', key: 'Tom', notes: 'Observações', songTitle: 'Título da música', addSong: '+ Adicionar música', edit: 'Editar', done: 'Concluir', empty: 'Nenhuma música ainda.', more: '+{n} mais', up: 'Subir {title}', down: 'Descer {title}', remove: 'Remover {title}', save: 'Salvar música', cancel: 'Cancelar', customKey: 'Outro tom' },
   errors: {
+    rangeOrder: 'A data "Até" deve ser igual ou depois de "De".', rangeTooLong: 'Um período pode ter no máximo um ano.',
     deptScope: 'Só o dono e os admins deste departamento podem editar esta página.', resTitle: 'O título é obrigatório.', urlInvalid: 'Digite um link válido (https://…).',
     setlistScope: 'Só o dono e os admins do Louvor podem editar o repertório.', songTitle: 'O título da música é obrigatório.',
     wrongCredentials: 'Usuário ou senha incorretos.', deactivated: 'Esta conta foi desativada. Fale com um administrador.', notSignedIn: 'Você não está conectado.',

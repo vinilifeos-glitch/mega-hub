@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { AppData, Department, Resource, Role, Service, SetlistItem, Song, Theme, Unavailability, User } from '../types';
-import { NOTE_MAX, awayOn, getUnavailableFor } from '../data/unavailability';
+import { NOTE_MAX, awayOn, covers, getUnavailableFor, rangeError } from '../data/unavailability';
+import { todayIso as todayIsoFn } from '../data/dates';
 import { repository } from '../data/repository';
 import { hashPassword, newSalt } from '../data/auth';
 import { canEditMemberRule, canEditPersonal, changedProtected, pickPref, visibleServiceData, visibleSetlists, canEditSetlistRule, canEditDeptRule, visibleSongs, cleanUrl, canLiveRule } from './permissions';
@@ -56,7 +57,8 @@ interface Ctx {
   changePassword: (oldPw: string, newPw: string) => Promise<string | null>;
   isAvailable: (userId: string, serviceId: string) => boolean | undefined;
   setAvailability: (userId: string, serviceId: string, available: boolean) => void;
-  addUnavailable: (isoDate: string, userId?: string, note?: string) => void;
+  /** Adds/replaces the entry starting on isoDate (optional inclusive `to`); clears that person's assignments on any day in range. */
+  addUnavailable: (isoDate: string, userId?: string, note?: string, to?: string) => string | null;
   removeUnavailable: (isoDate: string, userId?: string) => void;
   canEditMember: (target: User) => boolean;
   myAdminDeps: string[];
@@ -294,15 +296,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         return null;
       },
       canEditMember, myAdminDeps,
-      addUnavailable: (iso, userId, note) => {
+      addUnavailable: (iso, userId, note, to) => {
         const n = (note ?? '').trim().slice(0, NOTE_MAX);
         const uid = userId ?? currentUser?.id; const t0 = d.users.find(u => u.id === uid);
-        if (!t0 || !canEditMember(t0)) return;
+        if (!t0 || !canEditMember(t0)) return t('errors.memberScope');
+        const end = to && to > iso ? to : undefined;
+        const re = rangeError(iso, end ?? undefined, todayIsoFn()); if (re) return t(`errors.${re}` as any);
+        const entry = { date: iso, ...(end ? { to: end } : {}), ...(n ? { note: n } : {}) };
         update(x => ({
           ...x,
-          users: x.users.map(u => u.id === uid ? { ...u, unavailable: [...(u.unavailable ?? []).filter(e => e.date !== iso), n ? { date: iso, note: n } : { date: iso }].sort((a, b) => a.date.localeCompare(b.date)) } : u),
-          assignments: x.assignments.filter(a => !(a.userId === uid && x.services.find(s => s.id === a.serviceId)?.date === iso)),
+          users: x.users.map(u => u.id === uid ? { ...u, unavailable: [...(u.unavailable ?? []).filter(e => e.date !== iso), entry].sort((a, b) => a.date.localeCompare(b.date)) } : u),
+          assignments: x.assignments.filter(a => { if (a.userId !== uid) return true; const dt = x.services.find(s => s.id === a.serviceId)?.date; return !(dt && covers(entry, dt)); }),
         }));
+        return null;
       },
       removeUnavailable: (iso, userId) => {
         const uid = userId ?? currentUser?.id; const t0 = d.users.find(u => u.id === uid);
