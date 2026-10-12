@@ -1,3 +1,4 @@
+import { DateField } from '../components/DateField';
 import { useEffect, useState } from 'react';
 import { Alert, Platform, Pressable, Text, View } from 'react-native';
 import { formatDobInput, useMe } from '../state/AppContext';
@@ -165,7 +166,7 @@ function ServiceForm({ service, onClose }: { service?: Service; onClose: (msg?: 
       <Card>
         <Field label="Name" value={title} onChangeText={setTitle} autoCapitalize="words" testID="sv-title" />
         <Field label="Location" value={location} onChangeText={setLocation} autoCapitalize="words" placeholder="e.g. Main hall" testID="sv-location" />
-        <Field label="Date (DD/MM/YYYY)" value={date} keyboardType="number-pad" maxLength={10} onChangeText={v => setDate(formatDobInput(v))} testID="sv-date" />
+        <DateField label="Date" limit={service ? undefined : 'future'} value={date} onChange={setDate} testID="sv-date" />
         <View style={[s.row, { flexWrap: 'nowrap' }]}>
           <View style={{ flex: 1, marginRight: 8 }}><Field label="Start (HH:MM)" value={start} keyboardType="number-pad" maxLength={5} onChangeText={v => setStart(formatTimeInput(v))} testID="sv-start" /></View>
           <View style={{ flex: 1 }}><Field label="End (HH:MM)" value={end} keyboardType="number-pad" maxLength={5} onChangeText={v => setEnd(formatTimeInput(v))} testID="sv-end" /></View>

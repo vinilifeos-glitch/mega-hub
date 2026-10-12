@@ -1,3 +1,4 @@
+import { DateField } from '../../src/components/DateField';
 import { useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { AccountInput, formatDobInput, useMe, validContact, validDob } from '../../src/state/AppContext';
@@ -115,7 +116,7 @@ function FullEditor({ user, onClose }: { user: User; onClose: (m?: string) => vo
         <Field label="First name" value={f.firstName} onChangeText={v => setF({ ...f, firstName: v })} autoCapitalize="words" testID="e-first" />
         <Field label="Middle names (optional)" value={f.middleNames} onChangeText={v => setF({ ...f, middleNames: v })} autoCapitalize="words" testID="e-middle" />
         <Field label="Last name" value={f.lastName} onChangeText={v => setF({ ...f, lastName: v })} autoCapitalize="words" testID="e-last" />
-        <Field label="Date of birth (DD/MM/YYYY)" value={f.dob} placeholder="21/04/1995" keyboardType="number-pad" maxLength={10} onChangeText={v => setF({ ...f, dob: formatDobInput(v) })} testID="e-dob" />
+        <DateField label="Date of birth" limit="past" value={f.dob} onChange={v => setF({ ...f, dob: v })} testID="e-dob" />
         <Field label="Contact number (optional)" value={f.contact} keyboardType="phone-pad" onChangeText={v => setF({ ...f, contact: v })} testID="e-contact" />
       </Card>
       {sec('Sign-in')}
@@ -152,7 +153,7 @@ function FullEditor({ user, onClose }: { user: User; onClose: (m?: string) => vo
       })}
       {sec('Unavailable dates')}
       <Card>
-        <Field label="Add date (DD/MM/YYYY)" value={newDate} keyboardType="number-pad" maxLength={10} onChangeText={v => setNewDate(formatDobInput(v))} testID="e-unavail" />
+        <DateField label="Add unavailable date" limit="future" value={newDate} onChange={setNewDate} testID="e-unavail" />
         <Button label="Add date" outline testID="e-unavail-add" onPress={() => {
           const iso = toIso(newDate); if (!iso || iso < todayIso()) return setErr('Enter a real future date as DD/MM/YYYY.');
           setDates([...new Set([...dates, iso])].sort()); setNewDate(''); setErr(null);

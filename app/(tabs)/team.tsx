@@ -1,3 +1,4 @@
+import { DateField } from '../../src/components/DateField';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { formatDobInput, useMe } from '../../src/state/AppContext';
@@ -59,7 +60,7 @@ function MemberEditor({ user, onClose }: { user: User; onClose: (m?: string) => 
         <Field label="First name" value={f.firstName} onChangeText={v => setF({ ...f, firstName: v })} autoCapitalize="words" testID="m-first" />
         <Field label="Middle names (optional)" value={f.middleNames} onChangeText={v => setF({ ...f, middleNames: v })} autoCapitalize="words" />
         <Field label="Last name" value={f.lastName} onChangeText={v => setF({ ...f, lastName: v })} autoCapitalize="words" testID="m-last" />
-        <Field label="Date of birth (DD/MM/YYYY)" value={f.dob} keyboardType="number-pad" maxLength={10} onChangeText={v => setF({ ...f, dob: formatDobInput(v) })} />
+        <DateField label="Date of birth" limit="past" value={f.dob} onChange={v => setF({ ...f, dob: v })} testID="m-dob" />
         <Field label="Contact number (optional)" value={f.contact} keyboardType="phone-pad" onChangeText={v => setF({ ...f, contact: v })} />
       </Card>
       <Text style={s.section}>Departments & roles (your departments only)</Text>
@@ -76,7 +77,7 @@ function MemberEditor({ user, onClose }: { user: User; onClose: (m?: string) => 
       <Button label="Save changes" testID="m-save" onPress={() => { const e = adminSaveMember(user.id, { ...f, departments: dm }); if (e) setErr(e); else onClose(`Saved ${f.firstName}.`); }} />
       <Text style={s.section}>Unavailable dates</Text>
       <Card>
-        <Field label="Add date (DD/MM/YYYY)" value={date} keyboardType="number-pad" maxLength={10} onChangeText={v => setDate(formatDobInput(v))} testID="m-unavail" />
+        <DateField label="Add unavailable date" limit="future" value={date} onChange={setDate} testID="m-unavail" />
         <Button label="Add unavailable date" outline testID="m-unavail-add" onPress={() => {
           const iso = toIso(date); if (!iso || iso < todayIso()) return setErr('Enter a real future date as DD/MM/YYYY.');
           addUnavailable(iso, user.id); setDate(''); setErr(null);

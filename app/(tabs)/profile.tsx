@@ -1,3 +1,4 @@
+import { DateField } from '../../src/components/DateField';
 import { useState } from 'react';
 import { Text } from 'react-native';
 import { formatDobInput, useMe } from '../../src/state/AppContext';
@@ -19,7 +20,7 @@ export default function MyProfile() {
         <Field label="First name" value={f.firstName} onChangeText={v => setF({ ...f, firstName: v })} autoCapitalize="words" testID="me-first" />
         <Field label="Middle names (optional)" value={f.middleNames} onChangeText={v => setF({ ...f, middleNames: v })} autoCapitalize="words" testID="me-middle" />
         <Field label="Last name" value={f.lastName} onChangeText={v => setF({ ...f, lastName: v })} autoCapitalize="words" testID="me-last" />
-        <Field label="Date of birth (DD/MM/YYYY)" value={f.dob} placeholder="21/04/1995" keyboardType="number-pad" maxLength={10} onChangeText={v => setF({ ...f, dob: formatDobInput(v) })} testID="me-dob" />
+        <DateField label="Date of birth" limit="past" value={f.dob} onChange={v => setF({ ...f, dob: v })} testID="me-dob" />
         <Field label="Contact number (optional)" value={f.contact} placeholder="+44 7700 900123" keyboardType="phone-pad" onChangeText={v => setF({ ...f, contact: v })} testID="me-contact" />
         {err && <Text style={{ color: colors.red, marginBottom: 6 }}>{err}</Text>}
         <Button label="Save" testID="me-save" onPress={() => { const e = saveMyProfile(f); setErr(e); if (!e) { setMode('view'); setMsg('Profile saved.'); } }} />

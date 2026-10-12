@@ -1,3 +1,4 @@
+import { DateField } from '../../src/components/DateField';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { formatDobInput, useMe } from '../../src/state/AppContext';
@@ -17,8 +18,7 @@ export default function AvailabilityScreen() {
   return (
     <Screen title="Availability" subtitle="Add the dates you CAN'T serve. You're treated as available on every other day.">
       <Card>
-        <Field label="Date I'm unavailable (DD/MM/YYYY)" value={v} placeholder="25/12/2026" keyboardType="number-pad" maxLength={10}
-          onChangeText={t => setV(formatDobInput(t))} onSubmitEditing={add} testID="unavail-date" />
+        <DateField label="Date I'm unavailable" limit="future" value={v} onChange={setV} onSubmit={add} testID="unavail-date" />
         {err && <Text style={{ color: colors.red, marginBottom: 6 }}>{err}</Text>}
         <Button label="Add unavailable date" onPress={add} testID="unavail-add" />
       </Card>

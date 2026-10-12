@@ -1,3 +1,4 @@
+import { DateField } from '../components/DateField';
 import { useState } from 'react';
 import { Text, View } from 'react-native';
 import { formatDobInput, fullName, ProfileInput, useMe } from '../state/AppContext';
@@ -73,7 +74,7 @@ export function ProfileEditor({ user, onClose }: { user: User; onClose: (msg?: s
         <Field label="Middle names (optional)" value={f.middleNames} onChangeText={v => setF({ ...f, middleNames: v })} autoCapitalize="words" testID="pf-middle" />
         <Field label="Last name" value={f.lastName} onChangeText={v => setF({ ...f, lastName: v })} autoCapitalize="words" testID="pf-last" />
         <Field label="Contact number (optional)" value={f.contact} placeholder="+44 7700 900123" keyboardType="phone-pad" onChangeText={v => setF({ ...f, contact: v })} testID="pf-contact" />
-        <Field label="Date of birth (DD/MM/YYYY)" value={f.dob} placeholder="21/04/1995" keyboardType="number-pad" maxLength={10} onChangeText={v => setF({ ...f, dob: formatDobInput(v) })} testID="pf-dob" />
+        <DateField label="Date of birth" limit="past" value={f.dob} onChange={v => setF({ ...f, dob: v })} testID="pf-dob" />
       </Card>
       <Text style={s.section}>Departments & roles</Text>
       {data.departments.map(d => {
