@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useMemo, useState } from '
 import { AppData, Department, Role, Service, User } from '../types';
 import { repository } from '../data/repository';
 import { hashPassword, newSalt } from '../data/auth';
+import { DEFAULT_LANG, Lang, TKey, TParams, translate } from '../i18n';
 
 export interface AccountInput { name: string; username: string; role: Role; departmentIds: string[]; tempPassword?: string;
   firstName?: string; middleNames?: string; lastName?: string; dob?: string; contact?: string; positions?: Record<string, string[]>; adminOf?: string[]; mustChange?: boolean; }
@@ -21,6 +22,10 @@ export const fullName = (f: { firstName: string; middleNames: string; lastName: 
   [f.firstName, f.middleNames, f.lastName].map(x => x.trim()).filter(Boolean).join(' ');
 
 interface Ctx {
+  /** Current UI language: signed-in user's choice, else last used on this device, else 'pt'. */
+  language: Lang;
+  setLanguage: (lang: Lang) => void;
+  t: (key: TKey, params?: TParams) => string;
   saveProfile: (id: string, p: ProfileInput) => string | null;
   saveMyContact: (contact: string) => string | null;
   holdsRole: (userId: string, departmentId: string, position: string) => boolean;
@@ -60,11 +65,12 @@ const norm = (u: string) => u.trim().normalize('NFD').replace(/[\u0300-\u036f]/g
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [data, setData] = useState<AppData | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [deviceLang, setDeviceLang] = useState<Lang | null>(null);
 
   useEffect(() => {
     (async () => {
-      const [d, sid] = await Promise.all([repository.load(), repository.getSession()]);
-      setSessionId(sid); setData(d);
+      const [d, sid, dl] = await Promise.all([repository.load(), repository.getSession(), repository.getDeviceLanguage()]);
+      setSessionId(sid); setDeviceLang(dl); setData(d);
     })();
   }, []);
 
@@ -78,6 +84,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const found = d.users.find(u => u.id === sessionId && u.active);
     const currentUser = found ?? null;
     const role = currentUser?.role;
+    const language: Lang = currentUser?.language ?? deviceLang ?? DEFAULT_LANG;
+    const t = (key: TKey, params?: TParams) => translate(language, key, params);
     const isOwner = role === 'owner';
     const myAdminDeps = isOwner ? d.departments.map(x => x.id) : role === 'admin' ? (currentUser?.adminOf ?? []) : [];
     const canEditMember = (t: User) => !!currentUser && (isOwner || t.id === currentUser.id ||
@@ -90,43 +98,47 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       d.users.some(u => norm(u.username) === norm(username) && u.id !== exceptId);
 
     return {
-      ready: !!data, data: d, currentUser, canManage,
+      ready: !!data, data: d, currentUser, canManage, language, t,
+      setLanguage: lang => {
+        setDeviceLang(lang); repository.setDeviceLanguage(lang);
+        if (currentUser) update(x => ({ ...x, users: x.users.map(u => u.id === currentUser.id ? { ...u, language: lang } : u) }));
+      },
       managedDepartments: d.departments.filter(x => canManage(x.id)),
       canManageAccounts: isOwner, canEditAccount, allowedRoles,
       signIn: async (username, password) => {
         const u = d.users.find(x => norm(x.username) === norm(username));
-        if (!u || (await hashPassword(u.salt, password)) !== u.passwordHash) return 'Wrong username or password.';
-        if (!u.active) return 'This account has been deactivated. Ask an admin.';
+        if (!u || (await hashPassword(u.salt, password)) !== u.passwordHash) return t('errors.wrongCredentials');
+        if (!u.active) return t('errors.deactivated');
         setSession(u.id); return null;
       },
       signOut: () => setSession(null),
       changePassword: async (oldPw, newPw) => {
-        if (!currentUser) return 'Not signed in.';
-        if ((await hashPassword(currentUser.salt, oldPw)) !== currentUser.passwordHash) return 'Current password is incorrect.';
-        if (newPw.length < 4) return 'New password must be at least 4 characters.';
-        if (newPw === oldPw) return 'Choose a different password from the temporary one.';
+        if (!currentUser) return t('errors.notSignedIn');
+        if ((await hashPassword(currentUser.salt, oldPw)) !== currentUser.passwordHash) return t('errors.currentPasswordWrong');
+        if (newPw.length < 4) return t('errors.passwordTooShort');
+        if (newPw === oldPw) return t('errors.samePassword');
         const salt = newSalt(); const passwordHash = await hashPassword(salt, newPw);
         update(x => ({ ...x, users: x.users.map(u => u.id === currentUser.id ? { ...u, salt, passwordHash, mustChangePassword: false } : u) }));
         return null;
       },
       saveAccount: async (id, input) => {
-        if (!isOwner) return 'Only the owner can manage accounts.';
+        if (!isOwner) return t('errors.ownerOnlyAccounts');
         const name = input.name.trim(), username = input.username.trim();
-        if (!name || !username) return 'Full name and username are required.';
-        if (!/^[A-Za-z0-9._-]{2,30}$/.test(username)) return 'Username: 2–30 letters, numbers, . _ -';
-        if (usernameTaken(username, id)) return 'That username is already taken.';
+        if (!(input.firstName ?? name).trim() || !username) return t('errors.firstNameUsernameRequired');
+        if (!/^[A-Za-z0-9._-]{2,30}$/.test(username)) return t('errors.usernameFormat');
+        if (usernameTaken(username, id)) return t('errors.usernameTaken');
         const keepsOwner = role === 'owner' && id === currentUser?.id && input.role === 'owner';
-        if (!keepsOwner && !allowedRoles.includes(input.role)) return 'You are not allowed to give that role.';
+        if (!keepsOwner && !allowedRoles.includes(input.role)) return t('errors.roleNotAllowed');
         const existing = id ? d.users.find(u => u.id === id) : undefined;
-        if (existing && !canEditAccount(existing)) return 'You are not allowed to edit this account.';
+        if (existing && !canEditAccount(existing)) return t('errors.editNotAllowed');
         const departmentIds = input.departmentIds;
         if (!existing) {
           const pw = input.tempPassword ?? '';
-          if (pw.length < 4) return 'Temporary password must be at least 4 characters.';
+          if (pw.length < 4) return t('errors.passwordTooShort');
           const salt = newSalt(); const passwordHash = await hashPassword(salt, pw);
           const parts = name.split(' ');
-          if (input.dob && !validDob(input.dob)) return 'Date of birth must be a real date as DD/MM/YYYY.';
-          if (input.contact && !validContact(input.contact.trim())) return 'Contact number looks invalid.';
+          if (input.dob && !validDob(input.dob)) return t('errors.dobInvalid');
+          if (input.contact && !validContact(input.contact.trim())) return t('errors.contactInvalid');
           const positions = Object.fromEntries(departmentIds.map(dp => [dp, input.positions?.[dp] ?? []]));
           const user: User = {
             id: `u-${Date.now().toString(36)}`, name,
@@ -147,27 +159,27 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         return null;
       },
       resetPassword: async (id, pw) => {
-        const t = d.users.find(u => u.id === id);
-        if (!t || !canEditAccount(t)) return 'Not allowed.';
-        if (pw.length < 4) return 'Temporary password must be at least 4 characters.';
+        const tgt = d.users.find(u => u.id === id);
+        if (!tgt || !canEditAccount(tgt)) return t('errors.notAllowed');
+        if (pw.length < 4) return t('errors.passwordTooShort');
         const salt = newSalt(); const passwordHash = await hashPassword(salt, pw);
         update(x => ({ ...x, users: x.users.map(u => u.id === id ? { ...u, salt, passwordHash, mustChangePassword: true } : u) }));
         return null;
       },
       setActive: (id, active) => {
-        const t = d.users.find(u => u.id === id);
-        if (!t || !canEditAccount(t)) return 'Not allowed.';
-        if (t.id === currentUser?.id) return "You can't deactivate yourself.";
-        if (t.role === 'owner') return "The owner account can't be deactivated.";
+        const tgt = d.users.find(u => u.id === id);
+        if (!tgt || !canEditAccount(tgt)) return t('errors.notAllowed');
+        if (tgt.id === currentUser?.id) return t('errors.selfDeactivate');
+        if (tgt.role === 'owner') return t('errors.ownerDeactivate');
         update(x => ({ ...x, users: x.users.map(u => u.id === id ? { ...u, active } : u) }));
         return null;
       },
       holdsRole: (uid, depId, pos) => !!d.users.find(u => u.id === uid)?.positions?.[depId]?.includes(pos),
       saveProfile: (id, p) => {
-        if (role !== 'owner') return 'Only the owner can edit profiles.';
-        if (!p.firstName.trim()) return 'First name is required.';
-        if (!validContact(p.contact.trim())) return 'Contact number looks invalid.';
-        if (p.dob && !validDob(p.dob)) return 'Date of birth must be a real date as DD/MM/YYYY.';
+        if (role !== 'owner') return t('errors.ownerOnlyProfiles');
+        if (!p.firstName.trim()) return t('errors.firstNameRequired');
+        if (!validContact(p.contact.trim())) return t('errors.contactInvalid');
+        if (p.dob && !validDob(p.dob)) return t('errors.dobInvalid');
         const departmentIds = p.departmentIds;
         const positions: Record<string, string[]> = {};
         departmentIds.forEach(dep => { positions[dep] = p.positions[dep] ?? []; });
@@ -179,22 +191,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         return null;
       },
       saveMyProfile: p => {
-        if (!currentUser) return 'Not signed in.';
-        if (!p.firstName.trim()) return 'First name is required.';
-        if (p.dob && !validDob(p.dob)) return 'Date of birth must be a real date as DD/MM/YYYY.';
-        if (!validContact(p.contact.trim())) return 'Contact number looks invalid.';
+        if (!currentUser) return t('errors.notSignedIn');
+        if (!p.firstName.trim()) return t('errors.firstNameRequired');
+        if (p.dob && !validDob(p.dob)) return t('errors.dobInvalid');
+        if (!validContact(p.contact.trim())) return t('errors.contactInvalid');
         const v = { firstName: p.firstName.trim(), middleNames: p.middleNames.trim(), lastName: p.lastName.trim(), dob: p.dob, contact: p.contact.trim() };
         update(x => ({ ...x, users: x.users.map(u => u.id === currentUser.id ? { ...u, ...v, name: fullName(v) } : u) }));
         return null;
       },
       ownerUpdateAccount: async (id, a) => {
-        if (!isOwner) return 'Only the owner can manage accounts.';
-        const t0 = d.users.find(u => u.id === id); if (!t0) return 'Account not found.';
+        if (!isOwner) return t('errors.ownerOnlyAccounts');
+        const t0 = d.users.find(u => u.id === id); if (!t0) return t('errors.accountNotFound');
         const username = a.username.trim();
-        if (!/^[A-Za-z0-9._-]{2,30}$/.test(username)) return 'Username: 2–30 letters, numbers, . _ -';
-        if (usernameTaken(username, id)) return 'That username is already taken.';
-        if (id === currentUser!.id && (a.role !== 'owner' || !a.active)) return "You can't remove your own owner access or deactivate yourself.";
-        if (a.newPassword && a.newPassword.length < 4) return 'Password must be at least 4 characters.';
+        if (!/^[A-Za-z0-9._-]{2,30}$/.test(username)) return t('errors.usernameFormat');
+        if (usernameTaken(username, id)) return t('errors.usernameTaken');
+        if (id === currentUser!.id && (a.role !== 'owner' || !a.active)) return t('errors.selfOwnerLock');
+        if (a.newPassword && a.newPassword.length < 4) return t('errors.passwordTooShort');
         let pw = {};
         if (a.newPassword) { const salt = newSalt(); pw = { salt, passwordHash: await hashPassword(salt, a.newPassword), mustChangePassword: false }; }
         update(x => ({
@@ -220,10 +232,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       },
       adminSaveMember: (id, p) => {
         const t0 = d.users.find(u => u.id === id);
-        if (!t0 || !canEditMember(t0)) return 'You can only edit people in departments you administer.';
-        if (!p.firstName.trim()) return 'First name is required.';
-        if (p.dob && !validDob(p.dob)) return 'Date of birth must be a real date as DD/MM/YYYY.';
-        if (!validContact(p.contact.trim())) return 'Contact number looks invalid.';
+        if (!t0 || !canEditMember(t0)) return t('errors.memberScope');
+        if (!p.firstName.trim()) return t('errors.firstNameRequired');
+        if (p.dob && !validDob(p.dob)) return t('errors.dobInvalid');
+        if (!validContact(p.contact.trim())) return t('errors.contactInvalid');
         const v = { firstName: p.firstName.trim(), middleNames: p.middleNames.trim(), lastName: p.lastName.trim(), dob: p.dob, contact: p.contact.trim() };
         let departmentIds = [...t0.departmentIds]; const positions = { ...(t0.positions ?? {}) };
         for (const [dep, roles] of Object.entries(p.departments)) {
@@ -239,8 +251,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         return null;
       },
       saveMyContact: contact => {
-        if (!currentUser) return 'Not signed in.';
-        if (!validContact(contact.trim())) return 'Contact number looks invalid.';
+        if (!currentUser) return t('errors.notSignedIn');
+        if (!validContact(contact.trim())) return t('errors.contactInvalid');
         update(x => ({ ...x, users: x.users.map(u => u.id === currentUser.id ? { ...u, contact: contact.trim() } : u) }));
         return null;
       },
@@ -261,23 +273,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         return null;
       },
       assign: (serviceId, departmentId, position, index, userId) => {
-        if (!canManage(departmentId)) return 'You can only fill slots in departments you administer.';
+        if (!canManage(departmentId)) return t('errors.slotScope');
         const sv = d.services.find(x => x.id === serviceId); const u = d.users.find(x => x.id === userId);
-        if (!sv || !u || !u.active) return 'Not found.';
-        if (!(u.positions?.[departmentId] ?? []).includes(position)) return `${u.firstName} doesn't hold ${position}.`;
-        if ((u.unavailable ?? []).includes(sv.date)) return `${u.firstName} is unavailable that day.`;
-        if (d.assignments.some(a => a.serviceId === serviceId && a.userId === userId)) return `${u.firstName} is already serving in this service.`;
+        if (!sv || !u || !u.active) return t('errors.notFound');
+        if (!(u.positions?.[departmentId] ?? []).includes(position)) return t('errors.doesntHoldRole', { name: u.firstName, role: position });
+        if ((u.unavailable ?? []).includes(sv.date)) return t('errors.unavailableThatDay', { name: u.firstName });
+        if (d.assignments.some(a => a.serviceId === serviceId && a.userId === userId)) return t('errors.alreadyServing', { name: u.firstName });
         const id = `${serviceId}:${departmentId}:${position}:${index}`;
         update(x => ({ ...x, assignments: [...x.assignments.filter(a => a.id !== id), { id, serviceId, departmentId, position, index, userId }] }));
         return null;
       },
       saveService: (id, sv, picks) => {
-        if (!isOwner) return 'Only the owner can create or edit services.';
-        if (!sv.title.trim()) return 'Name is required.';
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(sv.date)) return 'Enter a real date as DD/MM/YYYY.';
+        if (!isOwner) return t('errors.ownerOnlyServices');
+        if (!sv.title.trim()) return t('errors.nameRequired');
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(sv.date)) return t('errors.dateInvalid');
         const hm = /^([01]\d|2[0-3]):[0-5]\d$/;
-        if (!hm.test(sv.start) || !hm.test(sv.end)) return 'Times must be HH:MM (24h).';
-        if (sv.end <= sv.start) return 'End time must be after start time.';
+        if (!hm.test(sv.start) || !hm.test(sv.end)) return t('errors.timeFormat');
+        if (sv.end <= sv.start) return t('errors.endAfterStart');
         const slots = sv.slots.filter(sl => sl.count > 0);
         const clean = { ...sv, title: sv.title.trim(), location: sv.location.trim(), slots };
         const sid = id ?? `svc-${Date.now().toString(36)}`;
@@ -306,7 +318,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       deleteService: id => isOwner && update(x => ({ ...x, services: x.services.filter(s => s.id !== id), assignments: x.assignments.filter(a => a.serviceId !== id) })),
       unassign: id => { const a0 = d.assignments.find(a => a.id === id); if (!a0 || !canManage(a0.departmentId)) return; update(x => ({ ...x, assignments: x.assignments.filter(a => a.id !== id) })); },
     };
-  }, [data, sessionId]);
+  }, [data, sessionId, deviceLang]);
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }

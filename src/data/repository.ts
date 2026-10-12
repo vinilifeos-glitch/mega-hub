@@ -49,10 +49,14 @@ export interface Repository {
   save(data: AppData): Promise<void>;
   getSession(): Promise<string | null>;
   setSession(userId: string | null): Promise<void>;
+  /** Last language used on this device, so the sign-in screen matches before anyone signs in. */
+  getDeviceLanguage(): Promise<'pt' | 'en' | null>;
+  setDeviceLanguage(lang: 'pt' | 'en'): Promise<void>;
 }
 
 const DATA_KEY = 'megahub:data:v4';
 const SESSION_KEY = 'megahub:session:v4';
+const LANG_KEY = 'megahub:lang';
 
 class DeviceRepository implements Repository {
   async load() {
@@ -69,6 +73,8 @@ class DeviceRepository implements Repository {
   async setSession(id: string | null) {
     if (id) await AsyncStorage.setItem(SESSION_KEY, id); else await AsyncStorage.removeItem(SESSION_KEY);
   }
+  async getDeviceLanguage() { const v = await AsyncStorage.getItem(LANG_KEY); return v === 'pt' || v === 'en' ? v : null; }
+  async setDeviceLanguage(lang: 'pt' | 'en') { await AsyncStorage.setItem(LANG_KEY, lang); }
 }
 
 export const repository: Repository = new DeviceRepository();

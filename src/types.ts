@@ -4,7 +4,8 @@ export interface User {
   firstName: string; middleNames: string; lastName: string; dob: string; // DD/MM/YYYY or ''
   adminOf?: string[]; // departments this admin administers (set by owner)
   unavailable?: string[]; // ISO YYYY-MM-DD dates the person can't serve
-  contact?: string; // optional phone number, not used for sign-in
+  contact?: string;
+  language?: 'pt' | 'en'; // app language for this user; unset = 'pt' (default) // optional phone number, not used for sign-in
   positions: Record<string, string[]>; // departmentId -> roles held
   salt: string; passwordHash: string; mustChangePassword: boolean; active: boolean;
 }
