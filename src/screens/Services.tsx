@@ -144,7 +144,7 @@ function ServiceDetail({ service: sv, msg, onBack, onEdit, onDeleted }: { servic
       <Text style={s.small}>{t('services.onlyHolders')}</Text>
       {isOwner && draft && <Button label={t('services.publish')} onPress={() => { publishService(sv.id); setPubMsg(t('services.published')); }} testID="publish-service" />}
       {isOwner && <Button label={t('services.editService')} outline onPress={onEdit} testID="edit-service" />}
-      {isOwner && <Button label={draft ? t('services.deleteDraft') : t('services.deleteService')} color={colors.red} outline onPress={del} testID={draft ? 'delete-draft' : 'svc-delete'} />}
+      {isOwner && <Button label={draft ? t('services.deleteDraft') : t('services.deleteService')} danger onPress={del} testID={draft ? 'delete-draft' : 'delete-service'} />}
     </Screen>
   );
 }
@@ -250,7 +250,7 @@ function ServiceForm({ service, onClose, onDeleted }: { service?: Service; onClo
                       <Text numberOfLines={1} style={{ flexShrink: 1, color: who ? colors.primaryText : colors.muted, fontWeight: who ? '700' : '500', fontSize: 14 }}>{who ? displayName(who) : t('ui.assignPlaceholder')}</Text>
                       <Icon name={openPick === x.id ? 'chevron-up' : 'chevron-down'} size={14} color={who ? colors.primaryText : colors.muted} style={{ marginLeft: 6 }} />
                     </Pressable>
-                    {manage && <IconButton testID={`rm-${d.id}-${x.role}-${n}`} icon="remove-circle-outline" label={t('services.removeSlot')} color={colors.subtle} onPress={() => removeSlot(x.id)} style={{ marginLeft: 4 }} />}
+                    {manage && <IconButton testID={`rm-${d.id}-${x.role}-${n}`} icon="remove-circle-outline" label={t('services.removeSlot')} color={colors.red} onPress={() => removeSlot(x.id)} style={{ marginLeft: 4 }} />}
                   </View>
                   {openPick === x.id && manage && <View style={[s.row, { marginTop: 8 }]}>
                     {opts.length === 0 && <Text style={s.small}>{t('services.noneAvailable')}</Text>}
@@ -277,7 +277,7 @@ function ServiceForm({ service, onClose, onDeleted }: { service?: Service; onClo
       {err && <Notice tone="error" text={err} />}
       <Button label={!service ? t('services.createService') : isDraftSv ? t('services.publish') : t('services.saveService')} onPress={() => save('published')} testID="sv-save" />
       {(!service || isDraftSv) && <Button label={t('services.saveDraft')} outline onPress={() => save('draft')} testID="sv-save-draft" />}
-      {isDraftSv && <Button label={t('services.deleteDraft')} color={colors.red} outline testID="sv-delete-draft" onPress={() => confirmAsk(t('services.deleteDraft'), t('services.deleteDraftConfirm', { title: service!.title, date: isoToDdmm(service!.date) }), t('common.delete'), t('common.cancel'), () => { deleteService(service!.id); onDeleted?.(t('services.draftDeleted')); })} />}
+      {isDraftSv && <Button label={t('services.deleteDraft')} danger testID="sv-delete-draft" onPress={() => confirmAsk(t('services.deleteDraft'), t('services.deleteDraftConfirm', { title: service!.title, date: isoToDdmm(service!.date) }), t('common.delete'), t('common.cancel'), () => { deleteService(service!.id); onDeleted?.(t('services.draftDeleted')); })} />}
       <Button label={t('common.cancel')} outline onPress={() => onClose()} />
     </Screen>
   );

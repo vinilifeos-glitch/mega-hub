@@ -49,7 +49,7 @@ export const lightColors = {
   tabBar: '#FFFFFF',
   green: '#15803D', greenSoft: '#DCFCE7',
   amber: '#B45309', amberSoft: '#FEF3C7',
-  red: '#DC2626', redSoft: '#FEE2E2',
+  red: '#DC2626', redSoft: '#FEE2E2', dangerBorder: '#FCA5A5',
   statusTintAmber: '#FFFBEB', statusTextAmber: '#92400E',
   statusTintRed: '#FEF2F2', statusTextRed: '#991B1B',
   shadow: '#0F172A',
@@ -73,7 +73,7 @@ export const darkColors: Palette = {
   tabBar: '#0F1829',
   green: '#4ADE80', greenSoft: '#12301F',
   amber: '#FBBF24', amberSoft: '#3A2A0A',
-  red: '#F87171', redSoft: '#3B1414',
+  red: '#F87171', redSoft: '#3B1414', dangerBorder: '#7F1D1D',
   statusTintAmber: '#2A2110', statusTextAmber: '#FCD34D',
   statusTintRed: '#2A1416', statusTextRed: '#FCA5A5',
   shadow: '#000000',
@@ -188,18 +188,20 @@ export function Chip({ label, active, onPress, color, testID, icon }: { label: s
   );
 }
 
-/** Primary = filled accent. `outline` = secondary. `danger` (or legacy red `color`) + outline = destructive text button. */
+/** Primary = filled accent. `outline` = secondary. `danger` = destructive secondary: same shape as outline, red text + red-tinted border (implies outline). */
 export function Button({ label, onPress, color, outline, danger: dangerProp, testID }: { label: string; onPress?: () => void; color?: string; outline?: boolean; danger?: boolean; testID?: string }) {
   const colors = useColors(); const s = useStyles();
   const danger = dangerProp || color === lightColors.red || color === darkColors.red;
   const fill = (danger ? colors.red : color) ?? colors.primary;
   return (
-    <Pressable testID={testID} onPress={onPress} accessibilityRole="button"
+    <Pressable testID={testID} onPress={onPress} accessibilityRole="button" accessibilityLabel={label}
       style={({ pressed }) => [s.btn,
-        outline
-          ? { backgroundColor: pressed ? colors.soft : danger ? 'transparent' : colors.card, borderColor: danger ? 'transparent' : colors.border }
+        danger
+          ? { backgroundColor: pressed ? colors.redSoft : colors.card, borderColor: colors.dangerBorder }
+          : outline
+          ? { backgroundColor: pressed ? colors.soft : colors.card, borderColor: colors.border }
           : { backgroundColor: fill, borderColor: fill, opacity: pressed ? 0.85 : 1 }]}>
-      <Text style={{ color: outline ? (danger ? colors.red : colors.text) : colors.onPrimary, fontWeight: '700', fontSize: 16, textAlign: 'center' }}>{label}</Text>
+      <Text style={{ color: danger ? colors.red : outline ? colors.text : colors.onPrimary, fontWeight: '700', fontSize: 16, textAlign: 'center' }}>{label}</Text>
     </Pressable>
   );
 }
