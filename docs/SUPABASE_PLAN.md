@@ -83,3 +83,9 @@ Run tests: `npm run test:supabase` (no account or Docker needed).
 - `setlist_items(id, service_id → services on delete cascade, position, title, key, notes, song_id nullable)`; app order = array index ↔ `position`.
 - RLS: read = service visible (drafts rule) AND (owner/admin OR Music member OR assigned on that service). Write = owner or Music admin (`administers('d-music')`).
 - Adapter maps `Service.setlist` ↔ rows; empty/missing setlist = no rows. `song_id` reserved for phase 2 — see docs/SONG_LIBRARY_PLAN.md.
+
+## Department pages + song library (migration 20261012030000_dept_pages_songs.sql)
+- `departments.description`; owner or that department's admins may change it (trigger keeps name/emoji/colour/sort owner-only).
+- `department_resources(id, department_id, position, title, url, kind 'link'|'file' default 'link', file_ref nullable)`. Only links are built; `kind='file'` + `file_ref` (Storage path) reserved for uploads after the switch-over. Read: staff + department members. Write: owner + that department's admins.
+- `songs(id, department_id default 'd-music', title, artist, key, chords, link)`; `setlist_items.song_id` now FK → songs on delete set null. Read: staff, Music members, or anyone who can see a setlist using the song. Write: owner + Music admins.
+- Adapter maps `Department.description/resources` and `AppData.songs` both ways.

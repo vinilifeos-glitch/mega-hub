@@ -97,5 +97,19 @@ await ok('Music member + staff see setlist', async () => (await as('miguel', `se
 await ok('unassigned non-Music volunteer cannot see setlist', async () => (await as('pedro', `select * from setlist_items`)).rows.length === 0);
 await ok('assigned volunteer sees setlist', async () => { await db.query(`insert into assignments (service_id, department_id, role, idx, user_id) values ($1,'d-obreiros','Atalaia',0,$2)`, [id(100), U.pedro]); return (await as('pedro', `select * from setlist_items`)).rows.length === 2; });
 await ok('draft setlist hidden from Music volunteer', async () => { await db.query(`update services set status='draft' where id=$1`, [id(100)]); const r = (await as('miguel', `select * from setlist_items`)).rows.length === 0; await db.query(`update services set status='published' where id=$1`, [id(100)]); return r; });
+// Dept pages + songs
+await ok('Kids admin edits Kids description', async () => (await allowed('camila', `update departments set description='Kids!' where id='d-kids'`)) && (await db.query(`select description from departments where id='d-kids'`)).rows[0].description === 'Kids!');
+await ok('Kids admin cannot rename Kids or edit Music', async () => { await as('camila', `update departments set name='X' where id='d-kids'`).catch(() => {}); await as('camila', `update departments set description='hack' where id='d-music'`).catch(() => {});
+  const r = (await db.query(`select id, name, description from departments where id in ('d-kids','d-music') order by id`)).rows; return r[0].name !== 'X' && r[1].description !== 'hack'; });
+await ok('dept admin adds link resource', () => allowed('camila', `insert into department_resources (id, department_id, position, title, url) values ('rs1','d-kids',0,'Lições','https://drive.google.com/x')`));
+await ok('resource needs http(s) url for links', () => denied('camila', `insert into department_resources (id, department_id, position, title, url) values ('rs2','d-kids',1,'Bad','javascript:x')`));
+await ok('file resource needs file_ref (reserved)', () => denied('owner', `insert into department_resources (id, department_id, position, title, kind) values ('rs3','d-kids',1,'F','file')`));
+await ok('other admin cannot add resource', () => denied('lucas', `insert into department_resources (id, department_id, position, title, url) values ('rs4','d-kids',1,'X','https://a.org')`));
+await ok('member reads resources, non-member cannot', async () => (await as('ana', `select * from department_resources`)).rows.length === 1 && (await as('pedro', `select * from department_resources`)).rows.length === 0);
+await ok('Music admin adds song', () => allowed('lucas', `insert into songs (id, title, key, chords) values ('sg1','Grande é o Senhor','G','G D Em')`));
+await ok('Kids admin / volunteer cannot add song', async () => (await denied('camila', `insert into songs (id, title) values ('sg2','X')`)) && denied('miguel', `insert into songs (id, title) values ('sg3','X')`));
+await ok('Music member reads library; outsider cannot', async () => (await as('miguel', `select * from songs`)).rows.length === 1 && (await as('pedro', `select * from songs`)).rows.length === 0);
+await ok('song in visible setlist readable by assigned outsider', async () => { await db.query(`update setlist_items set song_id='sg1' where id='so1'`); return (await as('pedro', `select * from songs`)).rows.length === 1; });
+await ok('deleting song nulls setlist song_id', async () => { await allowed('lucas', `delete from songs where id='sg1'`); return (await db.query(`select song_id from setlist_items where id='so1'`)).rows[0].song_id === null; });
 await ok('anon sees nothing', async () => { await db.exec(`select set_config('request.jwt.claim.sub','',false); set role anon`); try { await db.query('select * from profiles'); return false; } catch { return true; } finally { await db.exec('reset role'); } });
 console.log(`${n} passed, ${fails} failed`); process.exit(fails ? 1 : 0);

@@ -1,4 +1,8 @@
-# Song library — phase 2 plan (not built)
+# Song library
+
+**Status (12 Oct 2026):** phase 2 core is built and live in the local app (library on the Music page, `/song/[id]` chord view, setlist "Pick from library"). In Supabase the `songs` table is now applied (migration 20261012030000); the commented draft below is kept for history. Still to do: transpose, per-service key override UI, link-by-title for old free-text items.
+
+## Original phase 2 plan
 
 Phase 1 (live): each service has `setlist: { id, title, key?, notes?, songId? }[]`. `songId` is always empty today.
 
