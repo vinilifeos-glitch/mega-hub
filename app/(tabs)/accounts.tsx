@@ -2,7 +2,7 @@ import { DateField } from '../../src/components/DateField';
 import { useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { AccountInput, formatDobInput, useMe, validContact, validDob } from '../../src/state/AppContext';
-import { Button, Card, Chip, Empty, Field, Screen, colors, s } from '../../src/components/ui';
+import { Button, Card, Chip, Empty, Field, Screen, colors, s, Notice } from '../../src/components/ui';
 import { Role, User } from '../../src/types';
 import { toIso, todayIso } from '../../src/data/dates';
 
@@ -143,7 +143,7 @@ function FullEditor({ user, onClose }: { user: User; onClose: (m?: string) => vo
       {data.departments.map(d => {
         const inDep = depIds.includes(d.id);
         return (
-          <Card key={d.id} style={{ borderLeftWidth: 5, borderLeftColor: inDep ? d.color : colors.border }}>
+          <Card key={d.id} style={{ borderLeftWidth: 3, borderLeftColor: inDep ? d.color : colors.border }}>
             <Chip testID={`e-dep-${d.id}`} label={`${inDep ? '✓ ' : ''}${d.emoji} ${d.name}`} color={d.color} active={inDep}
               onPress={() => { setDepIds(toggle(depIds, d.id)); if (!positions[d.id]) setPositions({ ...positions, [d.id]: [] }); }} />
             {inDep && <View style={s.row}>{d.positions.map(r => <Chip key={r} testID={`e-role-${d.id}-${r}`} label={r} color={d.color} active={(positions[d.id] ?? []).includes(r)}
@@ -165,7 +165,7 @@ function FullEditor({ user, onClose }: { user: User; onClose: (m?: string) => vo
           </View>
         ))}
       </Card>
-      {err && <Text style={{ color: colors.red, marginVertical: 8 }} testID="e-error">{err}</Text>}
+      {err && <Notice tone="error" text={err} />}
       <Button label="Save" onPress={save} testID="e-save" />
       <Button label="Cancel" outline onPress={() => onClose()} />
     </Screen>
@@ -226,7 +226,7 @@ function NewAccount({ onClose }: { onClose: (m?: string) => void }) {
       {data.departments.map(d => {
         const inDep = depIds.includes(d.id);
         return (
-          <Card key={d.id} style={{ borderLeftWidth: 5, borderLeftColor: inDep ? d.color : colors.border }}>
+          <Card key={d.id} style={{ borderLeftWidth: 3, borderLeftColor: inDep ? d.color : colors.border }}>
             <Chip testID={`n-dep-${d.id}`} label={`${inDep ? '✓ ' : ''}${d.emoji} ${d.name}`} color={d.color} active={inDep}
               onPress={() => { setDepIds(toggle(depIds, d.id)); if (!positions[d.id]) setPositions({ ...positions, [d.id]: [] }); }} />
             {inDep && <View style={s.row}>{d.positions.map(r => <Chip key={r} testID={`n-role-${d.id}-${r}`} label={r} color={d.color} active={(positions[d.id] ?? []).includes(r)}
@@ -234,7 +234,7 @@ function NewAccount({ onClose }: { onClose: (m?: string) => void }) {
           </Card>
         );
       })}
-      {err && <Text style={{ color: colors.red, marginVertical: 8 }} testID="n-error">{err}</Text>}
+      {err && <Notice tone="error" text={err} />}
       <Button label="Create account" onPress={save} testID="saveaccount" />
       <Button label="Cancel" outline onPress={() => onClose()} />
     </Screen>

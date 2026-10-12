@@ -2,7 +2,7 @@ import { DateField } from '../../src/components/DateField';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { formatDobInput, useMe } from '../../src/state/AppContext';
-import { Button, Card, Chip, Empty, Field, Screen, colors, s } from '../../src/components/ui';
+import { Button, Card, Chip, Empty, Field, Screen, colors, s, Notice } from '../../src/components/ui';
 import { User } from '../../src/types';
 import { toIso, todayIso } from '../../src/data/dates';
 
@@ -27,11 +27,11 @@ export default function Team() {
   );
   return (
     <Screen title="Team" subtitle="People in the departments you administer">
-      {msg && <Text style={[s.small, { color: colors.green, marginBottom: 8 }]}>{msg}</Text>}
+      {msg && <Notice text={msg} />}
       {deps.map(d => {
         const members = data.users.filter(u => u.active && u.departmentIds.includes(d.id));
         return (
-          <Card key={d.id} style={{ borderLeftWidth: 5, borderLeftColor: d.color }}>
+          <Card key={d.id} style={{ borderLeftWidth: 3, borderLeftColor: d.color }}>
             <Text style={s.h2}>{d.emoji}  {d.name} · {members.length}</Text>
             {members.length ? members.map(u => row(u, d.id)) : <Text style={s.small}>No one yet. Add people from the list below.</Text>}
           </Card>
@@ -67,13 +67,13 @@ function MemberEditor({ user, onClose }: { user: User; onClose: (m?: string) => 
       {deps.map(d => {
         const inDep = dm[d.id] !== null;
         return (
-          <Card key={d.id} style={{ borderLeftWidth: 5, borderLeftColor: inDep ? d.color : colors.border }}>
+          <Card key={d.id} style={{ borderLeftWidth: 3, borderLeftColor: inDep ? d.color : colors.border }}>
             <Chip testID={`m-dep-${d.id}`} label={`${inDep ? '✓ ' : ''}${d.emoji} ${d.name}`} color={d.color} active={inDep} onPress={() => setDm({ ...dm, [d.id]: inDep ? null : [] })} />
             {inDep && <View style={s.row}>{d.positions.map(r => <Chip key={r} testID={`m-role-${d.id}-${r}`} label={r} color={d.color} active={dm[d.id]!.includes(r)} onPress={() => toggleRole(d.id, r)} />)}</View>}
           </Card>
         );
       })}
-      {err && <Text style={{ color: colors.red, marginVertical: 6 }}>{err}</Text>}
+      {err && <Notice tone="error" text={err} />}
       <Button label="Save changes" testID="m-save" onPress={() => { const e = adminSaveMember(user.id, { ...f, departments: dm }); if (e) setErr(e); else onClose(`Saved ${f.firstName}.`); }} />
       <Text style={s.section}>Unavailable dates</Text>
       <Card>

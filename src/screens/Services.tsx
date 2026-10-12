@@ -2,7 +2,7 @@ import { DateField } from '../components/DateField';
 import { useEffect, useState } from 'react';
 import { Alert, Platform, Pressable, Text, View } from 'react-native';
 import { formatDobInput, useMe } from '../state/AppContext';
-import { Button, Card, Chip, Empty, Field, Screen, colors, formatDate, s } from '../components/ui';
+import { Button, Card, Chip, Empty, Field, Screen, colors, formatDate, s, Notice } from '../components/ui';
 import { Service, Slot } from '../types';
 import { formatTimeInput, isoToDdmm, toIso, todayIso, upcomingSundayIso } from '../data/dates';
 
@@ -22,16 +22,16 @@ export function ServicesHome() {
   }
   const upcoming = data.services.filter(x => x.date >= todayIso()).sort((a, b) => (a.date + a.start).localeCompare(b.date + b.start));
   return (
-    <Screen title="Services" subtitle={`Hi ${currentUser.firstName} 👋 — upcoming services and who's serving`}>
-      {msg && <Text style={[s.small, { color: colors.green, marginBottom: 8 }]}>{msg}</Text>}
-      {isOwner && <Button label="+ New service" onPress={() => { setMsg(null); setView({ kind: 'new' }); }} testID="new-service" />}
+    <Screen title="Services" subtitle={`Hi ${currentUser.firstName}. Upcoming services and who's serving.`}>
+      {msg && <Notice text={msg} />}
+      {isOwner && <Button label="New service" onPress={() => { setMsg(null); setView({ kind: 'new' }); }} testID="new-service" />}
       <View style={{ height: 12 }} />
-      {upcoming.length === 0 && <Empty text={isOwner ? 'No upcoming services. Create one above.' : 'No upcoming services yet.'} />}
+      {upcoming.length === 0 && <Empty text={isOwner ? 'No upcoming services yet. Tap “New service” to add one.' : 'No upcoming services yet. Check back soon.'} />}
       {upcoming.map(sv => {
         const mine = data.assignments.filter(a => a.serviceId === sv.id && a.userId === currentUser.id);
         return (
           <Pressable key={sv.id} testID={`svc-${sv.date}`} onPress={() => { setMsg(null); setView({ kind: 'detail', id: sv.id }); }}>
-            <Card style={mine.length ? { borderColor: colors.primary, borderWidth: 2 } : undefined}>
+            <Card style={mine.length ? { borderColor: colors.primary, backgroundColor: colors.primarySoft } : undefined}>
               <Text style={s.h2}>{sv.title}</Text>
               <Text style={s.small}>{formatDate(sv.date)} · {isoToDdmm(sv.date)} · {sv.start}–{sv.end}{sv.location ? ` · ${sv.location}` : ''}</Text>
               {mine.length > 0 && <Text style={{ color: colors.primary, fontWeight: '700', marginTop: 6 }}>You're serving: {mine.map(a => a.position).join(', ')}</Text>}
@@ -63,15 +63,15 @@ function ServiceDetail({ service: sv, msg, onBack, onEdit, onDeleted }: { servic
   };
   return (
     <Screen title={sv.title} subtitle={`${formatDate(sv.date)} · ${isoToDdmm(sv.date)} · ${sv.start}–${sv.end}${sv.location ? ` · ${sv.location}` : ''}`}>
-      {msg && <Text style={[s.small, { color: colors.green, marginBottom: 8 }]}>{msg}</Text>}
-      {err && <Text style={{ color: colors.red, marginBottom: 8 }}>{err}</Text>}
+      {msg && <Notice text={msg} />}
+      {err && <Notice tone="error" text={err} />}
       {data.departments.map(d => {
         const slots = sv.slots.filter(z => z.departmentId === d.id);
         if (!slots.length) return null;
         const manage = canManage(d.id);
         const members = data.users.filter(u => u.active && u.departmentIds.includes(d.id));
         return (
-          <Card key={d.id} style={{ borderLeftWidth: 5, borderLeftColor: d.color }}>
+          <Card key={d.id} style={{ borderLeftWidth: 3, borderLeftColor: d.color }}>
             <Text style={s.h2}>{d.emoji}  {d.name}{manage ? '' : ''}</Text>
             {!manage && <Text style={s.small}>View only</Text>}
             {slots.flatMap(sl => Array.from({ length: sl.count }, (_, i) => {
@@ -94,7 +94,7 @@ function ServiceDetail({ service: sv, msg, onBack, onEdit, onDeleted }: { servic
                       {holders.length === 0 && <Text style={s.small}>Nobody holds {sl.position} yet.</Text>}
                       {holders.map(m => {
                         const why = m.id === who?.id ? null : whyBlocked(sv.id, m.id);
-                        return <Chip key={m.id} testID={`pick-${m.username}`} color={why ? '#B8B3C7' : d.color} active={m.id === who?.id}
+                        return <Chip key={m.id} testID={`pick-${m.username}`} color={why ? colors.subtle : d.color} active={m.id === who?.id}
                           label={`${why === 'unavailable' ? '✕ ' : why === 'busy' ? '⏳ ' : '✓ '}${m.name}${why === 'busy' ? ' (busy)' : why === 'unavailable' ? ' (away)' : ''}`}
                           onPress={why ? undefined : () => { const e = assign(sv.id, d.id, sl.position, i, m.id); setErr(e); if (!e) setOpen(null); }} />;
                       })}
@@ -177,7 +177,7 @@ function ServiceForm({ service, onClose }: { service?: Service; onClose: (msg?: 
         const missing = d.positions.filter(p => !slots.some(z => z.departmentId === d.id && z.position === p));
         const mine = slots.filter(z => z.departmentId === d.id);
         return (
-          <Card key={d.id} style={{ borderLeftWidth: 5, borderLeftColor: d.color }}>
+          <Card key={d.id} style={{ borderLeftWidth: 3, borderLeftColor: d.color }}>
             <Text style={s.h2}>{d.emoji}  {d.name} · {mine.reduce((n, z) => n + z.count, 0)}</Text>
             {mine.map(z => (
               <View key={z.position} style={[s.row, { justifyContent: 'space-between', paddingVertical: 6 }]}>
@@ -204,7 +204,7 @@ function ServiceForm({ service, onClose }: { service?: Service; onClose: (msg?: 
         const mine = slots.filter(z => z.departmentId === d.id);
         if (!mine.length) return null;
         return (
-          <Card key={d.id} style={{ borderLeftWidth: 5, borderLeftColor: d.color }}>
+          <Card key={d.id} style={{ borderLeftWidth: 3, borderLeftColor: d.color }}>
             <Text style={s.h2}>{d.emoji}  {d.name}</Text>
             {mine.flatMap(z => Array.from({ length: z.count }, (_, i) => {
               const key = `${d.id}:${z.position}:${i}`; const who = picks[key] ? userById(picks[key]) : undefined;
@@ -229,7 +229,7 @@ function ServiceForm({ service, onClose }: { service?: Service; onClose: (msg?: 
           </Card>
         );
       })}
-      {err && <Text style={{ color: colors.red, marginVertical: 6 }} testID="sv-error">{err}</Text>}
+      {err && <Notice tone="error" text={err} />}
       <Button label={service ? 'Save service' : 'Create service'} onPress={save} testID="sv-save" />
       <Button label="Cancel" outline onPress={() => onClose()} />
     </Screen>
