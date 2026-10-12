@@ -13,6 +13,7 @@ export type Rows = {
   assignments: { service_id: string; department_id: string; role: string; idx: number; user_id: string }[];
   departments: { id: string; name: string; emoji: string; color: string; sort: number }[];
   department_roles: { department_id: string; role: string; sort: number }[];
+  setlist_items: { id: string; service_id: string; position: number; title: string; key: string | null; notes: string | null; song_id: string | null }[];
 };
 
 /** Primary/unique key columns per table (used for upsert onConflict and diffing). */
@@ -20,11 +21,11 @@ export const KEYS: Record<keyof Rows, string[]> = {
   profiles: ['id'], profile_private: ['user_id'], user_departments: ['user_id', 'department_id'],
   user_positions: ['user_id', 'department_id', 'role'], admin_of: ['user_id', 'department_id'],
   unavailability: ['user_id', 'date'], services: ['id'], service_slots: ['service_id', 'department_id', 'role'],
-  assignments: ['service_id', 'department_id', 'role', 'idx'], departments: ['id'], department_roles: ['department_id', 'role'],
+  assignments: ['service_id', 'department_id', 'role', 'idx'], departments: ['id'], department_roles: ['department_id', 'role'], setlist_items: ['id'],
 };
 /** Write order (parents first); deletes run in reverse. */
 export const ORDER: (keyof Rows)[] = ['departments', 'department_roles', 'profiles', 'profile_private', 'user_departments', 'user_positions',
-  'admin_of', 'unavailability', 'services', 'service_slots', 'assignments'];
+  'admin_of', 'unavailability', 'services', 'service_slots', 'assignments', 'setlist_items'];
 
 const ddmmToIso = (v: string) => { const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(v ?? ''); return m ? `${m[3]}-${m[2]}-${m[1]}` : null; };
 const isoToDdmm = (v: string | null) => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(v ?? ''); return m ? `${m[3]}/${m[2]}/${m[1]}` : ''; };
@@ -34,7 +35,7 @@ const blank = (v?: string) => (v && v.trim() ? v.trim() : null);
 /** AppData -> rows. `idMap` remaps user ids (legacy 'u-ana' -> auth uuid) during import. */
 export function toRows(d: AppData, idMap: (id: string) => string = x => x): Rows {
   const r: Rows = { profiles: [], profile_private: [], user_departments: [], user_positions: [], admin_of: [], unavailability: [],
-    services: [], service_slots: [], assignments: [], departments: [], department_roles: [] };
+    services: [], service_slots: [], assignments: [], departments: [], department_roles: [], setlist_items: [] };
   d.departments.forEach((x, i) => {
     r.departments.push({ id: x.id, name: x.name, emoji: x.emoji, color: x.color, sort: i });
     x.positions.forEach((p, j) => r.department_roles.push({ department_id: x.id, role: p, sort: j }));
@@ -53,6 +54,7 @@ export function toRows(d: AppData, idMap: (id: string) => string = x => x): Rows
   }
   for (const s of d.services) {
     r.services.push({ id: s.id, title: s.title, location: s.location ?? '', date: s.date, start_time: s.start, end_time: s.end, status: s.status ?? 'published' });
+    (s.setlist ?? []).forEach((x, i) => r.setlist_items.push({ id: x.id, service_id: s.id, position: i, title: x.title, key: blank(x.key), notes: blank(x.notes), song_id: x.songId ?? null }));
     for (const sl of s.slots) r.service_slots.push({ service_id: s.id, department_id: sl.departmentId, role: sl.position, count: sl.count });
   }
   for (const a of d.assignments) r.assignments.push({ service_id: a.serviceId, department_id: a.departmentId, role: a.position, idx: a.index, user_id: idMap(a.userId) });
@@ -80,6 +82,8 @@ export function fromRows(r: Rows): AppData {
   const departments = [...r.departments].sort((a, b) => a.sort - b.sort).map(x => ({ id: x.id, name: x.name, emoji: x.emoji, color: x.color, leaderId: null,
     positions: r.department_roles.filter(p => p.department_id === x.id).sort((a, b) => a.sort - b.sort).map(p => p.role) }));
   const services = r.services.map(s => ({ id: s.id, title: s.title, location: s.location, date: s.date.slice(0, 10), start: hhmm(s.start_time), end: hhmm(s.end_time), ...(s.status === 'draft' ? { status: 'draft' as const } : {}),
+    ...((l => l.length ? { setlist: l } : {}))((r.setlist_items ?? []).filter(x => x.service_id === s.id).sort((a, b) => a.position - b.position)
+      .map(x => ({ id: x.id, title: x.title, ...(x.key ? { key: x.key } : {}), ...(x.notes ? { notes: x.notes } : {}), ...(x.song_id ? { songId: x.song_id } : {}) }))),
     slots: r.service_slots.filter(x => x.service_id === s.id).map(x => ({ departmentId: x.department_id, position: x.role, count: x.count })) }));
   const assignments: Assignment[] = r.assignments.map(a => ({ id: `${a.service_id}:${a.department_id}:${a.role}:${a.idx}`, serviceId: a.service_id, departmentId: a.department_id, position: a.role, index: a.idx, userId: a.user_id }));
   return { users, departments, services, availability: [], assignments };

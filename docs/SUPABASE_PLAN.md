@@ -78,3 +78,8 @@ Run tests: `npm run test:supabase` (no account or Docker needed).
 - `services.status text not null default 'published'` (`draft|published`); existing rows become published.
 - RLS: volunteers can't select draft services, their slots or their assignments (`service_visible()`); owner/admins can. Only the owner can publish (services write policy is owner-only).
 - Adapter: `status` mapped both ways; app `status` missing = published, so a published service comes back without the field (same meaning).
+
+## Service setlist (migration 20261012020000_setlist.sql)
+- `setlist_items(id, service_id → services on delete cascade, position, title, key, notes, song_id nullable)`; app order = array index ↔ `position`.
+- RLS: read = service visible (drafts rule) AND (owner/admin OR Music member OR assigned on that service). Write = owner or Music admin (`administers('d-music')`).
+- Adapter maps `Service.setlist` ↔ rows; empty/missing setlist = no rows. `song_id` reserved for phase 2 — see docs/SONG_LIBRARY_PLAN.md.
