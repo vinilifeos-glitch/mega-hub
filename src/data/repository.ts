@@ -4,7 +4,9 @@ import { normalizeUnavailable } from './unavailability';
 import { mockData } from './mockData';
 
 /** Upgrade data saved by older app versions in place (keeps accounts & passwords). */
-export function migrate(d: AppData): AppData {
+export function migrate(d0: AppData): AppData {
+  // songs v2: artist -> composer (value kept, additive & idempotent)
+  const d: AppData = d0.songs?.some(s => s.artist !== undefined) ? { ...d0, songs: d0.songs.map(s => s.artist === undefined ? s : (({ artist, ...r }) => ({ ...r, composer: r.composer ?? artist }))(s)) } : d0;
   const seedPos = (id: string) => mockData.departments.find(x => x.id === id)?.positions;
   const departments = d.departments.map(x => ({ ...x, positions: seedPos(x.id) ?? x.positions }));
   const valid = (dep: string, r: string) => !!departments.find(x => x.id === dep)?.positions.includes(r);

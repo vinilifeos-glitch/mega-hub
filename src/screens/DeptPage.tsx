@@ -82,7 +82,7 @@ function SongLibrary() {
   const [q, setQ] = useState('');
   const songs = [...(data.songs ?? [])].sort((a, b) => a.title.localeCompare(b.title));
   const n = q.trim().toLowerCase();
-  const shown = n ? songs.filter(x => x.title.toLowerCase().includes(n) || (x.artist ?? '').toLowerCase().includes(n)) : songs;
+  const shown = n ? songs.filter(x => x.title.toLowerCase().includes(n) || (x.composer ?? x.artist ?? '').toLowerCase().includes(n)) : songs;
   return (
     <Card>
       <Text style={s.h2}>{t('dept.library')}</Text>
@@ -93,7 +93,7 @@ function SongLibrary() {
         <Pressable key={x.id} testID={`song-row-${x.id}`} onPress={() => router.push(`/song/${x.id}` as any)} style={[s.row, { flexWrap: 'nowrap', alignItems: 'center', borderTopWidth: 1, borderTopColor: colors.border, paddingVertical: 8 }]}>
           <View style={{ flex: 1 }}>
             <Text style={{ color: colors.text, fontWeight: '600' }}>{x.title}</Text>
-            {x.artist ? <Text style={s.small}>{x.artist}</Text> : null}
+            {(x.composer ?? x.artist) ? <Text style={s.small}>{x.composer ?? x.artist}</Text> : null}
           </View>
           {x.key ? <Badge label={x.key} tone="accent" /> : null}
           {x.chords ? <Icon name="musical-notes-outline" size={18} style={{ marginLeft: 8 }} /> : null}

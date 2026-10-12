@@ -66,3 +66,7 @@ export function cleanUrl(v: string): string | null {
   let u = (v ?? '').trim(); if (!u) return null; if (!/^[a-z]+:\/\//i.test(u)) u = 'https://' + u;
   try { const p = new URL(u); return (p.protocol === 'http:' || p.protocol === 'https:') && /\./.test(p.hostname) ? p.toString() : null; } catch { return null; }
 }
+
+/** Live mode: owner, Music admins, or Music members assigned on that service. */
+export const canLiveRule = (actor: { id: string; role: Tier; adminOf?: string[]; departmentIds?: string[] } | null | undefined, serviceId: string, assignments: { serviceId: string; userId: string }[]) =>
+  !!actor && (canEditSetlistRule(actor) || ((actor.departmentIds ?? []).includes(MUSIC_DEPT) && assignments.some(a => a.serviceId === serviceId && a.userId === actor.id)));
