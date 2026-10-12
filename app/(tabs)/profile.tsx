@@ -2,7 +2,7 @@ import { DateField } from '../../src/components/DateField';
 import { useState } from 'react';
 import { Text } from 'react-native';
 import { formatDobInput, useMe } from '../../src/state/AppContext';
-import { Button, Card, Field, Screen, colors, s, Notice } from '../../src/components/ui';
+import { Button, Card, Field, LanguagePicker, Lang, Screen, colors, s, Notice } from '../../src/components/ui';
 import { PersonalInfo } from '../../src/screens/Profile';
 import { ChangePasswordScreen } from '../../src/screens/Auth';
 
@@ -13,6 +13,8 @@ export default function MyProfile() {
   const [f, setF] = useState(init);
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  // TODO(Tom): wire to AppContext language setting (useApp().language / setLanguage(lang) from the i18n branch). Local state only, not persisted.
+  const [lang, setLang] = useState<Lang>('pt');
   if (mode === 'password') return <ChangePasswordScreen onDone={() => { setMode('view'); setMsg('Password changed.'); }} onCancel={() => setMode('view')} />;
   if (mode === 'edit') return (
     <Screen title="Edit my profile" subtitle={`Username @${me.username} can only be changed by the owner`}>
@@ -32,6 +34,12 @@ export default function MyProfile() {
     <Screen title="My profile" subtitle="Your personal details.">
       {msg && <Notice text={msg} />}
       <PersonalInfo user={me} title={me.name} />
+      <Text style={s.section}>Language</Text>
+      <Card>
+        <Text style={[s.small, { marginBottom: 12 }]}>Choose the language for your account.</Text>
+        <LanguagePicker value={lang} onChange={setLang} />
+      </Card>
+      <Text style={s.section}>Account</Text>
       <Button label="Edit my details" onPress={() => { setMsg(null); setF(init()); setMode('edit'); }} testID="edit-me" />
       <Button label="Change password" outline onPress={() => { setMsg(null); setMode('password'); }} testID="change-password" />
       <Button label="Sign out" color={colors.red} outline onPress={signOut} testID="signout" />

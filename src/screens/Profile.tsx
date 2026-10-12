@@ -9,7 +9,7 @@ const roleName = { owner: 'Owner', admin: 'Admin', volunteer: 'Volunteer' };
 const fmtDob = (d: string) => d || 'Not set';
 
 function Row({ k, v }: { k: string; v: string }) {
-  return <View style={{ marginBottom: 8 }}><Text style={s.small}>{k}</Text><Text style={{ fontSize: 16, color: colors.text }}>{v || '—'}</Text></View>;
+  return <View style={{ marginBottom: 8 }}><Text style={s.small}>{k}</Text><Text style={{ fontSize: 16, color: colors.text }}>{v || 'Not set'}</Text></View>;
 }
 
 export function PersonalInfo({ user, title }: { user: User; title?: string }) {

@@ -22,9 +22,9 @@ export default function Departments() {
                 <DeptTitle dep={d} />
                 {canManage(d.id) && <Text style={{ color: d.color, fontWeight: '600', fontSize: 12 }}>You manage</Text>}
               </View>
-              <Text style={[s.small, { marginTop: 4 }]}>Admins: {admins.map(a => a.name).join(', ') || 'None yet (Vini covers)'}</Text>
+              <Text style={[s.small, { marginTop: 4 }]}>{admins.length ? `Admins: ${admins.map(a => a.name).join(', ')}` : 'No admins yet. The owner (Vini) manages this department.'}</Text>
               <Text style={s.small}>Roles: {d.positions.join(', ')}</Text>
-              <Text style={{ marginTop: 6, color: colors.text }}>{members.length} people: {members.map(m => m.firstName).join(', ') || '—'}</Text>
+              <Text style={{ marginTop: 6, color: colors.text }}>{members.length ? `${members.length} ${members.length === 1 ? 'member' : 'members'}: ${members.map(m => m.firstName).join(', ')}` : 'No members yet'}</Text>
             </Card>
           );
         })}
