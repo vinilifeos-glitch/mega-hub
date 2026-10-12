@@ -45,6 +45,7 @@ export const pt: Dict = {
   },
   services: {
     title: 'Cultos', greeting: 'Olá, {name}. Próximos cultos e quem vai servir.', newService: 'Novo culto', editService: 'Editar culto',
+draft: 'Rascunho', saveDraft: 'Salvar rascunho', publish: 'Publicar', published: 'Culto publicado.', draftSaved: 'Rascunho salvo.', deleteDraft: 'Excluir rascunho', deleteDraftConfirm: 'Excluir o rascunho {title} em {date}? As escalas também serão removidas.', draftDeleted: 'Rascunho excluído.', draftHint: 'Rascunho — só o dono e os admins podem ver.',
     deleteService: 'Excluir culto', deleteConfirmTitle: 'Excluir culto?', deleteConfirm: 'Excluir {title} em {date}?', backToServices: 'Voltar aos cultos',
     createService: 'Criar culto', saveService: 'Salvar culto', created: 'Culto criado.', updated: 'Culto atualizado.', deleted: 'Culto excluído.',
     emptyOwner: 'Nenhum culto agendado. Toque em “Novo culto” para adicionar.', empty: 'Nenhum culto agendado ainda. Volte em breve.',

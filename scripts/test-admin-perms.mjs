@@ -3,7 +3,7 @@
 import ts from 'typescript'; import fs from 'fs'; import assert from 'assert';
 const src = fs.readFileSync(new URL('../src/state/permissions.ts', import.meta.url), 'utf8');
 const js = ts.transpileModule(src, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2020 } }).outputText;
-const { canEditPersonal, changedProtected, canEditMemberRule, pickPref } = await import('data:text/javascript,' + encodeURIComponent(js));
+const { canEditPersonal, changedProtected, canEditMemberRule, pickPref, visibleServiceData, isDraft } = await import('data:text/javascript,' + encodeURIComponent(js));
 const owner = { id: 'o', role: 'owner' }, admin = { id: 'a', role: 'admin', adminOf: ['music'] }, vol = { id: 'v', role: 'volunteer' };
 const tgt = { id: 'x', firstName: 'Miguel', middleNames: '', lastName: 'S', contact: '123', email: 'miguel@x.com', departmentIds: ['music'], positions: { music: ['keys'] } };
 // Same gate order as adminSaveMember (scope check already passed for these actors)
@@ -40,3 +40,14 @@ ok(pickPref(true, 'dark', 'light', 'light') === 'dark', 'signed-in user theme us
 ok(pickPref(false, undefined, 'dark', 'light') === 'dark', 'sign-in screen uses device theme');
 ok(pickPref(true, undefined, 'en', 'pt') === 'pt', 'signed-in user without language defaults pt (no leak)');
 console.log(`${n}/${n} passed`);
+
+// Drafts visibility
+const D = { services: [{ id: 's1' }, { id: 's2', status: 'published' }, { id: 'd1', status: 'draft' }], assignments: [{ serviceId: 's1', userId: 'v' }, { serviceId: 'd1', userId: 'v' }] };
+ok(visibleServiceData(owner, D) === D, 'owner sees drafts');
+ok(visibleServiceData(admin, D).services.length === 3, 'admin sees drafts');
+const V = visibleServiceData(vol, D);
+ok(V.services.map(x => x.id).join() === 's1,s2', 'volunteer never receives draft services');
+ok(V.assignments.length === 1 && V.assignments[0].serviceId === 's1', 'volunteer never receives draft assignments');
+ok(visibleServiceData(null, D).services.length === 2, 'signed-out gets no drafts');
+ok(!isDraft({}) && !isDraft({ status: 'published' }) && isDraft({ status: 'draft' }), 'missing status = published');
+const L = { services: [{ id: 's1' }], assignments: [] }; ok(visibleServiceData(vol, L) === L, 'legacy data passed through unchanged');
