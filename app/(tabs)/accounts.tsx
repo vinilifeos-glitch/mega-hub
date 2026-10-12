@@ -1,3 +1,4 @@
+import { UnavailEditor } from '../../src/components/UnavailEditor';
 import { AppData } from '../../src/types';
 /** Owner-only one-time export for the Supabase import (enabled only with EXPO_PUBLIC_ENABLE_EXPORT=1). Password hashes are never exported. */
 const EXPORT_ENABLED = process.env.EXPO_PUBLIC_ENABLE_EXPORT === '1';
@@ -108,7 +109,7 @@ function FullEditor({ user, onClose }: { user: User; onClose: (m?: string) => vo
   const [adminOf, setAdminOf] = useState<string[]>(user.adminOf ?? []);
   const [depIds, setDepIds] = useState<string[]>([...user.departmentIds]);
   const [positions, setPositions] = useState<Record<string, string[]>>(JSON.parse(JSON.stringify(user.positions ?? {})));
-  const [dates, setDates] = useState<Unavailability[]>((user.unavailable ?? []).filter(x => x.date >= todayIso()));
+  const [dates, setDates] = useState<Unavailability[]>((user.unavailable ?? []).filter(x => (x.to ?? x.date) >= todayIso()));
   const [newDate, setNewDate] = useState(''); const [newNote, setNewNote] = useState('');
   const [err, setErr] = useState<string | null>(null);
   const self = user.id === currentUser.id;
@@ -122,9 +123,9 @@ function FullEditor({ user, onClose }: { user: User; onClose: (m?: string) => vo
     if (e) return setErr(e);
     const e2 = saveProfile(user.id, { ...f, departmentIds: depIds, positions });
     if (e2) return setErr(e2);
-    const old = (user.unavailable ?? []).filter(x => x.date >= todayIso());
+    const old = (user.unavailable ?? []).filter(x => (x.to ?? x.date) >= todayIso());
     old.filter(x => !dates.some(y => y.date === x.date)).forEach(x => removeUnavailable(x.date, user.id));
-    dates.filter(x => { const o = old.find(y => y.date === x.date); return !o || (o.note ?? '') !== (x.note ?? ''); }).forEach(x => addUnavailable(x.date, user.id, x.note));
+    dates.filter(x => { const o = old.find(y => y.date === x.date); return !o || (o.note ?? '') !== (x.note ?? '') || (o.to ?? '') !== (x.to ?? ''); }).forEach(x => addUnavailable(x.date, user.id, x.note, x.to));
     onClose(t(pw ? 'accounts.savedPw' : 'accounts.saved', { name: f.firstName }));
   };
   const sec = (label: string) => <Text style={[s.section, { marginTop: 18 }]}>{label}</Text>;
@@ -173,18 +174,7 @@ function FullEditor({ user, onClose }: { user: User; onClose: (m?: string) => vo
       })}
       {sec(t('availability.unavailableDates'))}
       <Card>
-        <DateField label={t('availability.add')} limit="future" value={newDate} onChange={setNewDate} testID="e-unavail" />
-        <Field label={t('availability.noteLabel')} value={newNote} onChangeText={setNewNote} maxLength={NOTE_MAX} placeholder={t('availability.notePlaceholder')} testID="e-unavail-note" />
-        <Button label={t('availability.addShort')} outline testID="e-unavail-add" onPress={() => {
-          const iso = toIso(newDate); if (!iso || iso < todayIso()) return setErr(t('errors.futureDateInvalid'));
-          const n = newNote.trim(); setDates([...dates.filter(x => x.date !== iso), n ? { date: iso, note: n } : { date: iso }].sort((a, b) => a.date.localeCompare(b.date))); setNewDate(''); setNewNote(''); setErr(null);
-        }} />
-        {dates.length === 0 ? <Text style={[s.small, { marginTop: 8 }]}>{t('availability.noDates')}</Text> : dates.map(({ date: iso, note: n }) => (
-          <View key={iso} style={[s.row, { justifyContent: 'space-between', marginTop: 8 }]}>
-            <View style={{ flex: 1 }}><Text style={{ color: colors.text }}>{iso.split('-').reverse().join('/')}</Text>{n ? <Text style={s.small}>{n}</Text> : null}</View>
-            <Pressable onPress={() => setDates(dates.filter(x => x.date !== iso))}><Text style={{ color: colors.red, fontWeight: '700' }}>{t('common.remove')}</Text></Pressable>
-          </View>
-        ))}
+        <UnavailEditor entries={dates} onAdd={e => { setDates([...dates.filter(x => x.date !== e.date), e].sort((p, q) => p.date.localeCompare(q.date))); return null; }} onRemove={d => setDates(dates.filter(x => x.date !== d))} />
       </Card>
       {err && <Notice tone="error" text={err} />}
       <Button label={t('common.save')} onPress={save} testID="e-save" />

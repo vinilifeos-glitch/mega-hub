@@ -58,6 +58,7 @@ draft: 'Draft', saveDraft: 'Save draft', publish: 'Publish', published: 'Service
     noneAvailable: 'No one available for this role on this date. Check Availability or department members.',
     assignedCount: '{n} of {total} assigned', noSlots: 'No slots', slotsA11y: '{dept} slots', assignA11y: 'Assign people in {dept}', slotNumber: '{role} {n}',
   },
+  unav: { from: 'From', to: 'To (optional)', toHint: 'Leave empty for a single day.', note: 'Note (optional)', add: 'Add', remove: 'Remove', days: '{n} days' },
   availability: {
     title: 'Availability', subtitle: "Add the dates you can't serve. You're available on every other date.", dateLabel: "Date I'm unavailable",
     add: 'Add unavailable date', addShort: 'Add date', mine: 'My unavailable dates', empty: "No dates added. You're available for every service.",
@@ -99,6 +100,7 @@ draft: 'Draft', saveDraft: 'Save draft', publish: 'Publish', published: 'Service
     title: 'Title', artist: 'Artist', key: 'Key', chords: 'Chords / lyrics', link: 'Link (optional)', edit: 'Edit song', save: 'Save song', cancel: 'Cancel', del: 'Delete song', delConfirm: 'Delete {title} from the library?', notFound: 'Song not found.', noChords: 'No chords yet.', smaller: 'Smaller text', bigger: 'Bigger text', pick: 'Pick from library', back: 'Back' },
   setlist: { title: 'Setlist', count: '{n} songs', key: 'Key', notes: 'Notes', songTitle: 'Song title', addSong: '+ Add song', edit: 'Edit', done: 'Done', empty: 'No songs yet.', more: '+{n} more', up: 'Move {title} up', down: 'Move {title} down', remove: 'Remove {title}', save: 'Save song', cancel: 'Cancel', customKey: 'Other key' },
   errors: {
+    rangeOrder: '"To" must be on or after "From".', rangeTooLong: 'A range can be at most one year.',
     deptScope: 'Only the owner and this department\'s admins can edit this page.', resTitle: 'Title is required.', urlInvalid: 'Enter a valid web link (https://…).',
     setlistScope: 'Only the owner and Music admins can edit the setlist.', songTitle: 'Song title is required.',
     wrongCredentials: 'Wrong username or password.', deactivated: 'This account has been deactivated. Ask an admin.', notSignedIn: 'Not signed in.',

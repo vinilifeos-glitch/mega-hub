@@ -1,6 +1,6 @@
 export type Role = 'owner' | 'admin' | 'volunteer';
 /** One unavailable day. `note` is private (owner, admins, and the person only). Maps 1:1 to a Supabase row (user_id, date, note). */
-export interface Unavailability { date: string /* ISO YYYY-MM-DD */; note?: string; }
+export interface Unavailability { date: string /* ISO YYYY-MM-DD, range start */; /** optional range end (ISO, inclusive); missing = single day */ to?: string; note?: string; }
 export type Theme = 'light' | 'dark';
 export interface User {
   id: string; username: string; name: string; role: Role; departmentIds: string[];

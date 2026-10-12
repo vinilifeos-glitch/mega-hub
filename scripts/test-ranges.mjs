@@ -1,0 +1,28 @@
+// Run: node scripts/test-ranges.mjs — unavailability range logic
+import ts from 'typescript'; import fs from 'fs'; import assert from 'assert';
+let src = fs.readFileSync(new URL('../src/data/unavailability.ts', import.meta.url), 'utf8').replace(/^import .*$/m, '');
+const js = ts.transpileModule(src, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2020 } }).outputText;
+const U = await import('data:text/javascript,' + encodeURIComponent(js));
+let n = 0; const ok = (c, m) => { assert.ok(c, m); n++; console.log('PASS', m); };
+const u = { unavailable: [{ date: '2026-10-20', to: '2026-10-27', note: 'Férias' }, { date: '2026-11-08' }] };
+ok(U.isUnavailableOn(u, '2026-10-20') && U.isUnavailableOn(u, '2026-10-25') && U.isUnavailableOn(u, '2026-10-27'), 'range covers start, middle, end (inclusive)');
+ok(!U.isUnavailableOn(u, '2026-10-19') && !U.isUnavailableOn(u, '2026-10-28'), 'outside range not covered');
+ok(U.isUnavailableOn(u, '2026-11-08') && !U.isUnavailableOn(u, '2026-11-09'), 'single day (no to) as before');
+ok(U.noteOn(u, '2026-10-25') === 'Férias', 'note found for day inside range');
+ok(U.formatRange({ date: '2026-10-20', to: '2026-10-27' }) === '20/10–27/10/2026', 'label same year');
+ok(U.formatRange({ date: '2026-12-28', to: '2027-01-03' }) === '28/12/2026–03/01/2027', 'label across years');
+ok(U.formatRange({ date: '2026-11-08' }) === '08/11/2026' && U.formatRange({ date: '2026-11-08', to: '2026-11-08' }) === '08/11/2026', 'single day label');
+ok(U.rangeError('2026-10-20', '2026-10-19', '2026-10-12') === 'rangeOrder', 'to before from rejected');
+ok(U.rangeError('2026-10-01', undefined, '2026-10-12') === 'datePast', 'past from rejected');
+ok(U.rangeError('2026-10-20', undefined, '2026-10-12') === null && U.rangeError('2026-10-20', '2026-10-20', '2026-10-12') === null, 'single day / to=from ok');
+ok(U.rangeError(null, undefined, '2026-10-12') === 'dateInvalid' && U.rangeError('2026-10-20', null, '2026-10-12') === 'dateInvalid', 'invalid dates rejected');
+ok(U.rangeError('2026-10-20', '2027-12-01', '2026-10-12') === 'rangeTooLong', 'over a year rejected');
+const legacy = U.normalizeUnavailable(['2026-10-25', { date: '2026-11-01', note: 'x' }, { date: '2026-12-01', to: '2026-12-05' }]);
+ok(JSON.stringify(legacy) === '[{"date":"2026-10-25"},{"date":"2026-11-01","note":"x"},{"date":"2026-12-01","to":"2026-12-05"}]', 'legacy strings + objects + ranges normalise');
+const cur = [{ date: '2026-10-25' }, { date: '2026-11-01', note: 'x' }];
+ok(JSON.stringify(U.normalizeUnavailable(cur)) === JSON.stringify(cur), 'existing {date,note} entries unchanged (no conversion)');
+ok(JSON.stringify(U.normalizeUnavailable([{ date: '2026-12-05', to: '2026-12-01' }])) === '[{"date":"2026-12-05"}]', 'bad to (< from) dropped to single day');
+const vol = { id: 'v', role: 'volunteer' };
+ok(JSON.stringify(U.getUnavailableFor(vol, { id: 'x', unavailable: u.unavailable })) === '[{"date":"2026-10-20","to":"2026-10-27"},{"date":"2026-11-08"}]', 'note stripped for others, range kept');
+ok(U.getUnavailableFor({ id: 'a', role: 'admin' }, { id: 'x', unavailable: u.unavailable })[0].note === 'Férias', 'admin sees note');
+console.log(`${n}/${n} passed`);
