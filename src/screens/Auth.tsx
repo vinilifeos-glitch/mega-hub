@@ -20,7 +20,7 @@ export function SignInScreen() {
   );
 }
 
-export function ChangePasswordScreen({ firstTime, onDone }: { firstTime?: boolean; onDone?: () => void }) {
+export function ChangePasswordScreen({ firstTime, onDone, onCancel }: { firstTime?: boolean; onDone?: () => void; onCancel?: () => void }) {
   const { changePassword, signOut } = useApp();
   const [o, setO] = useState(''); const [n, setN] = useState(''); const [c, setC] = useState('');
   const [err, setErr] = useState<string | null>(null);
@@ -36,7 +36,7 @@ export function ChangePasswordScreen({ firstTime, onDone }: { firstTime?: boolea
         <Field label="Confirm new password" value={c} onChangeText={setC} secureTextEntry testID="confirmpw" />
         {err && <Text style={{ color: colors.red, marginBottom: 6 }}>{err}</Text>}
         <Button label="Save password" onPress={go} testID="savepw" />
-        {firstTime ? <Button label="Sign out" outline onPress={signOut} /> : null}
+        {firstTime ? <Button label="Sign out" outline onPress={signOut} /> : onCancel ? <Button label="Cancel" outline onPress={onCancel} /> : null}
       </Card>
     </Screen>
   );

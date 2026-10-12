@@ -41,7 +41,7 @@ export default function Rotas() {
               {members.filter(m => holdsRole(m.id, dep.id, pos)).map(m => {
                 const av = isAvailable(m.id, serviceId!);
                 const blocked = av === false || busy(m.id);
-                const tag = av === true ? '✓' : av === false ? '✕' : '?';
+                const tag = av === false ? '✕' : '✓';
                 return (
                   <Chip key={m.id} color={blocked ? '#B8B3C7' : dep.color} active={m.id === current?.userId}
                     label={`${tag} ${m.name.split(' ')[0]}${busy(m.id) ? ' (busy)' : ''}`}
@@ -52,7 +52,7 @@ export default function Rotas() {
           </Card>
         );
       })}
-      <Text style={s.small}>Only people who hold the role are listed. ✓ available · ? not answered · ✕ unavailable (can't be picked) · busy = already serving elsewhere that day</Text>
+      <Text style={s.small}>Only people who hold the role are listed. ✓ available · ✕ marked that date unavailable (can't be picked) · busy = already serving elsewhere that day</Text>
     </Screen>
   );
 }

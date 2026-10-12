@@ -14,6 +14,10 @@ export function migrate(d: AppData): AppData {
       ...(iso ? { dob: `${iso[3]}/${iso[2]}/${iso[1]}` } : {}),
       ...(u0.positions ? { positions: Object.fromEntries(Object.entries(u0.positions).map(([k, v]) => [k, v.filter(r => valid(k, r))])) } : {}),
     };
+    if (!u.unavailable) {
+      u.unavailable = [...new Set(d.availability.filter(a => a.userId === u.id && !a.available)
+        .map(a => d.services.find(s => s.id === a.serviceId)?.date).filter((x): x is string => !!x))].sort();
+    }
     if (u.firstName !== undefined && u.positions) return u;
     const seed = mockData.users.find(s => s.id === u.id);
     const parts = u.name.split(' ');
