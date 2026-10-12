@@ -14,7 +14,7 @@ export const pt: Dict = {
   language: { title: 'Idioma', hint: 'Escolha o idioma da sua conta.', pt: 'Português', en: 'English' },
   departments: { 'd-music': 'Música', 'd-kids': 'Infantil', 'd-obreiros': 'Obreiros' },
   roles: {
-    'd-music': { Keys: 'Teclado', Bass: 'Baixo', Drums: 'Bateria', Guitar: 'Guitarra', Desk: 'Mesa de Som', 'Lead Singer': 'Ministro(a) de Louvor', 'Backing Vocals': 'Backing Vocal' },
+    'd-music': { Keys: 'Teclado', Bass: 'Baixo', Drums: 'Bateria', Guitar: 'Guitarra', Desk: 'Mesa de Som', 'Lead Singer': 'Ministro(a) de Louvor', 'Backing Vocals': 'Backing Vocal', Assembly: 'Montagem' },
     'd-kids': { Teacher: 'Professor(a)', Assistant: 'Auxiliar' },
     'd-obreiros': { Atalaia: 'Atalaia', 'Dízimo': 'Dízimo', Abertura: 'Abertura', 'Projeção': 'Projeção', 'Mídia': 'Mídia' },
   },

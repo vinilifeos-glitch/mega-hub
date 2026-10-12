@@ -12,7 +12,7 @@ export const en = {
   language: { title: 'Language', hint: 'Choose the language for your account.', pt: 'Português', en: 'English' },
   departments: { 'd-music': 'Music', 'd-kids': 'Kids', 'd-obreiros': 'Ushers' },
   roles: {
-    'd-music': { Keys: 'Keys', Bass: 'Bass', Drums: 'Drums', Guitar: 'Guitar', Desk: 'Sound Desk', 'Lead Singer': 'Lead Singer', 'Backing Vocals': 'Backing Vocals' },
+    'd-music': { Keys: 'Keys', Bass: 'Bass', Drums: 'Drums', Guitar: 'Guitar', Desk: 'Sound Desk', 'Lead Singer': 'Lead Singer', 'Backing Vocals': 'Backing Vocals', Assembly: 'Assembly' },
     'd-kids': { Teacher: 'Teacher', Assistant: 'Assistant' },
     'd-obreiros': { Atalaia: 'Watchman (door security)', 'Dízimo': 'Tithes & Offerings', Abertura: 'Opening', 'Projeção': 'Projection', 'Mídia': 'Media' },
   },

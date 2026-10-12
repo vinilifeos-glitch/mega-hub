@@ -15,7 +15,8 @@ import { Service, Slot } from '../types';
 import { formatTimeInput, isoToDdmm, toIso, todayIso, upcomingSundayIso } from '../data/dates';
 
 
-const DOUBLE: Record<string, number> = { 'd-kids:Assistant': 2, 'd-music:Backing Vocals': 2 };
+export const DEFAULT_LOCATION = '1 Main St, Farcet, Peterborough PE7 3AN';
+const DOUBLE: Record<string, number> = { 'd-kids:Assistant': 2, 'd-music:Backing Vocals': 2, 'd-music:Assembly': 3 };
 
 export function ServicesHome() {
   const colors = useColors(); const s = useStyles();
@@ -157,7 +158,7 @@ function ServiceForm({ service, onClose, onDeleted }: { service?: Service; onClo
   const colors = useColors(); const s = useStyles();
   const { data, saveService, deleteService, canManage, t, deptName, roleName } = useMe();
   const [title, setTitle] = useState(service?.title ?? t('services.defaultName'));
-  const [location, setLocation] = useState(service?.location ?? data.settings?.lastLocation ?? '');
+  const [location, setLocation] = useState(service?.location ?? DEFAULT_LOCATION);
   const [date, setDate] = useState(isoToDdmm(service?.date ?? upcomingSundayIso()));
   const [start, setStart] = useState(service?.start ?? '16:00');
   const [end, setEnd] = useState(service?.end ?? '21:00');
