@@ -1,3 +1,4 @@
+import { canEditPersonal } from '../../src/state/permissions';
 import { DateField } from '../../src/components/DateField';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
@@ -46,7 +47,7 @@ export default function Team() {
 }
 
 function MemberEditor({ user, onClose }: { user: User; onClose: (m?: string) => void }) {
-  const { data, myAdminDeps, adminSaveMember, addUnavailable, removeUnavailable, t, ownerName, deptName, roleName } = useMe();
+  const { data, currentUser, myAdminDeps, adminSaveMember, addUnavailable, removeUnavailable, t, ownerName, deptName, roleName } = useMe();
   const deps = data.departments.filter(d => myAdminDeps.includes(d.id));
   const [f, setF] = useState({ firstName: user.firstName, middleNames: user.middleNames, lastName: user.lastName, dob: user.dob, contact: user.contact ?? '' });
   const [dm, setDm] = useState<Record<string, string[] | null>>(Object.fromEntries(deps.map(d => [d.id, user.departmentIds.includes(d.id) ? [...(user.positions?.[d.id] ?? [])] : null])));
@@ -54,14 +55,15 @@ function MemberEditor({ user, onClose }: { user: User; onClose: (m?: string) => 
   const live = data.users.find(u => u.id === user.id) ?? user;
   const dates = (live.unavailable ?? []).filter(x => x >= todayIso());
   const toggleRole = (dep: string, r: string) => setDm(p => ({ ...p, [dep]: (p[dep] ?? []).includes(r) ? p[dep]!.filter(x => x !== r) : [...(p[dep] ?? []), r] }));
+  const lock = !canEditPersonal(currentUser, user.id);
   return (
     <Screen title={t('team.editTitle', { name: user.name })} subtitle={t('team.editSubtitle', { owner: ownerName })}>
       <Card>
-        <Field label={t('fields.firstName')} value={f.firstName} onChangeText={v => setF({ ...f, firstName: v })} autoCapitalize="words" testID="m-first" />
-        <Field label={t('fields.middleNames')} value={f.middleNames} onChangeText={v => setF({ ...f, middleNames: v })} autoCapitalize="words" />
-        <Field label={t('fields.surname')} value={f.lastName} onChangeText={v => setF({ ...f, lastName: v })} autoCapitalize="words" testID="m-last" />
+        <Field label={t('fields.firstName')} value={f.firstName} onChangeText={v => setF({ ...f, firstName: v })} editable={!lock} autoCapitalize="words" testID="m-first" />
+        <Field label={t('fields.middleNames')} value={f.middleNames} onChangeText={v => setF({ ...f, middleNames: v })} editable={!lock} autoCapitalize="words" />
+        <Field label={t('fields.surname')} value={f.lastName} onChangeText={v => setF({ ...f, lastName: v })} editable={!lock} autoCapitalize="words" testID="m-last" />
         <DateField label={t('fields.dob')} limit="past" value={f.dob} onChange={v => setF({ ...f, dob: v })} testID="m-dob" />
-        <Field label={t('fields.contact')} value={f.contact} keyboardType="phone-pad" onChangeText={v => setF({ ...f, contact: v })} />
+        <Field label={t('fields.contact')} value={f.contact} keyboardType="phone-pad" onChangeText={v => setF({ ...f, contact: v })} editable={!lock} />
       </Card>
       <Text style={s.section}>{t('team.yourDepts')}</Text>
       {deps.map(d => {

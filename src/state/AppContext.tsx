@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useMemo, useState } from '
 import { AppData, Department, Role, Service, User } from '../types';
 import { repository } from '../data/repository';
 import { hashPassword, newSalt } from '../data/auth';
+import { canEditPersonal, changedProtected } from './permissions';
 import { DEFAULT_LANG, Lang, TKey, TParams, deptLabel, formatDateShort, roleLabel, tierLabel, translate } from '../i18n';
 
 export interface AccountInput { name: string; username: string; role: Role; departmentIds: string[]; tempPassword?: string;
@@ -173,7 +174,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       },
       resetPassword: async (id, pw) => {
         const tgt = d.users.find(u => u.id === id);
-        if (!tgt || !canEditAccount(tgt)) return t('errors.notAllowed');
+        if (!tgt || !canEditAccount(tgt) || !canEditPersonal(currentUser, id)) return t('errors.notAllowed');
         if (pw.length < 4) return t('errors.passwordTooShort');
         const salt = newSalt(); const passwordHash = await hashPassword(salt, pw);
         update(x => ({ ...x, users: x.users.map(u => u.id === id ? { ...u, salt, passwordHash, mustChangePassword: true } : u) }));
@@ -246,6 +247,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       adminSaveMember: (id, p) => {
         const t0 = d.users.find(u => u.id === id);
         if (!t0 || !canEditMember(t0)) return t('errors.memberScope');
+        if (!canEditPersonal(currentUser, id) && changedProtected(t0, p).length) return t('errors.personalOwnerOnly');
         if (!p.firstName.trim()) return t('errors.firstNameRequired');
         if (p.dob && !validDob(p.dob)) return t('errors.dobInvalid');
         if (!validContact(p.contact.trim())) return t('errors.contactInvalid');

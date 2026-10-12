@@ -100,7 +100,7 @@ export const pt: Dict = {
     usernameTaken: 'Esse usuário já está em uso.', roleNotAllowed: 'Você não pode atribuir esse nível.', editNotAllowed: 'Você não pode editar esta conta.',
     notAllowed: 'Não permitido.', ownerOnlyProfiles: 'Só o proprietário pode editar perfis.', firstNameRequired: 'O nome é obrigatório.',
     contactInvalid: 'O telefone parece inválido.', dobInvalid: 'A data de nascimento deve ser uma data real no formato DD/MM/AAAA.', accountNotFound: 'Conta não encontrada.',
-    selfOwnerLock: 'Você não pode remover seu próprio acesso de proprietário nem se desativar.', memberScope: 'Você só pode editar pessoas dos departamentos que administra.',
+    selfOwnerLock: 'Você não pode remover seu próprio acesso de proprietário nem se desativar.', memberScope: 'Você só pode editar pessoas dos departamentos que administra.', personalOwnerOnly: 'Só o proprietário pode alterar o nome, o contato ou a senha de outra pessoa.',
     slotScope: 'Você só pode preencher vagas dos departamentos que administra.', notFound: 'Não encontrado.', doesntHoldRole: '{name} não tem a função {role}.',
     unavailableThatDay: '{name} está indisponível nesse dia.', alreadyServing: '{name} já está escalado(a) neste culto.',
     ownerOnlyServices: 'Só o proprietário pode criar ou editar cultos.', nameRequired: 'O nome é obrigatório.', dateInvalid: 'Informe uma data real no formato DD/MM/AAAA.',
