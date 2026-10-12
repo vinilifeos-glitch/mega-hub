@@ -7,7 +7,7 @@ import { RolesView } from '../../src/screens/Profile';
 
 export default function Departments() {
   const colors = useColors(); const s = useStyles();
-  const { data, canManage, currentUser, t, ownerName, roleName } = useMe();
+  const { data, canManage, canViewDept, currentUser, t, ownerName, roleName } = useMe();
   const seesAll = currentUser.role !== 'volunteer';
   return (
     <Screen title={t('departmentsScreen.title')} subtitle={t('departmentsScreen.subtitle')}>
@@ -19,7 +19,7 @@ export default function Departments() {
       {currentUser.role !== 'owner' && <Text style={[s.small, { marginBottom: 8 }]}>{t('departmentsScreen.assignedBy', { owner: ownerName })}</Text>}
       {seesAll && <>
         <Text style={s.section}>{t('departmentsScreen.all')}</Text>
-        {data.departments.map(d => {
+        {data.departments.filter(d => canViewDept(d.id)).map(d => {
           const admins = data.users.filter(u => u.active && u.role === 'admin' && (u.adminOf ?? []).includes(d.id));
           const members = data.users.filter(u => u.active && u.departmentIds.includes(d.id));
           return (

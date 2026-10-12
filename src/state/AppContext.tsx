@@ -1,9 +1,10 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { AppData, Department, Resource, Role, Service, SetlistItem, Song, Theme, Unavailability, User } from '../types';
-import { NOTE_MAX, awayOn, getUnavailableFor } from '../data/unavailability';
+import { NOTE_MAX, awayOn, covers, getUnavailableFor, rangeError } from '../data/unavailability';
+import { todayIso as todayIsoFn } from '../data/dates';
 import { repository } from '../data/repository';
 import { hashPassword, newSalt } from '../data/auth';
-import { canEditMemberRule, canEditPersonal, changedProtected, pickPref, visibleServiceData, visibleSetlists, canEditSetlistRule, canEditDeptRule, visibleSongs, cleanUrl, canLiveRule } from './permissions';
+import { canEditMemberRule, canEditPersonal, changedProtected, pickPref, visibleServiceData, visibleSetlists, canEditSetlistRule, canEditDeptRule, visibleSongs, cleanUrl, canLiveRule, canViewDeptRule, visibleDeptPages } from './permissions';
 import { keyLabel, parseKey } from '../data/music';
 import { DEFAULT_LANG, Lang, TKey, TParams, deptLabel, formatDateShort, roleLabel, tierLabel, translate } from '../i18n';
 
@@ -56,7 +57,8 @@ interface Ctx {
   changePassword: (oldPw: string, newPw: string) => Promise<string | null>;
   isAvailable: (userId: string, serviceId: string) => boolean | undefined;
   setAvailability: (userId: string, serviceId: string, available: boolean) => void;
-  addUnavailable: (isoDate: string, userId?: string, note?: string) => void;
+  /** Adds/replaces the entry starting on isoDate (optional inclusive `to`); clears that person's assignments on any day in range. */
+  addUnavailable: (isoDate: string, userId?: string, note?: string, to?: string) => string | null;
   removeUnavailable: (isoDate: string, userId?: string) => void;
   canEditMember: (target: User) => boolean;
   myAdminDeps: string[];
@@ -69,6 +71,7 @@ interface Ctx {
   deleteService: (id: string) => void;
   publishService: (id: string) => void;
   canEditDept: (deptId: string) => boolean;
+  canViewDept: (deptId: string) => boolean;
   setDeptAbout: (deptId: string, description: string) => string | null;
   addResource: (deptId: string, r: { title: string; url: string }) => string | null;
   updateResource: (deptId: string, id: string, r: { title: string; url: string }) => string | null;
@@ -144,7 +147,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const found = raw.users.find(u => u.id === sessionId && u.active);
     // Privacy: screens only ever receive notes they may see (owner, any admin, or the person themself).
     // Drafts: volunteers / signed-out never receive draft services or their assignments.
-    const d: AppData = visibleSongs(found, visibleSetlists(found, visibleServiceData(found, { ...raw, users: raw.users.map(u => ({ ...u, unavailable: getUnavailableFor(found, u) })) })));
+    const d: AppData = visibleDeptPages(found, visibleSongs(found, visibleSetlists(found, visibleServiceData(found, { ...raw, users: raw.users.map(u => ({ ...u, unavailable: getUnavailableFor(found, u) })) }))));
     const currentUser = found ?? null;
     const role = currentUser?.role;
     const language: Lang = pickPref<Lang>(!!currentUser, currentUser?.language, deviceLang, DEFAULT_LANG);
@@ -294,15 +297,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         return null;
       },
       canEditMember, myAdminDeps,
-      addUnavailable: (iso, userId, note) => {
+      addUnavailable: (iso, userId, note, to) => {
         const n = (note ?? '').trim().slice(0, NOTE_MAX);
         const uid = userId ?? currentUser?.id; const t0 = d.users.find(u => u.id === uid);
-        if (!t0 || !canEditMember(t0)) return;
+        if (!t0 || !canEditMember(t0)) return t('errors.memberScope');
+        const end = to && to > iso ? to : undefined;
+        const re = rangeError(iso, end ?? undefined, todayIsoFn()); if (re) return t(`errors.${re}` as any);
+        const entry = { date: iso, ...(end ? { to: end } : {}), ...(n ? { note: n } : {}) };
         update(x => ({
           ...x,
-          users: x.users.map(u => u.id === uid ? { ...u, unavailable: [...(u.unavailable ?? []).filter(e => e.date !== iso), n ? { date: iso, note: n } : { date: iso }].sort((a, b) => a.date.localeCompare(b.date)) } : u),
-          assignments: x.assignments.filter(a => !(a.userId === uid && x.services.find(s => s.id === a.serviceId)?.date === iso)),
+          users: x.users.map(u => u.id === uid ? { ...u, unavailable: [...(u.unavailable ?? []).filter(e => e.date !== iso), entry].sort((a, b) => a.date.localeCompare(b.date)) } : u),
+          assignments: x.assignments.filter(a => { if (a.userId !== uid) return true; const dt = x.services.find(s => s.id === a.serviceId)?.date; return !(dt && covers(entry, dt)); }),
         }));
+        return null;
       },
       removeUnavailable: (iso, userId) => {
         const uid = userId ?? currentUser?.id; const t0 = d.users.find(u => u.id === uid);
@@ -414,6 +421,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       removeSong: (sid, id) => { if (canEditSetlistRule(currentUser)) editSetlist(sid, l => l.filter(x => x.id !== id)); },
       moveSong: (sid, id, dir) => { if (canEditSetlistRule(currentUser)) editSetlist(sid, l => { const i = l.findIndex(x => x.id === id); const j = dir === 'up' ? i - 1 : i + 1; if (i < 0 || j < 0 || j >= l.length) return l; const n = [...l]; [n[i], n[j]] = [n[j], n[i]]; return n; }); },
       canEditDept: dep => canEditDeptRule(currentUser, dep),
+      canViewDept: dep => canViewDeptRule(currentUser, dep),
       setDeptAbout: (dep, text) => { if (!canEditDeptRule(currentUser, dep)) return t('errors.deptScope'); const v = text.trim().slice(0, 1000);
         update(x => ({ ...x, departments: x.departments.map(z => z.id === dep ? (v ? { ...z, description: v } : (({ description, ...r }) => r)(z)) : z) })); return null; },
       addResource: (dep, r) => { if (!canEditDeptRule(currentUser, dep)) return t('errors.deptScope'); const title = r.title.trim(); const url = cleanUrl(r.url);

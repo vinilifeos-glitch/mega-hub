@@ -13,13 +13,13 @@ const domain = (u: string) => { try { return new URL(u).hostname.replace(/^www\.
 
 export function DeptPage({ id }: { id: string }) {
   const colors = useColors(); const s = useStyles();
-  const { data, currentUser, t, deptName, canEditDept, setDeptAbout, addResource, updateResource, removeResource, moveResource } = useMe();
+  const { data, currentUser, t, deptName, canEditDept, canViewDept, setDeptAbout, addResource, updateResource, removeResource, moveResource } = useMe();
   const d = data.departments.find(x => x.id === id);
   const [editing, setEditing] = useState(false);
   const [about, setAbout] = useState<string | null>(null);
   const [res, setRes] = useState<{ id: string | null; title: string; url: string } | null>(null);
   const [err, setErr] = useState<string | null>(null);
-  const allowed = d && (currentUser.role !== 'volunteer' || currentUser.departmentIds.includes(d.id));
+  const allowed = d && canViewDept(d.id);
   if (!d || !allowed) return <Screen title={t('song.notFound')} backTo={{ label: t('dept.back'), onPress: () => goBack('/departments') }}><Text style={s.small}>{t('errors.notFound')}</Text></Screen>;
   const editor = canEditDept(d.id);
   const members = data.users.filter(u => u.active && u.departmentIds.includes(d.id));

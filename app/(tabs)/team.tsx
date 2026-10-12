@@ -1,3 +1,4 @@
+import { UnavailEditor } from '../../src/components/UnavailEditor';
 import { useTabReset } from '../../src/tabReset';
 import { displayName } from '../../src/display';
 import { canEditPersonal } from '../../src/state/permissions';
@@ -59,7 +60,7 @@ function MemberEditor({ user, onClose }: { user: User; onClose: (m?: string) => 
   const [dm, setDm] = useState<Record<string, string[] | null>>(Object.fromEntries(deps.map(d => [d.id, user.departmentIds.includes(d.id) ? [...(user.positions?.[d.id] ?? [])] : null])));
   const [date, setDate] = useState(''); const [note, setNote] = useState(''); const [err, setErr] = useState<string | null>(null);
   const live = data.users.find(u => u.id === user.id) ?? user;
-  const dates = (live.unavailable ?? []).filter(x => x.date >= todayIso());
+  const dates = (live.unavailable ?? []).filter(x => (x.to ?? x.date) >= todayIso());
   const toggleRole = (dep: string, r: string) => setDm(p => ({ ...p, [dep]: (p[dep] ?? []).includes(r) ? p[dep]!.filter(x => x !== r) : [...(p[dep] ?? []), r] }));
   const lock = !canEditPersonal(currentUser, user.id);
   return (
@@ -86,18 +87,7 @@ function MemberEditor({ user, onClose }: { user: User; onClose: (m?: string) => 
       <Button label={t('common.saveChanges')} testID="m-save" onPress={() => { const e = adminSaveMember(user.id, { ...f, departments: dm }); if (e) setErr(e); else onClose(t('team.saved', { name: displayName(user) })); }} />
       <Text style={s.section}>{t('availability.unavailableDates')}</Text>
       <Card>
-        <DateField label={t('availability.add')} limit="future" value={date} onChange={setDate} testID="m-unavail" />
-        <Field label={t('availability.noteLabel')} value={note} onChangeText={setNote} maxLength={NOTE_MAX} placeholder={t('availability.notePlaceholder')} testID="m-unavail-note" />
-        <Button label={t('availability.add')} outline testID="m-unavail-add" onPress={() => {
-          const iso = toIso(date); if (!iso || iso < todayIso()) return setErr(t('errors.futureDateInvalid'));
-          addUnavailable(iso, user.id, note); setDate(''); setNote(''); setErr(null);
-        }} />
-        {dates.length === 0 ? <Text style={[s.small, { marginTop: 8 }]}>{t('availability.noDates')}</Text> : dates.map(({ date: iso, note: n }) => (
-          <View key={iso} style={[s.row, { justifyContent: 'space-between', marginTop: 8 }]}>
-            <View style={{ flex: 1 }}><Text style={{ color: colors.text }}>{iso.split('-').reverse().join('/')}</Text>{n ? <Text style={s.small}>{n}</Text> : null}</View>
-            <Pressable onPress={() => removeUnavailable(iso, user.id)}><Text style={{ color: colors.red, fontWeight: '700' }}>{t('common.remove')}</Text></Pressable>
-          </View>
-        ))}
+        <UnavailEditor entries={dates} onAdd={e => addUnavailable(e.date, user.id, e.note, e.to)} onRemove={d => removeUnavailable(d, user.id)} />
       </Card>
       <Button label={t('common.back')} outline onPress={() => onClose()} />
     </Screen>
