@@ -18,7 +18,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="index" options={{ title: 'Services', headerTitle: 'Mega Hub', tabBarIcon: icon('calendar') }} />
       <Tabs.Screen name="departments" options={{ title: 'Depts', headerTitle: 'Departments', tabBarIcon: icon('grid') }} />
       <Tabs.Screen name="availability" options={{ title: 'Available', headerTitle: 'Availability', tabBarIcon: icon('close-circle'), }} />
-      <Tabs.Screen name="my-rota" options={{ title: 'My rota', tabBarIcon: icon('hand-left'), }} />
+      <Tabs.Screen name="my-rota" options={{ title: 'My Rota', tabBarIcon: icon('hand-left'), }} />
       <Tabs.Screen name="team" options={{ title: 'Team', headerTitle: 'My team', tabBarIcon: icon('people'), href: currentUser.role === 'admin' ? undefined : null }} />
       <Tabs.Screen name="profile" options={{ title: 'Profile', headerTitle: 'My profile', tabBarIcon: icon('person-circle') }} />
       <Tabs.Screen name="accounts" options={{ title: 'Accounts', tabBarIcon: icon('key'), href: canManageAccounts ? undefined : null }} />
