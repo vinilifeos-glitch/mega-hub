@@ -27,6 +27,9 @@
       "expo-router",
       "expo-status-bar"
     ],
-    "scheme": "megahub"
+    "scheme": "megahub",
+    "experiments": {
+      "baseUrl": "/mega-hub"
+    }
   }
 }
