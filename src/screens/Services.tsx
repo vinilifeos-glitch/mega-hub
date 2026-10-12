@@ -2,7 +2,7 @@ import { DateField } from '../components/DateField';
 import { useEffect, useState } from 'react';
 import { Alert, Platform, Pressable, Text, View } from 'react-native';
 import { formatDobInput, useMe } from '../state/AppContext';
-import { Button, Card, Chip, Empty, Field, Screen, colors, formatDate, s, Notice } from '../components/ui';
+import { Button, DeptTitle, Icon, deptIcon, Card, Chip, Empty, Field, Screen, colors, formatDate, s, Notice } from '../components/ui';
 import { Service, Slot } from '../types';
 import { formatTimeInput, isoToDdmm, toIso, todayIso, upcomingSundayIso } from '../data/dates';
 
@@ -40,7 +40,7 @@ export function ServicesHome() {
                   const need = sv.slots.filter(z => z.departmentId === d.id).reduce((n, z) => n + z.count, 0);
                   if (!need) return null;
                   const got = data.assignments.filter(a => a.serviceId === sv.id && a.departmentId === d.id).length;
-                  return <Text key={d.id} style={{ marginRight: 12, color: got >= need ? colors.green : d.color, fontWeight: '600', fontSize: 13 }}>{d.emoji} {got}/{need}</Text>;
+                  return <View key={d.id} style={[s.row, { marginRight: 16 }]}><Icon name={deptIcon(d.id)} size={16} color={got >= need ? colors.green : d.color} style={{ marginRight: 4 }} /><Text style={{ color: got >= need ? colors.green : d.color, fontWeight: '600', fontSize: 13 }}>{got}/{need}</Text></View>;
                 })}
               </View>
             </Card>
@@ -72,7 +72,7 @@ function ServiceDetail({ service: sv, msg, onBack, onEdit, onDeleted }: { servic
         const members = data.users.filter(u => u.active && u.departmentIds.includes(d.id));
         return (
           <Card key={d.id} style={{ borderLeftWidth: 3, borderLeftColor: d.color }}>
-            <Text style={s.h2}>{d.emoji}  {d.name}{manage ? '' : ''}</Text>
+            <DeptTitle dep={d} />
             {!manage && <Text style={s.small}>View only</Text>}
             {slots.flatMap(sl => Array.from({ length: sl.count }, (_, i) => {
               const key = `${sv.id}:${d.id}:${sl.position}:${i}`;
@@ -95,7 +95,7 @@ function ServiceDetail({ service: sv, msg, onBack, onEdit, onDeleted }: { servic
                       {holders.map(m => {
                         const why = m.id === who?.id ? null : whyBlocked(sv.id, m.id);
                         return <Chip key={m.id} testID={`pick-${m.username}`} color={why ? colors.subtle : d.color} active={m.id === who?.id}
-                          label={`${why === 'unavailable' ? '✕ ' : why === 'busy' ? '⏳ ' : '✓ '}${m.name}${why === 'busy' ? ' (busy)' : why === 'unavailable' ? ' (away)' : ''}`}
+                          icon={why === 'unavailable' ? 'close-circle-outline' : why === 'busy' ? 'time-outline' : 'checkmark-circle-outline'} label={`${m.name}${why === 'busy' ? ' (busy)' : why === 'unavailable' ? ' (away)' : ''}`}
                           onPress={why ? undefined : () => { const e = assign(sv.id, d.id, sl.position, i, m.id); setErr(e); if (!e) setOpen(null); }} />;
                       })}
                       {a && <Chip label="Clear" color={colors.red} onPress={() => { unassign(a.id); setOpen(null); }} />}
@@ -107,7 +107,8 @@ function ServiceDetail({ service: sv, msg, onBack, onEdit, onDeleted }: { servic
           </Card>
         );
       })}
-      <Text style={s.small}>✓ available · ✕ away that day · ⏳ already serving in this service. Only people holding the role are listed.</Text>
+      <View style={[s.row, { marginTop: 4, marginBottom: 4 }]}>{([['checkmark-circle-outline', 'Available'], ['close-circle-outline', 'Away that day'], ['time-outline', 'Already serving']] as const).map(([n, l]) => <View key={l} style={[s.row, { marginRight: 16, marginBottom: 4 }]}><Icon name={n} size={16} style={{ marginRight: 4 }} /><Text style={s.small}>{l}</Text></View>)}</View>
+      <Text style={s.small}>Only people who hold the role are listed.</Text>
       {isOwner && <Button label="Edit service" outline onPress={onEdit} testID="edit-service" />}
       {isOwner && <Button label="Delete service" color={colors.red} outline onPress={del} testID="delete-service" />}
       <Button label="Back to services" outline onPress={onBack} testID="back-services" />
@@ -178,7 +179,7 @@ function ServiceForm({ service, onClose }: { service?: Service; onClose: (msg?: 
         const mine = slots.filter(z => z.departmentId === d.id);
         return (
           <Card key={d.id} style={{ borderLeftWidth: 3, borderLeftColor: d.color }}>
-            <Text style={s.h2}>{d.emoji}  {d.name} · {mine.reduce((n, z) => n + z.count, 0)}</Text>
+            <DeptTitle dep={d} suffix={` · ${mine.reduce((n, z) => n + z.count, 0)}`} />
             {mine.map(z => (
               <View key={z.position} style={[s.row, { justifyContent: 'space-between', paddingVertical: 6 }]}>
                 <Text style={{ color: colors.text, flex: 1 }}>{z.position}</Text>
@@ -205,7 +206,7 @@ function ServiceForm({ service, onClose }: { service?: Service; onClose: (msg?: 
         if (!mine.length) return null;
         return (
           <Card key={d.id} style={{ borderLeftWidth: 3, borderLeftColor: d.color }}>
-            <Text style={s.h2}>{d.emoji}  {d.name}</Text>
+            <DeptTitle dep={d} />
             {mine.flatMap(z => Array.from({ length: z.count }, (_, i) => {
               const key = `${d.id}:${z.position}:${i}`; const who = picks[key] ? userById(picks[key]) : undefined;
               const opts = eligible(d.id, z.position, key);
