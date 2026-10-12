@@ -20,7 +20,14 @@ export interface Department { id: string; name: string; emoji: string; color: st
   /** Ordered links. kind 'file' + fileRef reserved for uploads after Supabase (not built). */ resources?: Resource[]; }
 export interface Resource { id: string; title: string; url: string; kind?: 'link' | 'file'; fileRef?: string | null; }
 /** Department song library (Music). Referenced by SetlistItem.songId. */
-export interface Song { id: string; deptId: string; title: string; artist?: string; key?: string; chords?: string; link?: string; }
+export interface Song { id: string; deptId: string; title: string;
+  composer?: string; /** legacy (pre-v2), migrated to composer on load */ artist?: string;
+  /** 'C', 'F#', 'Am', 'Bbm' — chords in `sections` are written in this key */ key?: string;
+  link?: string; timeSignature?: string; bpm?: number;
+  /** legacy plain-text sheet (kept readable) */ chords?: string;
+  sections?: SongSection[]; }
+/** One chord-sheet section. bars[i] = chord(s) for bar i; '' = hold/repeat previous. */
+export interface SongSection { id: string; name: string; cue?: string; bars: string[]; notes?: string; }
 export interface Slot { departmentId: string; position: string; count: number; }
 export interface Service { id: string; title: string; location: string; date: string /* ISO YYYY-MM-DD */; start: string; end: string; slots: Slot[]; /** missing = published */ status?: 'draft' | 'published';
   /** Ordered (array index = position). Missing = empty. */ setlist?: SetlistItem[]; }

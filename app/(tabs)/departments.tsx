@@ -29,7 +29,8 @@ export default function Departments() {
                 {canManage(d.id) && <Badge tone="accent" icon="shield-checkmark" label={t('common.youManage')} />}
               </View>
               <Text style={[s.small, { marginTop: 4 }]}>{admins.length ? t('departmentsScreen.admins', { names: admins.map(displayName).join(', ') }) : t('departmentsScreen.noAdmins', { owner: ownerName })}</Text>
-              <Text style={s.small}>{t('departmentsScreen.roles', { roles: d.positions.map(p => roleName(d.id, p)).join(', ') })}</Text>
+              <Text style={[s.label, { marginTop: 10, marginBottom: 6 }]}>{t('ui.rolesLabel')}</Text>
+              <View style={s.row}>{d.positions.map(p => <Badge key={p} label={roleName(d.id, p)} />)}</View>
               <Text style={{ marginTop: 6, color: colors.text }}>{members.length ? t(members.length === 1 ? 'departmentsScreen.member' : 'departmentsScreen.members', { count: members.length, names: members.map(displayName).join(', ') }) : t('departmentsScreen.noMembers')}</Text>
               <Text style={{ marginTop: 6, color: colors.primary, fontWeight: '700' }}>{t('dept.open')} ›</Text>
             </Card></Pressable>

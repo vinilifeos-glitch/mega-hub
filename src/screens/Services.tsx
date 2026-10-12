@@ -46,9 +46,10 @@ export function ServicesHome() {
         const mine = data.assignments.filter(a => a.serviceId === sv.id && a.userId === currentUser.id);
         return (
           <Pressable key={sv.id} testID={`svc-${sv.date}`} onPress={() => { setMsg(null); setView({ kind: 'detail', id: sv.id }); }}>
-            <Card style={mine.length ? { borderColor: colors.primary, borderWidth: 1.5 } : undefined}>
-              <View style={[s.row, { justifyContent: 'space-between' }]}><Text style={s.h2}>{sv.title}</Text>{sv.status === 'draft' && <Badge tone="warning" icon="create-outline" label={t('services.draft')} testID={`draft-badge-${sv.date}`} />}</View>
-              <Text style={s.small}>{fmtDate(sv.date)} · {isoToDdmm(sv.date)} · {sv.start}–{sv.end}{sv.location ? ` · ${sv.location}` : ''}</Text>
+            <Card style={sv.status === 'draft' ? { borderStyle: 'dashed', borderColor: colors.amber, borderWidth: 1.5, backgroundColor: colors.soft } : mine.length ? { borderColor: colors.primary, borderWidth: 1.5 } : undefined}>
+              <View style={[s.row, { justifyContent: 'space-between' }]}><Text style={s.h2}>{sv.title}</Text>{sv.status === 'draft' && <StatusBadge status="draft" label={t('services.draft')} testID={`draft-badge-${sv.date}`} />}</View>
+              <Text style={s.small}>{fmtDate(sv.date)} · {isoToDdmm(sv.date)} · {sv.start}–{sv.end}</Text>
+              {sv.location ? <View style={[s.row, { flexWrap: 'nowrap', marginTop: 2 }]}><Icon name="location-outline" size={14} style={{ marginRight: 4 }} /><Text style={[s.small, { flexShrink: 1 }]}>{sv.location}</Text></View> : null}
               {mine.length > 0 && <View style={{ marginTop: 8 }}><StatusBadge status="assigned" label={t('services.youreServing', { roles: mine.map(a => roleName(a.departmentId, a.position)).join(', ') })} /></View>}
               <View style={[s.row, { marginTop: 8 }]}>
                 {data.departments.map(d => {
@@ -80,7 +81,7 @@ function ServiceDetail({ service: sv, msg, onBack, onEdit, onDeleted }: { servic
     <Screen title={sv.title} subtitle={`${fmtDate(sv.date)} · ${isoToDdmm(sv.date)} · ${sv.start}–${sv.end}${sv.location ? ` · ${sv.location}` : ''}`}>
       {msg && <Notice text={msg} />}
       {pubMsg && <Notice text={pubMsg} />}
-      {draft && <View style={[s.row, { marginBottom: 8 }]}><Badge tone="warning" icon="create-outline" label={t('services.draft')} testID="draft-badge" /><Text style={[s.small, { marginLeft: 8, flex: 1 }]}>{t('services.draftHint')}</Text></View>}
+      {draft && <View style={[s.row, { marginBottom: 8 }]}><StatusBadge status="draft" label={t('services.draft')} testID="draft-badge" /><Text style={[s.small, { marginLeft: 8, flex: 1 }]}>{t('services.draftHint')}</Text></View>}
       {err && <Notice tone="error" text={err} />}
       {data.departments.map(d => {
         const slots = sv.slots.filter(z => z.departmentId === d.id);
@@ -102,7 +103,7 @@ function ServiceDetail({ service: sv, msg, onBack, onEdit, onDeleted }: { servic
                   <View style={[s.row, { justifyContent: 'space-between' }]}>
                     <Text style={{ fontWeight: '600', color: colors.text }}>{roleName(d.id, sl.position)}{sl.count > 1 ? ` ${i + 1}` : ''}</Text>
                     <View style={s.row}>
-                      <Text style={{ color: who ? (me ? colors.primary : colors.text) : colors.muted, fontWeight: me ? '800' : '400' }}>{who ? `${displayName(who)}${me ? ` ${t('common.you')}` : ''}` : t('common.unfilled')}</Text>
+                      {who ? <View style={[s.row, { flexWrap: 'nowrap', flexShrink: 1 }]}><Icon name="checkmark-circle" size={16} color={me ? colors.primary : colors.green} style={{ marginRight: 4 }} /><Text style={{ color: me ? colors.primary : colors.text, fontWeight: me ? '800' : '600', flexShrink: 1 }}>{`${displayName(who)}${me ? ` ${t('common.you')}` : ''}`}</Text></View> : <View style={{ marginTop: 4 }}><StatusBadge status="open" label={t('common.unfilled')} /></View>}
                       {manage && <Pressable testID={`slot-${d.id}-${sl.position}-${i}`} onPress={() => { setErr(null); setOpen(open === key ? null : key); }}><Text style={{ color: colors.primary, fontWeight: '700', marginLeft: 10 }}>{who ? t('common.change') : t('common.fill')}</Text></Pressable>}
                     </View>
                   </View>
@@ -214,25 +215,30 @@ function ServiceForm({ service, onClose, onDeleted }: { service?: Service; onClo
         return (
           <Card key={d.id} style={{ borderLeftWidth: 3, borderLeftColor: d.color, opacity: manage ? 1 : 0.6 }}>
             <Pressable testID={`dept-toggle-${d.id}`} accessibilityRole="button" accessibilityState={{ expanded: open }} accessibilityLabel={t('services.slotsA11y', { dept: deptName(d.id) })} onPress={() => setOpenDept(open ? null : d.id)} style={[s.row, { justifyContent: 'space-between', flexWrap: 'nowrap', minHeight: 44 }]}>
-              <View style={{ flex: 1 }}>
+              <View style={{ flex: 1, marginRight: 8 }}>
                 <DeptTitle dep={d} />
-                <Text style={[s.small, { marginTop: 4 }]} testID={`dept-status-${d.id}`}>{mine.length ? t('services.assignedCount', { n: mine.filter(x => x.assigneeId).length, total: mine.length }) : t('services.noSlots')}{manage ? '' : ` · ${t('common.viewOnly')}`}</Text>
+                <View style={{ marginTop: 8, marginLeft: 42 }} testID={`dept-status-${d.id}`}>
+                  <Badge tone={mine.length && mine.every(x => x.assigneeId) ? 'success' : mine.some(x => x.assigneeId) ? 'warning' : 'neutral'} icon={mine.length && mine.every(x => x.assigneeId) ? 'checkmark-circle' : 'ellipse-outline'}
+                    label={`${mine.length ? t('services.assignedCount', { n: mine.filter(x => x.assigneeId).length, total: mine.length }) : t('services.noSlots')}${manage ? '' : ` · ${t('common.viewOnly')}`}`} />
+                </View>
               </View>
-              <Icon name={open ? 'chevron-up' : 'chevron-down'} size={20} />
+              <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.soft, alignItems: 'center', justifyContent: 'center' }}><Icon name={open ? 'chevron-up' : 'chevron-down'} size={18} /></View>
             </Pressable>
             {open && mine.map(x => {
               const same = mine.filter(y => y.role === x.role); const n = same.indexOf(x);
               const who = x.assigneeId ? userById(x.assigneeId) : undefined;
               const opts = eligibleFor(x.id);
               return (
-                <View key={x.id} testID={`row-${d.id}-${x.role}-${n}`} style={{ borderTopWidth: 1, borderTopColor: colors.border, paddingVertical: 6 }}>
+                <View key={x.id} testID={`row-${d.id}-${x.role}-${n}`} style={{ borderTopWidth: 1, borderTopColor: colors.border, paddingVertical: 6, minHeight: 56, justifyContent: 'center' }}>
                   <View style={[s.row, { flexWrap: 'nowrap', alignItems: 'center' }]}>
-                    <Text style={[s.small, { flex: 1, color: colors.text }]}>{roleName(d.id, x.role)}{same.length > 1 ? ` ${n + 1}` : ''}</Text>
+                    <Text style={{ flex: 1, fontSize: 15, fontWeight: '600', color: colors.text, marginRight: 8 }} numberOfLines={2}>{roleName(d.id, x.role)}{same.length > 1 ? ` ${n + 1}` : ''}</Text>
                     <Pressable testID={`fp-${d.id}-${x.role}-${n}`} disabled={!manage} onPress={() => setOpenPick(openPick === x.id ? null : x.id)}
-                      style={{ borderWidth: 1, borderColor: colors.border, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 6, marginRight: 6 }}>
-                      <Text style={{ color: who ? colors.text : colors.muted, fontWeight: '600' }}>{who ? `${displayName(who)} ▾` : t('services.assign')}</Text>
+                      accessibilityRole="button" accessibilityState={{ expanded: openPick === x.id }} accessibilityLabel={`${roleName(d.id, x.role)}: ${who ? displayName(who) : t('ui.assignPlaceholder')}`}
+                      style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', minHeight: 40, maxWidth: '55%', borderWidth: 1, borderColor: who ? colors.primary : colors.border, backgroundColor: openPick === x.id || pressed ? colors.soft : who ? colors.primarySoft : colors.card, borderRadius: 999, paddingLeft: 14, paddingRight: 10 })}>
+                      <Text numberOfLines={1} style={{ flexShrink: 1, color: who ? colors.primaryText : colors.muted, fontWeight: who ? '700' : '500', fontSize: 14 }}>{who ? displayName(who) : t('ui.assignPlaceholder')}</Text>
+                      <Icon name={openPick === x.id ? 'chevron-up' : 'chevron-down'} size={14} color={who ? colors.primaryText : colors.muted} style={{ marginLeft: 6 }} />
                     </Pressable>
-                    {manage && <IconButton testID={`rm-${d.id}-${x.role}-${n}`} icon="close" label={t('services.removeSlot')} color={colors.red} onPress={() => removeSlot(x.id)} />}
+                    {manage && <IconButton testID={`rm-${d.id}-${x.role}-${n}`} icon="remove-circle-outline" label={t('services.removeSlot')} color={colors.subtle} onPress={() => removeSlot(x.id)} style={{ marginLeft: 4 }} />}
                   </View>
                   {openPick === x.id && manage && <View style={[s.row, { marginTop: 8 }]}>
                     {opts.length === 0 && <Text style={s.small}>{t('services.noneAvailable')}</Text>}
@@ -244,15 +250,21 @@ function ServiceForm({ service, onClose, onDeleted }: { service?: Service; onClo
               );
             })}
             {open && manage && <>
-              <Button label={t('services.addRole')} outline onPress={() => setOpenAdd(openAdd === d.id ? null : d.id)} testID={`add-role-${d.id}`} />
-              {openAdd === d.id && <View style={s.row}>{d.positions.map(p => <Chip key={p} testID={`sl-add-${d.id}-${p}`} label={`+ ${roleName(d.id, p)}`} color={d.color} onPress={() => { addSlot(d.id, p); setOpenAdd(null); }} />)}</View>}
+              <View style={{ borderTopWidth: 1, borderTopColor: colors.border, marginTop: 2, paddingTop: 8 }}>
+                <Pressable testID={`add-role-${d.id}`} accessibilityRole="button" accessibilityState={{ expanded: openAdd === d.id }} onPress={() => setOpenAdd(openAdd === d.id ? null : d.id)}
+                  style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', minHeight: 44, paddingHorizontal: 12, borderRadius: 12, backgroundColor: pressed ? colors.soft : 'transparent' })}>
+                  <Icon name="add" size={18} color={colors.primaryText} style={{ marginRight: 6 }} />
+                  <Text style={{ color: colors.primaryText, fontWeight: '700', fontSize: 15 }}>{t('ui.addRole')}</Text>
+                </Pressable>
+              </View>
+              {openAdd === d.id && <View style={[s.row, { marginTop: 6 }]}>{d.positions.map(p => <Chip key={p} testID={`sl-add-${d.id}-${p}`} label={`+ ${roleName(d.id, p)}`} color={d.color} onPress={() => { addSlot(d.id, p); setOpenAdd(null); }} />)}</View>}
             </>}
           </Card>
         );
       })}
       {err && <Notice tone="error" text={err} />}
-      {(!service || isDraftSv) && <Button label={t('services.saveDraft')} outline onPress={() => save('draft')} testID="sv-save-draft" />}
       <Button label={!service ? t('services.createService') : isDraftSv ? t('services.publish') : t('services.saveService')} onPress={() => save('published')} testID="sv-save" />
+      {(!service || isDraftSv) && <Button label={t('services.saveDraft')} outline onPress={() => save('draft')} testID="sv-save-draft" />}
       {isDraftSv && <Button label={t('services.deleteDraft')} color={colors.red} outline testID="sv-delete-draft" onPress={() => confirmAsk(t('services.deleteDraft'), t('services.deleteDraftConfirm', { title: service!.title, date: isoToDdmm(service!.date) }), t('common.delete'), t('common.cancel'), () => { deleteService(service!.id); onDeleted?.(t('services.draftDeleted')); })} />}
       <Button label={t('common.cancel')} outline onPress={() => onClose()} />
     </Screen>

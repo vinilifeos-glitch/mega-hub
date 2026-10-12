@@ -3,7 +3,7 @@
 import ts from 'typescript'; import fs from 'fs'; import assert from 'assert';
 const src = fs.readFileSync(new URL('../src/state/permissions.ts', import.meta.url), 'utf8');
 const js = ts.transpileModule(src, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2020 } }).outputText;
-const { canEditPersonal, changedProtected, canEditMemberRule, pickPref, visibleServiceData, isDraft, canEditSetlistRule, canSeeSetlistRule, visibleSetlists, canEditDeptRule, visibleSongs, cleanUrl } = await import('data:text/javascript,' + encodeURIComponent(js));
+const { canEditPersonal, changedProtected, canEditMemberRule, pickPref, visibleServiceData, isDraft, canEditSetlistRule, canSeeSetlistRule, visibleSetlists, canEditDeptRule, visibleSongs, cleanUrl, canLiveRule } = await import('data:text/javascript,' + encodeURIComponent(js));
 const owner = { id: 'o', role: 'owner' }, admin = { id: 'a', role: 'admin', adminOf: ['music'] }, vol = { id: 'v', role: 'volunteer' };
 const tgt = { id: 'x', firstName: 'Miguel', middleNames: '', lastName: 'S', contact: '123', email: 'miguel@x.com', departmentIds: ['music'], positions: { music: ['keys'] } };
 // Same gate order as adminSaveMember (scope check already passed for these actors)
@@ -77,3 +77,11 @@ ok(visibleSongs(musicAdmin, SD) === SD && visibleSongs({ role: 'volunteer', depa
 ok(visibleSongs({ role: 'volunteer', departmentIds: ['d-kids'] }, SD).songs.map(x => x.id).join() === 'g2', 'others only see songs in visible setlists');
 ok(visibleSongs(null, SD).songs.length === 0, 'signed-out no songs');
 const NS = { services: [] }; ok(visibleSongs(vol, NS) === NS, 'legacy data (no songs) untouched');
+
+// Live mode
+const LA = [{ serviceId: 's1', userId: 'mm' }, { serviceId: 's1', userId: 'kv' }];
+ok(canLiveRule(owner, 's1', []) && canLiveRule(musicAdmin, 's1', []), 'owner + Music admin can go live');
+ok(canLiveRule({ id: 'mm', role: 'volunteer', departmentIds: ['d-music'] }, 's1', LA), 'Music member assigned on service can go live');
+ok(!canLiveRule({ id: 'mm', role: 'volunteer', departmentIds: ['d-music'] }, 's2', LA), 'Music member not assigned on that service cannot');
+ok(!canLiveRule({ id: 'kv', role: 'volunteer', departmentIds: ['d-kids'] }, 's1', LA), 'assigned non-Music volunteer cannot');
+ok(!canLiveRule(kidsAdmin, 's1', LA) && !canLiveRule(null, 's1', LA), 'Kids admin / signed-out cannot');

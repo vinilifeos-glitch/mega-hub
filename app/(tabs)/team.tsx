@@ -43,8 +43,8 @@ export default function Team() {
           </Card>
         );
       })}
+      {unassigned.length > 0 && <Text style={s.section}>{t('ui.noDeptSection')}</Text>}
       {unassigned.length > 0 && <Card>
-        <Text style={s.h2}>{t('team.notInDept')}</Text>
         {unassigned.map(u => row(u))}
       </Card>}
     </Screen>

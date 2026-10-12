@@ -96,7 +96,9 @@ draft: 'Rascunho', saveDraft: 'Salvar rascunho', publish: 'Publicar', published:
     saved: '{name} salvo(a).', savedPw: '{name} salvo(a) (senha alterada).',
   },
   dept: { members: '{n} membros', edit: 'Editar', done: 'Concluir', about: 'Sobre', noAbout: 'Sem descrição ainda.', leaders: 'Líderes: {names}', noLeaders: 'Sem admins ainda', resources: 'Recursos', noResources: 'Nenhum recurso ainda.', addResource: '+ Adicionar recurso', resTitle: 'Título', resUrl: 'Link (URL)', save: 'Salvar', cancel: 'Cancelar', library: 'Biblioteca de músicas', search: 'Buscar músicas', noSongs: 'Nenhuma música ainda.', addSong: '+ Adicionar música', open: 'Abrir página', back: 'Voltar', up: 'Subir {title}', down: 'Descer {title}', remove: 'Remover {title}', description: 'Descrição' },
-  song: { title: 'Título', artist: 'Artista', key: 'Tom', chords: 'Cifra / letra', link: 'Link (opcional)', edit: 'Editar música', save: 'Salvar música', cancel: 'Cancelar', del: 'Excluir música', delConfirm: 'Excluir {title} da biblioteca?', notFound: 'Música não encontrada.', noChords: 'Sem cifra ainda.', smaller: 'Texto menor', bigger: 'Texto maior', pick: 'Escolher da biblioteca', back: 'Voltar' },
+  live: { open: 'Ao vivo', exit: 'Sair', prev: 'Anterior', next: 'Próxima', nextUp: 'Próxima: {title}', last: 'Última música', position: '{n}/{total}', noAccess: 'O modo ao vivo é para o dono, os admins do Louvor e os membros do Louvor escalados neste culto.', empty: 'Nenhuma música neste repertório.', key: 'Tom {key}' },
+  song: { composer: 'Compositor', timeSignature: 'Compasso', bpm: 'BPM', originalKey: 'Tom', major: 'Maior', minor: 'Menor', transpose: 'Transpor para', resetKey: 'Voltar para {key}', sections: 'Cifra', addSection: '+ Adicionar seção', sectionName: 'Nome da seção', cue: 'Deixa da letra (opcional)', bars: 'Compassos', barsHint: 'Um acorde por compasso entre barras: | FM7 | | CM7 | |  — compasso vazio mantém o acorde anterior.', barCount: '{n} compassos', notes: 'Observações', legacy: 'Cifra antiga (texto)', convert: 'Converter em seções', preset: { Intro: 'Intro', Verse: 'Verso', 'Pre-chorus': 'Pré-refrão', Chorus: 'Refrão', Bridge: 'Ponte', Outro: 'Final' },
+    title: 'Título', artist: 'Artista', key: 'Tom', chords: 'Cifra / letra', link: 'Link (opcional)', edit: 'Editar música', save: 'Salvar música', cancel: 'Cancelar', del: 'Excluir música', delConfirm: 'Excluir {title} da biblioteca?', notFound: 'Música não encontrada.', noChords: 'Sem cifra ainda.', smaller: 'Texto menor', bigger: 'Texto maior', pick: 'Escolher da biblioteca', back: 'Voltar' },
   setlist: { title: 'Repertório', count: '{n} músicas', key: 'Tom', notes: 'Observações', songTitle: 'Título da música', addSong: '+ Adicionar música', edit: 'Editar', done: 'Concluir', empty: 'Nenhuma música ainda.', more: '+{n} mais', up: 'Subir {title}', down: 'Descer {title}', remove: 'Remover {title}', save: 'Salvar música', cancel: 'Cancelar', customKey: 'Outro tom' },
   errors: {
     deptScope: 'Só o dono e os admins deste departamento podem editar esta página.', resTitle: 'O título é obrigatório.', urlInvalid: 'Digite um link válido (https://…).',
@@ -117,10 +119,11 @@ draft: 'Rascunho', saveDraft: 'Salvar rascunho', publish: 'Publicar', published:
   },
   // ── UI v2 (Tina) ──
   appearance: { title: 'Aparência', hint: 'Escolha o modo claro ou escuro.', light: 'Claro', dark: 'Escuro' },
-  badges: { assigned: 'Escalado', open: 'Em aberto', away: 'Ausente' },
+  badges: { assigned: 'Escalado', open: 'Em aberto', away: 'Ausente', draft: 'Rascunho' },
   more: {
     title: 'Mais', subtitle: 'Seu perfil, configurações e ferramentas de administração.', back: 'Voltar para Mais',
     profile: 'Meu perfil', profileHint: 'Dados pessoais, idioma e aparência', team: 'Minha equipe', teamHint: 'Pessoas dos departamentos que você administra',
     accounts: 'Contas', ownerOnlyField: 'Somente o proprietário pode alterar nome e telefone.', accountsHint: 'Crie e gerencie o acesso de todos', settings: 'Configurações', admin: 'Administração',
   },
+  ui: { noDeptSection: 'Ainda sem departamento', rolesLabel: 'Funções', assignPlaceholder: 'Atribuir', addRole: 'Adicionar função', addSong: 'Adicionar música' },
 };

@@ -3,7 +3,8 @@ import { AppData, Department, Resource, Role, Service, SetlistItem, Song, Theme,
 import { NOTE_MAX, awayOn, getUnavailableFor } from '../data/unavailability';
 import { repository } from '../data/repository';
 import { hashPassword, newSalt } from '../data/auth';
-import { canEditMemberRule, canEditPersonal, changedProtected, pickPref, visibleServiceData, visibleSetlists, canEditSetlistRule, canEditDeptRule, visibleSongs, cleanUrl } from './permissions';
+import { canEditMemberRule, canEditPersonal, changedProtected, pickPref, visibleServiceData, visibleSetlists, canEditSetlistRule, canEditDeptRule, visibleSongs, cleanUrl, canLiveRule } from './permissions';
+import { keyLabel, parseKey } from '../data/music';
 import { DEFAULT_LANG, Lang, TKey, TParams, deptLabel, formatDateShort, roleLabel, tierLabel, translate } from '../i18n';
 
 export interface AccountInput { name: string; username: string; role: Role; departmentIds: string[]; tempPassword?: string;
@@ -74,6 +75,7 @@ interface Ctx {
   removeResource: (deptId: string, id: string) => void;
   moveResource: (deptId: string, id: string, dir: 'up' | 'down') => void;
   canEditSongs: boolean;
+  canLive: (serviceId: string) => boolean;
   addLibSong: (s: Omit<Song, 'id' | 'deptId'>) => string | { error: string };
   updateLibSong: (id: string, s: Partial<Omit<Song, 'id' | 'deptId'>>) => string | null;
   removeLibSong: (id: string) => void;
@@ -124,10 +126,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     function swap<T extends { id: string }>(l: T[], id: string, dir: 'up' | 'down'): T[] { const i = l.findIndex(x => x.id === id); const j = dir === 'up' ? i - 1 : i + 1; if (i < 0 || j < 0 || j >= l.length) return l; const n = [...l]; [n[i], n[j]] = [n[j], n[i]]; return n; }
     const editRes = (dep: string, fn: (l: Resource[]) => Resource[]) => update(x => ({ ...x, departments: x.departments.map(z => z.id === dep ? { ...z, resources: fn(z.resources ?? []) } : z) }));
     const cleanLib = (so: Partial<Omit<Song, 'id' | 'deptId'>>) => {
-      const o: { title?: string; artist?: string; key?: string; chords?: string; link?: string | null } = {};
+      const o: { title?: string; composer?: string; key?: string; chords?: string; link?: string | null; timeSignature?: string; bpm?: number; sections?: Song['sections'] } = {};
       if (so.title !== undefined) o.title = so.title.trim().slice(0, 120);
-      if (so.artist?.trim()) o.artist = so.artist.trim().slice(0, 120);
-      if (so.key?.trim()) o.key = so.key.trim().slice(0, 8);
+      const comp = so.composer ?? so.artist; if (comp?.trim()) o.composer = comp.trim().slice(0, 120);
+      if (so.key?.trim()) { const k = parseKey(so.key); o.key = k ? keyLabel(k) : so.key.trim().slice(0, 8); }
+      if (so.timeSignature?.trim()) o.timeSignature = so.timeSignature.trim().slice(0, 10);
+      if (so.bpm !== undefined && Number.isFinite(+so.bpm) && +so.bpm > 0) o.bpm = Math.min(400, Math.round(+so.bpm));
+      if (so.sections) { const secs = so.sections.map(x => ({ id: x.id || `sc-${uid()}`, name: (x.name || '').trim().slice(0, 40) || 'Section', bars: x.bars.map(b => b.trim().slice(0, 40)).slice(0, 128),
+        ...(x.cue?.trim() ? { cue: x.cue.trim().slice(0, 120) } : {}), ...(x.notes?.trim() ? { notes: x.notes.trim().slice(0, 500) } : {}) })); if (secs.length) o.sections = secs; }
       if (so.chords?.trim()) o.chords = so.chords.replace(/\s+$/, '').slice(0, 20000);
       if (so.link?.trim()) o.link = cleanUrl(so.link);
       return o;
@@ -452,12 +458,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       removeResource: (dep, id) => { if (canEditDeptRule(currentUser, dep)) editRes(dep, l => l.filter(z => z.id !== id)); },
       moveResource: (dep, id, dir) => { if (canEditDeptRule(currentUser, dep)) editRes(dep, l => swap(l, id, dir)); },
       canEditSongs: canEditSetlistRule(currentUser),
+      canLive: sid => canLiveRule(currentUser, sid, d.assignments) && d.services.some(s => s.id === sid),
       addLibSong: so => { if (!canEditSetlistRule(currentUser)) return { error: t('errors.setlistScope') }; const c = cleanLib(so); if (!c.title) return { error: t('errors.songTitle') };
         if (c.link === null) return { error: t('errors.urlInvalid') };
         const id = `sg-${uid()}`; update(x => ({ ...x, songs: [...(x.songs ?? []), { id, deptId: 'd-music', ...c, title: c.title! } as Song] })); return id; },
       updateLibSong: (id, so) => { if (!canEditSetlistRule(currentUser)) return t('errors.setlistScope'); const c = cleanLib(so); if (so.title !== undefined && !c.title) return t('errors.songTitle');
         if (c.link === null) return t('errors.urlInvalid');
-        update(x => ({ ...x, songs: (x.songs ?? []).map(z => { if (z.id !== id) return z; const n: any = { ...z, ...c }; for (const k of ['artist', 'key', 'chords', 'link']) if (k in so && !c[k as keyof typeof c]) delete n[k]; return n; }) })); return null; },
+        update(x => ({ ...x, songs: (x.songs ?? []).map(z => { if (z.id !== id) return z; const n: any = { ...z, ...c }; delete n.artist; for (const k of ['composer', 'key', 'chords', 'link', 'timeSignature', 'bpm', 'sections']) if ((k in so || (k === 'composer' && 'artist' in so)) && c[k as keyof typeof c] === undefined) delete n[k]; return n; }) })); return null; },
       removeLibSong: id => { if (canEditSetlistRule(currentUser)) update(x => ({ ...x, songs: (x.songs ?? []).filter(z => z.id !== id),
         services: x.services.map(s => s.setlist?.some(i => i.songId === id) ? { ...s, setlist: s.setlist.map(i => i.songId === id ? (({ songId, ...r }) => r)(i) : i) } : s) })); },
       publishService: id => isOwner && update(x => ({ ...x, services: x.services.map(s => s.id === id ? { ...s, status: 'published' } : s) })),

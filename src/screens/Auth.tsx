@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { Text } from 'react-native';
+import { Text, View } from 'react-native';
 import { useApp } from '../state/AppContext';
-import { Button, Card, Field, Screen, Notice, useColors, useStyles } from '../components/ui';
+import { LanguagePicker, Button, Card, Field, Screen, Notice, useColors, useStyles } from '../components/ui';
 
 export function SignInScreen() {
   const colors = useColors(); const s = useStyles();
-  const { signIn, t, ownerName } = useApp();
+  const { signIn, t, ownerName, language, setDeviceLanguage } = useApp();
   const [u, setU] = useState(''); const [p, setP] = useState(''); const [err, setErr] = useState<string | null>(null);
   const go = async () => setErr(await signIn(u, p));
   return (
@@ -17,6 +17,10 @@ export function SignInScreen() {
         <Button label={t('auth.signIn')} onPress={go} testID="signin" />
       </Card>
       <Text style={[s.small, { textAlign: 'center', marginTop: 8 }]}>{t('auth.noAccount', { owner: ownerName })}</Text>
+      <View style={{ width: '100%', maxWidth: 280, alignSelf: 'center', marginTop: 24 }}>
+        <Text style={[s.label, { textAlign: 'center', marginBottom: 8 }]}>{t('language.title')}</Text>
+        <LanguagePicker value={language} onChange={setDeviceLanguage} />
+      </View>
     </Screen>
   );
 }
