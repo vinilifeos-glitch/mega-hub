@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, Text, TextInput, View } from 'react-native';
+import { router } from 'expo-router';
 import { useMe } from '../state/AppContext';
-import { Badge, Button, Card, Chip, Field, IconButton, Notice, useColors, useStyles } from '../components/ui';
+import { Badge, Button, Card, Chip, Field, Icon, IconButton, Notice, useColors, useStyles } from '../components/ui';
 import { Service, SetlistItem } from '../types';
 
 const KEYS = ['C', 'D', 'E', 'F', 'G', 'A', 'B', 'Bb', 'Eb', 'Ab'];
@@ -9,12 +10,13 @@ const KEYS = ['C', 'D', 'E', 'F', 'G', 'A', 'B', 'Bb', 'Eb', 'Ab'];
 /** Service setlist card (detail screen). Visible only if AppContext left `setlist` on the service (or the viewer can edit). */
 export function SetlistCard({ service: sv }: { service: Service }) {
   const colors = useColors(); const s = useStyles();
-  const { t, canEditSetlist, addSong, updateSong, removeSong, moveSong } = useMe();
+  const { data, t, canEditSetlist, addSong, updateSong, removeSong, moveSong } = useMe();
   const editor = canEditSetlist(sv);
   const list = sv.setlist ?? [];
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<{ id: string | null; title: string; key: string; notes: string } | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [pick, setPick] = useState<string | null>(null);
   if (!editor && !sv.setlist) return null;
   const open = (x?: SetlistItem) => { setErr(null); setForm({ id: x?.id ?? null, title: x?.title ?? '', key: x?.key ?? '', notes: x?.notes ?? '' }); };
   const submit = () => {
@@ -37,6 +39,7 @@ export function SetlistCard({ service: sv }: { service: Service }) {
               {x.notes ? <Text style={s.small}>{x.notes}</Text> : null}
             </Pressable>
             {x.key ? <Badge label={x.key} tone="accent" testID={`song-key-${x.id}`} /> : null}
+            {x.songId && (data.songs ?? []).some(z => z.id === x.songId) ? <Pressable testID={`song-chords-${x.id}`} accessibilityLabel={x.title} onPress={() => router.push(`/song/${x.songId}` as any)} hitSlop={8} style={{ marginLeft: 8 }}><Icon name="musical-notes-outline" size={20} /></Pressable> : null}
             {editing && <>
               <IconButton testID={`song-up-${x.id}`} icon="chevron-up" label={t('setlist.up', { title: x.title })} onPress={() => moveSong(sv.id, x.id, 'up')} />
               <IconButton testID={`song-down-${x.id}`} icon="chevron-down" label={t('setlist.down', { title: x.title })} onPress={() => moveSong(sv.id, x.id, 'down')} />
@@ -49,6 +52,15 @@ export function SetlistCard({ service: sv }: { service: Service }) {
       {form && form.id === null && editor_()}
       {editing && !form && <>
         <Button label={t('setlist.addSong')} outline onPress={() => open()} testID="add-song" />
+        {pick === null ? <Button label={t('song.pick')} outline onPress={() => setPick('')} testID="pick-library" /> : <View style={{ marginTop: 8 }} testID="library-picker">
+          <TextInput value={pick} onChangeText={setPick} placeholder={t('dept.search')} placeholderTextColor={colors.muted} testID="pick-search"
+            style={{ borderWidth: 1, borderColor: colors.border, borderRadius: 10, padding: 10, marginBottom: 8, color: colors.text }} />
+          {(data.songs ?? []).filter(z => !pick.trim() || (z.title + ' ' + (z.artist ?? '')).toLowerCase().includes(pick.trim().toLowerCase())).sort((a, b) => a.title.localeCompare(b.title)).map(z => (
+            <Chip key={z.id} testID={`pick-${z.id}`} label={`${z.title}${z.key ? ` (${z.key})` : ''}`} onPress={() => { addSong(sv.id, { title: z.title, key: z.key, songId: z.id }); setPick(null); }} />
+          ))}
+          {(data.songs ?? []).length === 0 && <Text style={s.small}>{t('dept.noSongs')}</Text>}
+          <Button label={t('setlist.cancel')} outline onPress={() => setPick(null)} />
+        </View>}
         <Button label={t('setlist.done')} onPress={() => setEditing(false)} testID="setlist-done" />
       </>}
     </Card></View>

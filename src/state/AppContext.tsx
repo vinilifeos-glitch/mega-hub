@@ -1,9 +1,9 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { AppData, Department, Role, Service, SetlistItem, Theme, Unavailability, User } from '../types';
+import { AppData, Department, Resource, Role, Service, SetlistItem, Song, Theme, Unavailability, User } from '../types';
 import { NOTE_MAX, awayOn, getUnavailableFor } from '../data/unavailability';
 import { repository } from '../data/repository';
 import { hashPassword, newSalt } from '../data/auth';
-import { canEditMemberRule, canEditPersonal, changedProtected, pickPref, visibleServiceData, visibleSetlists, canEditSetlistRule } from './permissions';
+import { canEditMemberRule, canEditPersonal, changedProtected, pickPref, visibleServiceData, visibleSetlists, canEditSetlistRule, canEditDeptRule, visibleSongs, cleanUrl } from './permissions';
 import { DEFAULT_LANG, Lang, TKey, TParams, deptLabel, formatDateShort, roleLabel, tierLabel, translate } from '../i18n';
 
 export interface AccountInput { name: string; username: string; role: Role; departmentIds: string[]; tempPassword?: string;
@@ -67,6 +67,16 @@ interface Ctx {
   saveService: (id: string | null, s: Omit<Service, 'id'>, picks?: { departmentId: string; position: string; index: number; userId: string }[]) => string | null;
   deleteService: (id: string) => void;
   publishService: (id: string) => void;
+  canEditDept: (deptId: string) => boolean;
+  setDeptAbout: (deptId: string, description: string) => string | null;
+  addResource: (deptId: string, r: { title: string; url: string }) => string | null;
+  updateResource: (deptId: string, id: string, r: { title: string; url: string }) => string | null;
+  removeResource: (deptId: string, id: string) => void;
+  moveResource: (deptId: string, id: string, dir: 'up' | 'down') => void;
+  canEditSongs: boolean;
+  addLibSong: (s: Omit<Song, 'id' | 'deptId'>) => string | { error: string };
+  updateLibSong: (id: string, s: Partial<Omit<Song, 'id' | 'deptId'>>) => string | null;
+  removeLibSong: (id: string) => void;
   canEditSetlist: (service?: Service) => boolean;
   addSong: (serviceId: string, song: { title: string; key?: string; notes?: string; songId?: string | null }) => string | null;
   updateSong: (serviceId: string, id: string, patch: Partial<Omit<SetlistItem, 'id'>>) => string | null;
@@ -106,6 +116,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo<Ctx>(() => {
     const x0 = () => raw;
+    const uid = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
+    function swap<T extends { id: string }>(l: T[], id: string, dir: 'up' | 'down'): T[] { const i = l.findIndex(x => x.id === id); const j = dir === 'up' ? i - 1 : i + 1; if (i < 0 || j < 0 || j >= l.length) return l; const n = [...l]; [n[i], n[j]] = [n[j], n[i]]; return n; }
+    const editRes = (dep: string, fn: (l: Resource[]) => Resource[]) => update(x => ({ ...x, departments: x.departments.map(z => z.id === dep ? { ...z, resources: fn(z.resources ?? []) } : z) }));
+    const cleanLib = (so: Partial<Omit<Song, 'id' | 'deptId'>>) => {
+      const o: { title?: string; artist?: string; key?: string; chords?: string; link?: string | null } = {};
+      if (so.title !== undefined) o.title = so.title.trim().slice(0, 120);
+      if (so.artist?.trim()) o.artist = so.artist.trim().slice(0, 120);
+      if (so.key?.trim()) o.key = so.key.trim().slice(0, 8);
+      if (so.chords?.trim()) o.chords = so.chords.replace(/\s+$/, '').slice(0, 20000);
+      if (so.link?.trim()) o.link = cleanUrl(so.link);
+      return o;
+    };
     const editSetlist = (sid: string, fn: (l: SetlistItem[]) => SetlistItem[]) =>
       update(x => ({ ...x, services: x.services.map(s => s.id === sid ? { ...s, setlist: fn(s.setlist ?? []) } : s) }));
     const cleanSong = (p: { key?: string; notes?: string; songId?: string | null }) => {
@@ -116,7 +138,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const found = raw.users.find(u => u.id === sessionId && u.active);
     // Privacy: screens only ever receive notes they may see (owner, any admin, or the person themself).
     // Drafts: volunteers / signed-out never receive draft services or their assignments.
-    const d: AppData = visibleSetlists(found, visibleServiceData(found, { ...raw, users: raw.users.map(u => ({ ...u, unavailable: getUnavailableFor(found, u) })) }));
+    const d: AppData = visibleSongs(found, visibleSetlists(found, visibleServiceData(found, { ...raw, users: raw.users.map(u => ({ ...u, unavailable: getUnavailableFor(found, u) })) })));
     const currentUser = found ?? null;
     const role = currentUser?.role;
     const language: Lang = pickPref<Lang>(!!currentUser, currentUser?.language, deviceLang, DEFAULT_LANG);
@@ -385,6 +407,27 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       },
       removeSong: (sid, id) => { if (canEditSetlistRule(currentUser)) editSetlist(sid, l => l.filter(x => x.id !== id)); },
       moveSong: (sid, id, dir) => { if (canEditSetlistRule(currentUser)) editSetlist(sid, l => { const i = l.findIndex(x => x.id === id); const j = dir === 'up' ? i - 1 : i + 1; if (i < 0 || j < 0 || j >= l.length) return l; const n = [...l]; [n[i], n[j]] = [n[j], n[i]]; return n; }); },
+      canEditDept: dep => canEditDeptRule(currentUser, dep),
+      setDeptAbout: (dep, text) => { if (!canEditDeptRule(currentUser, dep)) return t('errors.deptScope'); const v = text.trim().slice(0, 1000);
+        update(x => ({ ...x, departments: x.departments.map(z => z.id === dep ? (v ? { ...z, description: v } : (({ description, ...r }) => r)(z)) : z) })); return null; },
+      addResource: (dep, r) => { if (!canEditDeptRule(currentUser, dep)) return t('errors.deptScope'); const title = r.title.trim(); const url = cleanUrl(r.url);
+        if (!title) return t('errors.resTitle'); if (!url) return t('errors.urlInvalid');
+        const item: Resource = { id: `rs-${uid()}`, title: title.slice(0, 120), url, kind: 'link' };
+        editRes(dep, l => [...l, item]); return null; },
+      updateResource: (dep, id, r) => { if (!canEditDeptRule(currentUser, dep)) return t('errors.deptScope'); const title = r.title.trim(); const url = cleanUrl(r.url);
+        if (!title) return t('errors.resTitle'); if (!url) return t('errors.urlInvalid');
+        editRes(dep, l => l.map(z => z.id === id ? { ...z, title: title.slice(0, 120), url } : z)); return null; },
+      removeResource: (dep, id) => { if (canEditDeptRule(currentUser, dep)) editRes(dep, l => l.filter(z => z.id !== id)); },
+      moveResource: (dep, id, dir) => { if (canEditDeptRule(currentUser, dep)) editRes(dep, l => swap(l, id, dir)); },
+      canEditSongs: canEditSetlistRule(currentUser),
+      addLibSong: so => { if (!canEditSetlistRule(currentUser)) return { error: t('errors.setlistScope') }; const c = cleanLib(so); if (!c.title) return { error: t('errors.songTitle') };
+        if (c.link === null) return { error: t('errors.urlInvalid') };
+        const id = `sg-${uid()}`; update(x => ({ ...x, songs: [...(x.songs ?? []), { id, deptId: 'd-music', ...c, title: c.title! } as Song] })); return id; },
+      updateLibSong: (id, so) => { if (!canEditSetlistRule(currentUser)) return t('errors.setlistScope'); const c = cleanLib(so); if (so.title !== undefined && !c.title) return t('errors.songTitle');
+        if (c.link === null) return t('errors.urlInvalid');
+        update(x => ({ ...x, songs: (x.songs ?? []).map(z => { if (z.id !== id) return z; const n: any = { ...z, ...c }; for (const k of ['artist', 'key', 'chords', 'link']) if (k in so && !c[k as keyof typeof c]) delete n[k]; return n; }) })); return null; },
+      removeLibSong: id => { if (canEditSetlistRule(currentUser)) update(x => ({ ...x, songs: (x.songs ?? []).filter(z => z.id !== id),
+        services: x.services.map(s => s.setlist?.some(i => i.songId === id) ? { ...s, setlist: s.setlist.map(i => i.songId === id ? (({ songId, ...r }) => r)(i) : i) } : s) })); },
       publishService: id => isOwner && update(x => ({ ...x, services: x.services.map(s => s.id === id ? { ...s, status: 'published' } : s) })),
       deleteService: id => isOwner && update(x => ({ ...x, services: x.services.filter(s => s.id !== id), assignments: x.assignments.filter(a => a.serviceId !== id) })),
       unassign: id => { const a0 = d.assignments.find(a => a.id === id); if (!a0 || !canManage(a0.departmentId)) return; update(x => ({ ...x, assignments: x.assignments.filter(a => a.id !== id) })); },

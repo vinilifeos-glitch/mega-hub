@@ -3,7 +3,7 @@
 import ts from 'typescript'; import fs from 'fs'; import assert from 'assert';
 const src = fs.readFileSync(new URL('../src/state/permissions.ts', import.meta.url), 'utf8');
 const js = ts.transpileModule(src, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2020 } }).outputText;
-const { canEditPersonal, changedProtected, canEditMemberRule, pickPref, visibleServiceData, isDraft, canEditSetlistRule, canSeeSetlistRule, visibleSetlists } = await import('data:text/javascript,' + encodeURIComponent(js));
+const { canEditPersonal, changedProtected, canEditMemberRule, pickPref, visibleServiceData, isDraft, canEditSetlistRule, canSeeSetlistRule, visibleSetlists, canEditDeptRule, visibleSongs, cleanUrl } = await import('data:text/javascript,' + encodeURIComponent(js));
 const owner = { id: 'o', role: 'owner' }, admin = { id: 'a', role: 'admin', adminOf: ['music'] }, vol = { id: 'v', role: 'volunteer' };
 const tgt = { id: 'x', firstName: 'Miguel', middleNames: '', lastName: 'S', contact: '123', email: 'miguel@x.com', departmentIds: ['music'], positions: { music: ['keys'] } };
 // Same gate order as adminSaveMember (scope check already passed for these actors)
@@ -66,3 +66,14 @@ ok(visibleSetlists(owner, S) === S, 'owner data untouched');
 // drafts + setlist: volunteer assigned on a draft still gets nothing
 const DS = { services: [{ id: 'd', status: 'draft', setlist: [{ id: 'x', title: 'S' }] }], assignments: [{ serviceId: 'd', userId: 'v1' }] };
 ok(visibleSetlists({ id: 'v1', role: 'volunteer' }, visibleServiceData({ id: 'v1', role: 'volunteer' }, DS)).services.length === 0, 'draft setlist hidden from assigned volunteer');
+
+// Dept pages + song library
+ok(canEditDeptRule(owner, 'd-kids') && canEditDeptRule(kidsAdmin, 'd-kids'), 'owner + dept admin edit dept page');
+ok(!canEditDeptRule(musicAdmin, 'd-kids') && !canEditDeptRule(vol, 'd-kids') && !canEditDeptRule(null, 'd-kids'), 'other admin / volunteer cannot edit dept page');
+ok(cleanUrl('example.com/x') === 'https://example.com/x' && cleanUrl('http://a.org') === 'http://a.org/', 'url normalised');
+ok(cleanUrl('javascript:alert(1)') === null && cleanUrl('notaurl') === null && cleanUrl('') === null && cleanUrl('ftp://a.org') === null, 'bad urls rejected');
+const SD = { songs: [{ id: 'g1' }, { id: 'g2' }], services: [{ setlist: [{ songId: 'g2' }] }] };
+ok(visibleSongs(musicAdmin, SD) === SD && visibleSongs({ role: 'volunteer', departmentIds: ['d-music'] }, SD) === SD, 'staff + Music members see library');
+ok(visibleSongs({ role: 'volunteer', departmentIds: ['d-kids'] }, SD).songs.map(x => x.id).join() === 'g2', 'others only see songs in visible setlists');
+ok(visibleSongs(null, SD).songs.length === 0, 'signed-out no songs');
+const NS = { services: [] }; ok(visibleSongs(vol, NS) === NS, 'legacy data (no songs) untouched');
