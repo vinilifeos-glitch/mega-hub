@@ -2,13 +2,14 @@ import { Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { useMe } from '../state/AppContext';
 import { SetlistPreview } from './Setlist';
-import { Button, Card, DeptBadge, Empty, Icon, Screen, StatusBadge, useStyles } from '../components/ui';
+import { Card, Empty, Icon, Screen, useColors, useStyles } from '../components/ui';
+import { LiveButton, RotaRoleCard, RotaTeamCard } from '../components/rota';
 import { isoToDdmm } from '../data/dates';
 import { teamFor } from '../data/rota';
 
 /** My Rota detail: service info, my roles, the team per department; setlist + Live only for Music people (data is already scoped). */
 export function RotaView({ serviceId }: { serviceId: string }) {
-  const s = useStyles(); const { data, currentUser, t, fmtDate, deptName, roleName, canLive } = useMe();
+  const s = useStyles(); const c = useColors(); const B = { fontSize: 15, color: c.text }; const { data, currentUser, t, fmtDate, deptName, roleName, canLive } = useMe();
   const back = { label: t('myRota.title'), onPress: () => router.navigate('/my-rota' as any) };
   const sv = data.services.find(x => x.id === serviceId);
   const mine = sv ? data.assignments.filter(a => a.serviceId === sv.id && a.userId === currentUser.id) : [];
@@ -16,30 +17,26 @@ export function RotaView({ serviceId }: { serviceId: string }) {
   const team = teamFor(data, sv.id);
   const hasSetlist = (sv.setlist ?? []).length > 0;
   return (
-    <Screen title={sv.title} subtitle={`${fmtDate(sv.date)} · ${isoToDdmm(sv.date)} · ${sv.start}–${sv.end}`} backTo={back}>
+    <Screen title={sv.title} backTo={back}>
       <View testID={`rota-detail-${sv.id}`}>
-        {sv.location ? <View style={[s.row, { flexWrap: 'nowrap' }]}><Icon name="location-outline" size={14} style={{ marginRight: 4 }} /><Text testID="rota-location" style={s.small}>{sv.location}</Text></View> : null}
         <Card>
-          <Text style={s.h2}>{t('myRota.yourRoles')}</Text>
-          {mine.map(a => { const dep = data.departments.find(d => d.id === a.departmentId); return (
-            <View key={a.id} testID={`rota-myrole-${a.id}`} style={[s.row, { marginTop: 6 }]}>
-              <Text style={s.label}>{roleName(a.departmentId, a.position)}</Text>
-              {dep ? <DeptBadge dep={dep} /> : null}<StatusBadge status="assigned" />
-            </View>); })}
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+            <Icon name="calendar-outline" size={18} style={{ marginRight: 8 }} />
+            <Text style={[B, { fontWeight: '700', flexShrink: 1 }]}>{fmtDate(sv.date)} · {isoToDdmm(sv.date)}</Text>
+          </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: sv.location ? 6 : 0 }}>
+            <Icon name="time-outline" size={18} style={{ marginRight: 8 }} />
+            <Text style={B}>{sv.start}–{sv.end}</Text>
+          </View>
+          {sv.location ? <View style={{ flexDirection: 'row', alignItems: 'center' }}><Icon name="location-outline" size={18} style={{ marginRight: 8 }} /><Text testID="rota-location" style={[B, { flexShrink: 1 }]}>{sv.location}</Text></View> : null}
         </Card>
-        <Card>
-          <Text style={s.h2}>{t('myRota.team')}</Text>
-          {team.map(g => (
-            <View key={g.departmentId} testID={`rota-team-${g.departmentId}`} style={{ marginTop: 8 }}>
-              <Text style={s.label}>{deptName(g.departmentId)}</Text>
-              {g.members.map(m => (
-                <Text key={m.assignmentId} testID={`rota-member-${m.assignmentId}`} style={s.small}>
-                  {roleName(g.departmentId, m.position)}: {m.name}{m.userId === currentUser.id ? ` (${t('myRota.you')})` : ''}
-                </Text>))}
-            </View>))}
-        </Card>
+        <RotaRoleCard title={t('myRota.yourRoles')} roles={mine.flatMap(a => { const dep = data.departments.find(d => d.id === a.departmentId); return dep ? [{ dep, role: roleName(a.departmentId, a.position), testID: `rota-myrole-${a.id}` }] : []; })} />
+        {mine.filter(a => !data.departments.some(d => d.id === a.departmentId)).map(a => <View key={a.id} testID={`rota-myrole-${a.id}`}><Text style={s.label}>{roleName(a.departmentId, a.position)}</Text></View>)}
+        {team.map(g => (
+          <RotaTeamCard at={false} key={g.departmentId} testID={`rota-team-${g.departmentId}`} title={`${t('myRota.team')} · ${deptName(g.departmentId)}`}
+            rows={g.members.map(m => ({ role: roleName(g.departmentId, m.position), name: m.name, suffix: m.userId === currentUser.id ? `(${t('myRota.you')})` : undefined, testID: `rota-member-${m.assignmentId}` }))} />))}
         {hasSetlist && <SetlistPreview service={sv} onOpen={() => router.navigate({ pathname: '/', params: { svc: sv.id } })} />}
-        {hasSetlist && canLive(sv.id) && <Button label={t('live.open')} onPress={() => router.push(`/live/${sv.id}` as any)} testID="rota-live-open" />}
+        {hasSetlist && canLive(sv.id) && <LiveButton label={t('live.open')} onPress={() => router.push(`/live/${sv.id}` as any)} testID="rota-live-open" />}
       </View>
     </Screen>
   );

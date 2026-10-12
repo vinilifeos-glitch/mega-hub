@@ -73,7 +73,7 @@ export function BusyChoiceSheet({ name, detail, onDouble, onSwap, onCancel, test
 }
 
 /** "Your role" card on My Rota. */
-export function RotaRoleCard({ roles, title, testID }: { roles: { dep: { id: string; color: string }; role: string }[]; title?: string; testID?: string }) {
+export function RotaRoleCard({ roles, title, testID }: { roles: { dep: { id: string; color: string }; role: string; testID?: string }[]; title?: string; testID?: string }) {
   const c = useColors(); const s = useStyles(); const { t } = useApp();
   return (
     <View testID={testID} style={[s.card, { backgroundColor: c.primarySoft, borderColor: c.primarySoft }]}>
@@ -82,7 +82,7 @@ export function RotaRoleCard({ roles, title, testID }: { roles: { dep: { id: str
         <Text style={{ fontSize: 13, fontWeight: '800', letterSpacing: 0.5, textTransform: 'uppercase', color: c.primaryText }}>{title ?? t('rota.yourRole')}</Text>
       </View>
       {roles.map((r, i) => (
-        <View key={i} style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', paddingVertical: 4 }}>
+        <View key={i} testID={r.testID} style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', paddingVertical: 4 }}>
           <DeptBadge dep={r.dep} />
           <Text style={{ fontSize: 17, fontWeight: '700', color: c.text, marginLeft: 4, flexShrink: 1 }}>{r.role}</Text>
         </View>
@@ -92,7 +92,7 @@ export function RotaRoleCard({ roles, title, testID }: { roles: { dep: { id: str
 }
 
 /** "Your team" card: role left, @name right, open badge when `name` is missing. */
-export function RotaTeamCard({ rows, title, testID }: { rows: { role: string; name?: string; testID?: string }[]; title?: string; testID?: string }) {
+export function RotaTeamCard({ rows, title, testID, at = true }: { at?: boolean; rows: { role: string; name?: string; suffix?: string; testID?: string }[]; title?: string; testID?: string }) {
   const c = useColors(); const s = useStyles(); const { t } = useApp();
   return (
     <View testID={testID} style={s.card}>
@@ -103,7 +103,7 @@ export function RotaTeamCard({ rows, title, testID }: { rows: { role: string; na
       {rows.map((r, i) => (
         <View key={i} testID={r.testID} style={{ flexDirection: 'row', alignItems: 'center', minHeight: 44, borderTopWidth: i ? 1 : 0, borderTopColor: c.border }}>
           <Text numberOfLines={2} style={{ flex: 1, fontSize: 15, color: c.muted, paddingRight: space.sm }}>{r.role}</Text>
-          {r.name ? <Text numberOfLines={1} style={{ fontSize: 15, fontWeight: '700', color: c.text, maxWidth: '55%' }}>@{r.name}</Text>
+          {r.name ? <Text numberOfLines={1} style={{ fontSize: 15, fontWeight: '700', color: c.text, maxWidth: '55%' }}>{at ? '@' : ''}{r.name}{r.suffix ? <Text style={{ fontWeight: '500', color: c.primaryText }}>{` ${r.suffix}`}</Text> : null}</Text>
             : <View style={{ marginBottom: -4, marginRight: -6 }}><StatusBadge status="open" label={t('rota.unfilled')} /></View>}
         </View>
       ))}
