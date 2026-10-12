@@ -3,7 +3,7 @@ import { AppData, Department, Role, Service, Theme, Unavailability, User } from 
 import { NOTE_MAX, awayOn, getUnavailableFor } from '../data/unavailability';
 import { repository } from '../data/repository';
 import { hashPassword, newSalt } from '../data/auth';
-import { canEditPersonal, changedProtected } from './permissions';
+import { canEditMemberRule, canEditPersonal, changedProtected, pickPref } from './permissions';
 import { DEFAULT_LANG, Lang, TKey, TParams, deptLabel, formatDateShort, roleLabel, tierLabel, translate } from '../i18n';
 
 export interface AccountInput { name: string; username: string; role: Role; departmentIds: string[]; tempPassword?: string;
@@ -29,6 +29,8 @@ interface Ctx {
   /** Current UI language: signed-in user's choice, else last used on this device, else 'pt'. */
   language: Lang;
   setLanguage: (lang: Lang) => void;
+  /** Device-level language for the sign-in screen; works signed out, never touches user data. */
+  setDeviceLanguage: (lang: Lang) => void;
   /** Current UI theme: signed-in user's choice, else last used on this device, else 'light'. */
   theme: Theme;
   setTheme: (theme: Theme) => void;
@@ -103,13 +105,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const d: AppData = { ...raw, users: raw.users.map(u => ({ ...u, unavailable: getUnavailableFor(found, u) })) };
     const currentUser = found ?? null;
     const role = currentUser?.role;
-    const language: Lang = currentUser?.language ?? deviceLang ?? DEFAULT_LANG;
-    const theme: Theme = currentUser?.theme ?? deviceTheme ?? 'light';
+    const language: Lang = pickPref<Lang>(!!currentUser, currentUser?.language, deviceLang, DEFAULT_LANG);
+    const theme: Theme = pickPref<Theme>(!!currentUser, currentUser?.theme, deviceTheme, 'light');
     const t = (key: TKey, params?: TParams) => translate(language, key, params);
     const isOwner = role === 'owner';
     const myAdminDeps = isOwner ? d.departments.map(x => x.id) : role === 'admin' ? (currentUser?.adminOf ?? []) : [];
-    const canEditMember = (t: User) => !!currentUser && (isOwner || t.id === currentUser.id ||
-      (role === 'admin' && t.role !== 'owner' && (t.departmentIds.some(dep => myAdminDeps.includes(dep)) || (t.role === 'volunteer' && t.departmentIds.length === 0))));
+    const canEditMember = (t: User) => canEditMemberRule(currentUser, t);
     const canManage = (depId: string) => !!currentUser && (isOwner ||
       (role === 'admin' && (currentUser.adminOf ?? []).includes(depId)));
     const canEditAccount = (_t: User) => isOwner;
@@ -129,6 +130,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       tierName: tr => tierLabel(tr, language),
       fmtDate: iso => formatDateShort(iso, language),
       ownerName: d.users.find(u => u.role === 'owner' && u.active)?.firstName ?? translate(language, 'tiers.owner'),
+      setDeviceLanguage: lang => { setDeviceLang(lang); repository.setDeviceLanguage(lang); },
       setLanguage: lang => {
         setDeviceLang(lang); repository.setDeviceLanguage(lang);
         if (currentUser) update(x => ({ ...x, users: x.users.map(u => u.id === currentUser.id ? { ...u, language: lang } : u) }));
@@ -355,7 +357,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       deleteService: id => isOwner && update(x => ({ ...x, services: x.services.filter(s => s.id !== id), assignments: x.assignments.filter(a => a.serviceId !== id) })),
       unassign: id => { const a0 = d.assignments.find(a => a.id === id); if (!a0 || !canManage(a0.departmentId)) return; update(x => ({ ...x, assignments: x.assignments.filter(a => a.id !== id) })); },
     };
-  }, [data, sessionId, deviceLang]);
+  }, [data, sessionId, deviceLang, deviceTheme]);
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }

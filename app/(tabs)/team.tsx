@@ -27,7 +27,7 @@ export default function Team() {
           <Text style={{ fontWeight: '600', color: colors.text }}>{displayName(u)}</Text>
           <Text style={s.small}>{depId ? ((u.positions?.[depId] ?? []).map(r => roleName(depId, r)).join(', ') || t('team.noRolesYet')) : t('team.notInDeptShort')}</Text>
         </View>
-        <Text style={{ color: colors.primary, fontWeight: '700' }}>{t('common.editArrow')}</Text>
+        {canEditMember(u) && <Text style={{ color: colors.primary, fontWeight: '700' }}>{t('common.editArrow')}</Text>}
       </View>
     </Pressable>
   );

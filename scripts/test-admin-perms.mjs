@@ -3,7 +3,7 @@
 import ts from 'typescript'; import fs from 'fs'; import assert from 'assert';
 const src = fs.readFileSync(new URL('../src/state/permissions.ts', import.meta.url), 'utf8');
 const js = ts.transpileModule(src, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2020 } }).outputText;
-const { canEditPersonal, changedProtected } = await import('data:text/javascript,' + encodeURIComponent(js));
+const { canEditPersonal, changedProtected, canEditMemberRule, pickPref } = await import('data:text/javascript,' + encodeURIComponent(js));
 const owner = { id: 'o', role: 'owner' }, admin = { id: 'a', role: 'admin', adminOf: ['music'] }, vol = { id: 'v', role: 'volunteer' };
 const tgt = { id: 'x', firstName: 'Miguel', middleNames: '', lastName: 'S', contact: '123', email: 'miguel@x.com', departmentIds: ['music'], positions: { music: ['keys'] } };
 // Same gate order as adminSaveMember (scope check already passed for these actors)
@@ -28,4 +28,15 @@ ok(save(admin, tgt, { email: ' MIGUEL@X.COM ' }) === 'ok', 'email case/whitespac
 ok(save(admin, { ...tgt, email: undefined }, {}) === 'ok', 'legacy user without email + admin role edit ok');
 ok(save(owner, tgt, { email: 'o@x.com' }) === 'ok', 'owner edits email');
 ok(save(vol, { ...tgt, id: 'v' }, { email: 'me@x.com' }) === 'ok', 'self edits own email');
+const ownerT = { id: 'o', role: 'owner', departmentIds: ['music'] };
+ok(!canEditMemberRule(admin, ownerT), 'admin cannot edit owner (even in own dept)');
+ok(canEditMemberRule(owner, ownerT), 'owner can edit self');
+ok(canEditMemberRule(admin, { id: 'x', role: 'volunteer', departmentIds: ['music'] }), 'admin edits member of own dept');
+ok(!canEditMemberRule(admin, { id: 'x', role: 'volunteer', departmentIds: ['kids'] }), 'admin cannot edit other-dept member');
+ok(!canEditMemberRule(admin, { id: 'a2', role: 'admin', departmentIds: [] }), 'admin cannot edit unassigned admin');
+ok(!canEditMemberRule(vol, { id: 'x', role: 'volunteer', departmentIds: [] }), 'volunteer cannot edit others');
+ok(pickPref(true, undefined, 'dark', 'light') === 'light', 'signed-in user without theme ignores device dark (no leak)');
+ok(pickPref(true, 'dark', 'light', 'light') === 'dark', 'signed-in user theme used');
+ok(pickPref(false, undefined, 'dark', 'light') === 'dark', 'sign-in screen uses device theme');
+ok(pickPref(true, undefined, 'en', 'pt') === 'pt', 'signed-in user without language defaults pt (no leak)');
 console.log(`${n}/${n} passed`);

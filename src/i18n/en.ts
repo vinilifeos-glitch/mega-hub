@@ -58,7 +58,7 @@ export const en = {
     assignedCount: '{n} of {total} assigned', noSlots: 'No slots', slotsA11y: '{dept} slots', assignA11y: 'Assign people in {dept}', slotNumber: '{role} {n}',
   },
   availability: {
-    title: 'Availability', subtitle: "Add the days you can't serve. Every other day you're available.", dateLabel: "Date I'm unavailable",
+    title: 'Availability', subtitle: "Add the dates you can't serve. You're available on every other date.", dateLabel: "Date I'm unavailable",
     add: 'Add unavailable date', addShort: 'Add date', mine: 'My unavailable dates', empty: "No dates added. You're available for every service.",
     noteLabel: 'Note (optional)', notePlaceholder: 'e.g. travelling', noteA11y: 'Note: {note}',
     misses: 'Misses: {services}', noServices: 'No services scheduled that day', unavailableDates: 'Unavailable dates', noDates: 'No unavailable dates.',
