@@ -67,7 +67,7 @@ draft: 'Rascunho', saveDraft: 'Salvar rascunho', publish: 'Publicar', published:
     noteLabel: 'Observação (opcional)', notePlaceholder: 'ex.: viagem', noteA11y: 'Observação: {note}',
     misses: 'Vai perder: {services}', noServices: 'Nenhum culto agendado nesse dia', unavailableDates: 'Datas indisponíveis', noDates: 'Nenhuma data indisponível.',
   },
-  myRota: { title: 'Minha Escala', subtitle: 'Cultos em que você está escalado.', empty: 'Você ainda não está em nenhuma escala. Mantenha suas datas indisponíveis atualizadas para os administradores planejarem.' },
+  myRota: { view: 'Ver detalhes', yourRoles: 'Suas funções', team: 'Equipe neste culto', you: 'você', notFound: 'Este culto não está na sua escala.', title: 'Minha Escala', subtitle: 'Cultos em que você está escalado.', empty: 'Você ainda não está em nenhuma escala. Mantenha suas datas indisponíveis atualizadas para os administradores planejarem.' },
   departmentsScreen: {
     title: 'Departamentos', subtitle: 'Onde você serve e suas funções.', mine: 'Meus departamentos e funções', all: 'Todos os departamentos',
     assignedBy: 'Departamentos e funções são definidos por {owner} (proprietário).', admins: 'Administradores: {names}', noAdmins: 'Nenhum administrador ainda. O proprietário ({owner}) cuida deste departamento.',

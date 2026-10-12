@@ -65,7 +65,7 @@ draft: 'Draft', saveDraft: 'Save draft', publish: 'Publish', published: 'Service
     noteLabel: 'Note (optional)', notePlaceholder: 'e.g. travelling', noteA11y: 'Note: {note}',
     misses: 'Misses: {services}', noServices: 'No services scheduled that day', unavailableDates: 'Unavailable dates', noDates: 'No unavailable dates.',
   },
-  myRota: { title: 'My Rota', subtitle: "Services you're scheduled to serve.", empty: "You're not on any rota yet. Keep your unavailable dates up to date so admins can plan." },
+  myRota: { view: 'View details', yourRoles: 'Your roles', team: 'Team on this service', you: 'you', notFound: 'This service is not on your rota.', title: 'My Rota', subtitle: "Services you're scheduled to serve.", empty: "You're not on any rota yet. Keep your unavailable dates up to date so admins can plan." },
   departmentsScreen: {
     title: 'Departments', subtitle: 'Where you serve and the roles you hold.', mine: 'My departments & roles', all: 'All departments',
     assignedBy: 'Departments and roles are assigned by {owner} (the owner).', admins: 'Admins: {names}', noAdmins: 'No admins yet. The owner ({owner}) manages this department.',
