@@ -11,7 +11,8 @@ export type Rows = {
   services: { id: string; title: string; location: string; date: string; start_time: string; end_time: string; status?: 'draft' | 'published' }[];
   service_slots: { service_id: string; department_id: string; role: string; count: number }[];
   assignments: { service_id: string; department_id: string; role: string; idx: number; user_id: string }[];
-  departments: { id: string; name: string; emoji: string; color: string; sort: number; description?: string | null }[];
+  departments: { id: string; name: string; emoji: string; color: string; sort: number }[];
+  department_pages: { department_id: string; description: string | null }[];
   department_resources: { id: string; department_id: string; position: number; title: string; url: string | null; kind: 'link' | 'file'; file_ref: string | null }[];
   songs: { id: string; department_id: string; title: string; composer: string | null; key: string | null; chords: string | null; link: string | null; time_signature: string | null; bpm: number | null; sections: SongSection[] }[];
   department_roles: { department_id: string; role: string; sort: number }[];
@@ -23,10 +24,10 @@ export const KEYS: Record<keyof Rows, string[]> = {
   profiles: ['id'], profile_private: ['user_id'], user_departments: ['user_id', 'department_id'],
   user_positions: ['user_id', 'department_id', 'role'], admin_of: ['user_id', 'department_id'],
   unavailability: ['user_id', 'date'], services: ['id'], service_slots: ['service_id', 'department_id', 'role'],
-  assignments: ['service_id', 'department_id', 'role', 'idx'], departments: ['id'], department_roles: ['department_id', 'role'], setlist_items: ['id'], department_resources: ['id'], songs: ['id'],
+  assignments: ['service_id', 'department_id', 'role', 'idx'], departments: ['id'], department_pages: ['department_id'], department_roles: ['department_id', 'role'], setlist_items: ['id'], department_resources: ['id'], songs: ['id'],
 };
 /** Write order (parents first); deletes run in reverse. */
-export const ORDER: (keyof Rows)[] = ['departments', 'department_roles', 'profiles', 'profile_private', 'user_departments', 'user_positions',
+export const ORDER: (keyof Rows)[] = ['departments', 'department_pages', 'department_roles', 'profiles', 'profile_private', 'user_departments', 'user_positions',
   'admin_of', 'unavailability', 'services', 'service_slots', 'assignments', 'department_resources', 'songs', 'setlist_items'];
 
 const ddmmToIso = (v: string) => { const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(v ?? ''); return m ? `${m[3]}-${m[2]}-${m[1]}` : null; };
@@ -37,9 +38,9 @@ const blank = (v?: string) => (v && v.trim() ? v.trim() : null);
 /** AppData -> rows. `idMap` remaps user ids (legacy 'u-ana' -> auth uuid) during import. */
 export function toRows(d: AppData, idMap: (id: string) => string = x => x): Rows {
   const r: Rows = { profiles: [], profile_private: [], user_departments: [], user_positions: [], admin_of: [], unavailability: [],
-    services: [], service_slots: [], assignments: [], departments: [], department_roles: [], setlist_items: [], department_resources: [], songs: [] };
+    services: [], service_slots: [], assignments: [], departments: [], department_pages: [], department_roles: [], setlist_items: [], department_resources: [], songs: [] };
   d.departments.forEach((x, i) => {
-    r.departments.push({ id: x.id, name: x.name, emoji: x.emoji, color: x.color, sort: i, description: blank(x.description) });
+    r.departments.push({ id: x.id, name: x.name, emoji: x.emoji, color: x.color, sort: i }); if (blank(x.description)) r.department_pages.push({ department_id: x.id, description: blank(x.description) });
     (x.resources ?? []).forEach((z, j) => r.department_resources.push({ id: z.id, department_id: x.id, position: j, title: z.title, url: z.url || null, kind: z.kind ?? 'link', file_ref: z.fileRef ?? null }));
     x.positions.forEach((p, j) => r.department_roles.push({ department_id: x.id, role: p, sort: j }));
   });
@@ -83,7 +84,7 @@ export function fromRows(r: Rows): AppData {
       salt: '', passwordHash: '',
     };
   });
-  const departments = [...r.departments].sort((a, b) => a.sort - b.sort).map(x => ({ id: x.id, name: x.name, emoji: x.emoji, color: x.color, leaderId: null, ...(x.description ? { description: x.description } : {}),
+  const departments = [...r.departments].sort((a, b) => a.sort - b.sort).map(x => ({ id: x.id, name: x.name, emoji: x.emoji, color: x.color, leaderId: null, ...((pg => pg?.description ? { description: pg.description } : {}))((r.department_pages ?? []).find(z => z.department_id === x.id)),
     ...((l => l.length ? { resources: l } : {}))((r.department_resources ?? []).filter(z => z.department_id === x.id).sort((a, b) => a.position - b.position)
       .map(z => ({ id: z.id, title: z.title, url: z.url ?? '', ...(z.kind ? { kind: z.kind } : {}), ...(z.file_ref ? { fileRef: z.file_ref } : {}) }))),
     positions: r.department_roles.filter(p => p.department_id === x.id).sort((a, b) => a.sort - b.sort).map(p => p.role) }));

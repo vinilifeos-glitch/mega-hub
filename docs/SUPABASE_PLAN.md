@@ -98,4 +98,9 @@ Run tests: `npm run test:supabase` (no account or Docker needed).
 ## Unavailability ranges + STRICT admin scoping (migration 20261012050000_ranges_strict.sql)
 - `unavailability.date_to` (nullable, `>= date`); `unavailable_on(user, date)` covers ranges; `can_fill` and the clear-assignments trigger (insert or date change) use it. `unavailable_days` view adds `date_to` (still no notes). Note RLS unchanged.
 - STRICT: `views_dept(dep)` = owner, that dept's admins, or its members. `department_resources` and `songs` read via `views_dept`; `can_see_setlist` = visible service AND `views_dept('d-music')` — assigned non-Music people no longer read setlists/songs. Assignments/services stay readable as before.
-- Known gap: `departments.description` is a column on the publicly-readable `departments` table; if it must be private, move it to a `department_pages` table with `views_dept` RLS before switch-over.
+- (Resolved in 20261012060000) department descriptions now live in `department_pages`.
+
+## Private descriptions + double book / swap (migration 20261012060000_dept_pages_swap.sql)
+- `department_pages(department_id pk, description)`: data copied from `departments.description`, column dropped. Read `views_dept`, write `administers`. Adapter maps `Department.description` <-> `department_pages`.
+- Double booking: no per-user uniqueness on `assignments`; `can_fill` checks role/active/unavailability only, so it's already allowed.
+- `assign_swap(service, dep, role, idx, user)` (security invoker, so RLS applies to every write): moves the user out of their other slot in that service into the target; the target's previous occupant takes the vacated slot if `can_fill`, else it stays open. It raises (and changes nothing) when the caller can't change the other slot's department.
