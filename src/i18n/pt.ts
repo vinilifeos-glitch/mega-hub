@@ -27,6 +27,8 @@ export const pt: Dict = {
     prevMonth: 'Mês anterior', nextMonth: 'Próximo mês', prevYear: 'Ano anterior', nextYear: 'Próximo ano', openCalendar: 'Abrir calendário',
     placeholder: 'DD/MM/AAAA',
   },
+  rows: { firstName: 'Nome', middleNames: 'Nomes do meio', surname: 'Sobrenome', dob: 'Data de nascimento', contact: 'Telefone', username: 'Usuário', accountType: 'Tipo de conta' },
+  dateField: { openFor: 'Abrir calendário de {label}', closeFor: 'Fechar calendário de {label}', dayA11y: '{day} de {month} de {year}' },
   fields: {
     firstName: 'Nome', middleNames: 'Nomes do meio (opcional)', surname: 'Sobrenome (opcional)', dob: 'Data de nascimento (opcional)',
     contact: 'Telefone (opcional)', contactPlaceholder: '+44 7700 900123', username: 'Usuário', password: 'Senha',
@@ -53,6 +55,9 @@ export const pt: Dict = {
     removedPicks: 'Removido(s): {names} — indisponível na nova data ou vaga removida.',
     legendAvailable: 'Disponível', legendAway: 'Indisponível no dia', legendBusy: 'Já escalado', onlyHolders: 'Só aparecem pessoas que têm a função.',
     busy: '(ocupado)', away: '(indisponível)',
+    nobodyHoldsDept: 'Ninguém em {dept} tem a função {role} ainda. Adicione a função a um membro na tela Equipe ou Contas.',
+    noneAvailable: 'Ninguém disponível para esta função nesta data. Verifique a disponibilidade ou os membros do departamento.',
+    assignedCount: '{n} de {total} escalados', noSlots: 'Sem vagas', slotsA11y: 'Vagas de {dept}', assignA11y: 'Escalar pessoas em {dept}', slotNumber: '{role} {n}',
   },
   availability: {
     title: 'Disponibilidade', subtitle: 'Adicione os dias em que você não pode servir. Nos outros dias você está disponível.', dateLabel: 'Data em que estou indisponível',
@@ -63,7 +68,7 @@ export const pt: Dict = {
   departmentsScreen: {
     title: 'Departamentos', subtitle: 'Onde você serve e suas funções.', mine: 'Meus departamentos e funções', all: 'Todos os departamentos',
     assignedBy: 'Departamentos e funções são definidos por {owner} (proprietário).', admins: 'Administradores: {names}', noAdmins: 'Nenhum administrador ainda. O proprietário ({owner}) cuida deste departamento.',
-    roles: 'Funções: {roles}', people: '{count} pessoas: {names}', notAssigned: 'Ainda não está em nenhum departamento.', noRoles: 'Nenhuma função atribuída ainda.', adminSuffix: ' · Administrador',
+    roles: 'Funções: {roles}', people: '{count} pessoas: {names}', member: '1 membro: {names}', members: '{count} membros: {names}', noMembers: 'Nenhum membro ainda', notAssigned: 'Ainda não está em nenhum departamento.', noRoles: 'Nenhuma função atribuída ainda.', adminSuffix: ' · Administrador',
   },
   team: {
     title: 'Equipe', subtitle: 'Gerencie as pessoas dos departamentos que você administra.', noDepts: 'Você ainda não administra nenhum departamento. {owner} (proprietário) faz essa atribuição.',
@@ -74,16 +79,17 @@ export const pt: Dict = {
   profile: {
     title: 'Meu perfil', subtitle: 'Seus dados pessoais.', editTitle: 'Editar meu perfil', usernameLocked: 'O usuário @{username} só pode ser alterado pelo proprietário',
     editDetails: 'Editar meus dados', saved: 'Perfil salvo.', personalDetails: 'Dados pessoais', departmentsRoles: 'Departamentos e funções',
+    rolesHint: 'Funções em {dept} (toque para escolher várias)', accountSection: 'Conta',
     editProfile: 'Editar perfil', saveProfile: 'Salvar perfil', savedFor: 'Perfil de {name} salvo.',
   },
   accounts: {
-    title: 'Contas', subtitle: '{count} contas ativas', newAccount: 'Nova conta', newSubtitle: 'Crie um acesso para uma nova pessoa.',
+    title: 'Contas', subtitle: '{count} contas ativas', listSubtitle: 'Todos que podem entrar no Mega Hub.', ownerOnlySubtitle: 'Crie e gerencie o acesso de todos.', editTitle: 'Editar {name}', editA11y: 'Editar {name}', newAccount: 'Nova conta', newSubtitle: 'Crie um acesso para uma nova pessoa.',
     ownerOnly: 'Só o proprietário pode gerenciar contas.', noMatch: 'Nenhuma conta encontrada.', department: 'Departamento', noDepartment: 'Sem departamento',
     roleIn: 'Função em {dept}', clearFilters: 'Limpar filtros', adminOf: 'Administra: {depts}', noneYet: 'nenhum ainda', noDeptYet: 'Ainda sem departamento',
     signIn: 'Acesso', access: 'Permissões', administers: 'Departamentos que administra', setPassword: 'Nova senha (deixe em branco para manter a atual)',
     selfLimit: 'Você não pode alterar seu próprio nível nem se desativar.', askChange: 'Pedir para trocar a senha no primeiro acesso',
-    usernameTaken: '@{username} já está em uso — escolha outro.', createAccount: 'Criar conta',
-    created: '@{username} criado.', createdMustChange: '@{username} criado. A pessoa vai escolher a própria senha no primeiro acesso.',
+    usernameTaken: 'O usuário @{username} já está em uso — escolha outro.', createAccount: 'Criar conta',
+    created: 'Conta de {name} criada (usuário @{username}).', createdMustChange: 'Conta de {name} criada (usuário @{username}). A pessoa vai escolher a própria senha no primeiro acesso.',
     saved: '{name} salvo(a).', savedPw: '{name} salvo(a) (senha alterada).',
   },
   errors: {

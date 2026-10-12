@@ -2,6 +2,9 @@ import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View, ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useApp } from '../state/AppContext';
+import type { Lang } from '../i18n';
+export type { Lang } from '../i18n';
 
 /* ── Icons (Ionicons only) ──────────────────────────────────── */
 export type IconName = React.ComponentProps<typeof Ionicons>['name'];
@@ -12,10 +15,11 @@ const DEPT_ICONS: Record<string, IconName> = { 'd-music': 'musical-notes-outline
 export const deptIcon = (id: string): IconName => DEPT_ICONS[id] ?? 'grid-outline';
 /** Department heading: icon in the department colour + name. */
 export function DeptTitle({ dep, suffix, style }: { dep: { id: string; name: string; color: string }; suffix?: string; style?: any }) {
+  const { deptName } = useApp();
   return (
     <View style={[{ flexDirection: 'row', alignItems: 'center', flexShrink: 1 }, style]}>
       <Icon name={deptIcon(dep.id)} size={20} color={dep.color} style={{ marginRight: 8 }} />
-      <Text style={[type.h2, { flexShrink: 1 }]}>{dep.name}{suffix ?? ''}</Text>
+      <Text style={[type.h2, { flexShrink: 1 }]}>{deptName(dep.id)}{suffix ?? ''}</Text>
     </View>
   );
 }
@@ -52,9 +56,6 @@ export const type = {
 };
 export const touch = 48; // minimum touch target
 
-export function formatDate(iso: string) {
-  return new Date(iso + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
-}
 
 /* ── Layout ─────────────────────────────────────────────────── */
 export function Screen({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
@@ -122,10 +123,10 @@ export function IconButton({ icon, label, onPress, color, testID, style }: { ico
   );
 }
 
-/** Presentational segmented control for the account language. */
-export type Lang = 'pt' | 'en';
+/** Segmented control for the account language (labels are each language's own name). */
 export function LanguagePicker({ value, onChange }: { value: Lang; onChange: (v: Lang) => void }) {
-  const opts: { v: Lang; label: string }[] = [{ v: 'pt', label: 'Português' }, { v: 'en', label: 'English' }];
+  const { t } = useApp();
+  const opts: { v: Lang; label: string }[] = [{ v: 'pt', label: t('language.pt') }, { v: 'en', label: t('language.en') }];
   return (
     <View accessibilityRole="radiogroup" style={{ flexDirection: 'row', backgroundColor: colors.soft, borderRadius: radius.md, padding: 4 }}>
       {opts.map(o => {

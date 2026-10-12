@@ -6,12 +6,11 @@ import { Button, Icon, deptIcon, Card, Chip, Empty, Field, Screen, colors, s, No
 import { Role, User } from '../../src/types';
 import { toIso, todayIso } from '../../src/data/dates';
 
-const roleName: Record<Role, string> = { owner: 'Owner', admin: 'Admin', volunteer: 'Volunteer' };
 const order: Role[] = ['owner', 'admin', 'volunteer'];
 const fold = (x: string) => x.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
 export default function Accounts() {
-  const { data, canManageAccounts, currentUser } = useMe();
+  const { data, canManageAccounts, currentUser, t, deptName, roleName, tierName } = useMe();
   const [mode, setMode] = useState<{ kind: 'new' } | { kind: 'edit'; id: string } | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [q, setQ] = useState('');
@@ -21,58 +20,58 @@ export default function Accounts() {
   const users = useMemo(() => {
     const terms = fold(q).split(/\s+/).filter(Boolean);
     return [...data.users]
-      .filter(u => terms.every(t => fold([u.firstName, u.middleNames, u.lastName, u.username, u.name].join(' ')).includes(t)))
+      .filter(u => terms.every(term => fold([u.firstName, u.middleNames, u.lastName, u.username, u.name].join(' ')).includes(term)))
       .filter(u => dep === 'all' || (dep === 'none' ? u.departmentIds.length === 0 : u.departmentIds.includes(dep)))
       .filter(u => !pos || dep === 'all' || dep === 'none' || (u.positions?.[dep] ?? []).includes(pos))
       .filter(u => !tier || u.role === tier)
       .sort((a, b) => order.indexOf(a.role) - order.indexOf(b.role) || a.name.localeCompare(b.name));
   }, [data.users, q, dep, pos, tier]);
-  if (!canManageAccounts) return <Screen title="Accounts" subtitle="Create and manage everyone's sign-in."><Empty text="Only the owner can manage accounts." /></Screen>;
+  if (!canManageAccounts) return <Screen title={t('accounts.title')} subtitle={t('accounts.ownerOnlySubtitle')}><Empty text={t('accounts.ownerOnly')} /></Screen>;
   const close = (m?: string) => { setMode(null); setNotice(m ?? null); };
   if (mode?.kind === 'new') return <NewAccount onClose={close} />;
   if (mode) return <FullEditor user={data.users.find(x => x.id === mode.id)!} onClose={close} />;
-  const depName = (id: string) => data.departments.find(d => d.id === id)?.name ?? id;
+  const depName = deptName;
   const selDep = data.departments.find(d => d.id === dep);
   const filtered = q !== '' || dep !== 'all' || !!pos || !!tier;
   return (
-    <Screen title="Accounts" subtitle="Everyone who can sign in to Mega Hub.">
-      <Button label="New account" onPress={() => { setNotice(null); setMode({ kind: 'new' }); }} testID="newaccount" />
+    <Screen title={t('accounts.title')} subtitle={t('accounts.listSubtitle')}>
+      <Button label={t('accounts.newAccount')} onPress={() => { setNotice(null); setMode({ kind: 'new' }); }} testID="newaccount" />
       {notice && <Card style={{ backgroundColor: '#ECFDF5', borderColor: '#A7F3D0', marginTop: 12 }}><Text selectable>{notice}</Text></Card>}
       <Card style={{ marginTop: 12 }}>
-        <Field label="Search by name or username" value={q} onChangeText={setQ} placeholder="e.g. vitoria" testID="acc-search" />
-        <Text style={s.section}>Department</Text>
+        <Field label={t('fields.search')} value={q} onChangeText={setQ} placeholder={t('fields.searchPlaceholder')} testID="acc-search" />
+        <Text style={s.section}>{t('accounts.department')}</Text>
         <View style={s.row}>
-          <Chip label="All" active={dep === 'all'} onPress={() => { setDep('all'); setPos(null); }} testID="f-dep-all" />
-          {data.departments.map(d => <Chip key={d.id} testID={`f-dep-${d.id}`} icon={deptIcon(d.id)} label={d.name} color={d.color} active={dep === d.id} onPress={() => { setDep(d.id); setPos(null); }} />)}
-          <Chip label="No department" active={dep === 'none'} onPress={() => { setDep('none'); setPos(null); }} testID="f-dep-none" />
+          <Chip label={t('common.all')} active={dep === 'all'} onPress={() => { setDep('all'); setPos(null); }} testID="f-dep-all" />
+          {data.departments.map(d => <Chip key={d.id} testID={`f-dep-${d.id}`} icon={deptIcon(d.id)} label={deptName(d.id)} color={d.color} active={dep === d.id} onPress={() => { setDep(d.id); setPos(null); }} />)}
+          <Chip label={t('accounts.noDepartment')} active={dep === 'none'} onPress={() => { setDep('none'); setPos(null); }} testID="f-dep-none" />
         </View>
         {selDep && <>
-          <Text style={s.section}>Role in {selDep.name}</Text>
+          <Text style={s.section}>{t('accounts.roleIn', { dept: deptName(selDep.id) })}</Text>
           <View style={s.row}>
-            <Chip label="Any" color={selDep.color} active={!pos} onPress={() => setPos(null)} />
-            {selDep.positions.map(r => <Chip key={r} testID={`f-role-${r}`} label={r} color={selDep.color} active={pos === r} onPress={() => setPos(pos === r ? null : r)} />)}
+            <Chip label={t('common.any')} color={selDep.color} active={!pos} onPress={() => setPos(null)} />
+            {selDep.positions.map(r => <Chip key={r} testID={`f-role-${r}`} label={roleName(selDep.id, r)} color={selDep.color} active={pos === r} onPress={() => setPos(pos === r ? null : r)} />)}
           </View>
         </>}
-        <Text style={s.section}>Access tier</Text>
+        <Text style={s.section}>{t('fields.accessTier')}</Text>
         <View style={s.row}>
-          <Chip label="Any" active={!tier} onPress={() => setTier(null)} />
-          {order.map(r => <Chip key={r} testID={`f-tier-${r}`} label={roleName[r]} active={tier === r} onPress={() => setTier(tier === r ? null : r)} />)}
+          <Chip label={t('common.any')} active={!tier} onPress={() => setTier(null)} />
+          {order.map(r => <Chip key={r} testID={`f-tier-${r}`} label={tierName(r)} active={tier === r} onPress={() => setTier(tier === r ? null : r)} />)}
         </View>
         <View style={[s.row, { justifyContent: 'space-between', marginTop: 4 }]}>
-          <Text style={{ fontWeight: '700', color: colors.text }} testID="acc-count">{users.length} {users.length === 1 ? 'result' : 'results'}</Text>
-          {filtered && <Pressable testID="f-clear" onPress={() => { setQ(''); setDep('all'); setPos(null); setTier(null); }}><Text style={{ color: colors.primary, fontWeight: '700' }}>Clear filters</Text></Pressable>}
+          <Text style={{ fontWeight: '700', color: colors.text }} testID="acc-count">{users.length === 1 ? t('common.result') : t('common.results', { count: users.length })}</Text>
+          {filtered && <Pressable testID="f-clear" onPress={() => { setQ(''); setDep('all'); setPos(null); setTier(null); }}><Text style={{ color: colors.primary, fontWeight: '700' }}>{t('accounts.clearFilters')}</Text></Pressable>}
         </View>
       </Card>
-      {users.length === 0 && <Empty text="No accounts match." />}
+      {users.length === 0 && <Empty text={t('accounts.noMatch')} />}
       {users.map(u => (
-        <Pressable key={u.id} testID={`edit-${u.username}`} accessibilityRole="button" accessibilityLabel={`Edit ${u.name}`} onPress={() => { setNotice(null); setMode({ kind: 'edit', id: u.id }); }}
+        <Pressable key={u.id} testID={`edit-${u.username}`} accessibilityRole="button" accessibilityLabel={t('accounts.editA11y', { name: u.name })} onPress={() => { setNotice(null); setMode({ kind: 'edit', id: u.id }); }}
           style={({ pressed }) => [s.card, { paddingVertical: 12, marginBottom: 8, flexDirection: 'row', alignItems: 'center', opacity: u.active ? 1 : 0.55, backgroundColor: pressed ? colors.soft : colors.card }]}>
           <View style={{ flex: 1, marginRight: 12 }}>
             <View style={[s.row, { flexWrap: 'wrap' }]}>
-              <Text style={[s.h2, { marginRight: 8, flexShrink: 1 }]}>{u.name}{u.id === currentUser.id ? ' (you)' : ''}</Text>
-              <Text style={{ color: colors.primary, fontWeight: '600', fontSize: 12, backgroundColor: colors.primarySoft, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 999, overflow: 'hidden' }}>{roleName[u.role]}{u.active ? '' : ' · Deactivated'}</Text>
+              <Text style={[s.h2, { marginRight: 8, flexShrink: 1 }]}>{u.name}{u.id === currentUser.id ? ` ${t('common.you')}` : ''}</Text>
+              <Text style={{ color: colors.primary, fontWeight: '600', fontSize: 12, backgroundColor: colors.primarySoft, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 999, overflow: 'hidden' }}>{tierName(u.role)}{u.active ? '' : ` · ${t('common.deactivated')}`}</Text>
             </View>
-            <Text style={s.small} numberOfLines={2}>@{u.username}{u.role === 'admin' ? ` · Admin of ${(u.adminOf ?? []).map(depName).join(', ') || 'none yet'}` : ''}{u.departmentIds.length ? ` · ${u.departmentIds.map(id => `${depName(id)}${(u.positions?.[id] ?? []).length ? ` (${u.positions![id].join(', ')})` : ''}`).join(' · ')}` : ' · No department yet'}</Text>
+            <Text style={s.small} numberOfLines={2}>{t('rows.username')}: @{u.username}{u.role === 'admin' ? ` · ${t('accounts.adminOf', { depts: (u.adminOf ?? []).map(depName).join(', ') || t('accounts.noneYet') })}` : ''}{u.departmentIds.length ? ` · ${u.departmentIds.map(id => `${depName(id)}${(u.positions?.[id] ?? []).length ? ` (${u.positions![id].map(r => roleName(id, r)).join(', ')})` : ''}`).join(' · ')}` : ` · ${t('accounts.noDeptYet')}`}</Text>
           </View>
           <Icon name="chevron-forward" size={20} />
         </Pressable>
@@ -82,7 +81,7 @@ export default function Accounts() {
 }
 
 function FullEditor({ user, onClose }: { user: User; onClose: (m?: string) => void }) {
-  const { data, ownerUpdateAccount, saveProfile, addUnavailable, removeUnavailable, allowedRoles, currentUser } = useMe();
+  const { data, ownerUpdateAccount, saveProfile, addUnavailable, removeUnavailable, allowedRoles, currentUser, t, deptName, roleName, tierName } = useMe();
   const [f, setF] = useState({ firstName: user.firstName, middleNames: user.middleNames, lastName: user.lastName, dob: user.dob, contact: user.contact ?? '' });
   const [username, setUsername] = useState(user.username);
   const [pw, setPw] = useState('');
@@ -97,9 +96,9 @@ function FullEditor({ user, onClose }: { user: User; onClose: (m?: string) => vo
   const self = user.id === currentUser.id;
   const toggle = <T,>(arr: T[], v: T) => arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v];
   const save = async () => {
-    if (!f.firstName.trim()) return setErr('First name is required.');
-    if (f.dob && !validDob(f.dob)) return setErr('Date of birth must be a real date as DD/MM/YYYY.');
-    if (!validContact(f.contact.trim())) return setErr('Contact number looks invalid.');
+    if (!f.firstName.trim()) return setErr(t('errors.firstNameRequired'));
+    if (f.dob && !validDob(f.dob)) return setErr(t('errors.dobInvalid'));
+    if (!validContact(f.contact.trim())) return setErr(t('errors.contactInvalid'));
     const e = await ownerUpdateAccount(user.id, { username, role, active, newPassword: pw, adminOf });
     if (e) return setErr(e);
     const e2 = saveProfile(user.id, { ...f, departmentIds: depIds, positions });
@@ -107,74 +106,74 @@ function FullEditor({ user, onClose }: { user: User; onClose: (m?: string) => vo
     const old = (user.unavailable ?? []).filter(x => x >= todayIso());
     old.filter(x => !dates.includes(x)).forEach(x => removeUnavailable(x, user.id));
     dates.filter(x => !old.includes(x)).forEach(x => addUnavailable(x, user.id));
-    onClose(`Saved ${f.firstName}${pw ? ' (password changed)' : ''}.`);
+    onClose(t(pw ? 'accounts.savedPw' : 'accounts.saved', { name: f.firstName }));
   };
-  const sec = (t: string) => <Text style={[s.section, { marginTop: 18 }]}>{t}</Text>;
+  const sec = (label: string) => <Text style={[s.section, { marginTop: 18 }]}>{label}</Text>;
   return (
-    <Screen title={`Edit ${user.name}`} subtitle={`@${user.username}`}>
-      {sec('Personal details')}
+    <Screen title={t('accounts.editTitle', { name: user.name })} subtitle={`${t('rows.username')}: @${user.username}`}>
+      {sec(t('profile.personalDetails'))}
       <Card>
-        <Field label="First name" value={f.firstName} onChangeText={v => setF({ ...f, firstName: v })} autoCapitalize="words" testID="e-first" />
-        <Field label="Middle names (optional)" value={f.middleNames} onChangeText={v => setF({ ...f, middleNames: v })} autoCapitalize="words" testID="e-middle" />
-        <Field label="Surname" value={f.lastName} onChangeText={v => setF({ ...f, lastName: v })} autoCapitalize="words" testID="e-last" />
-        <DateField label="Date of birth" limit="past" value={f.dob} onChange={v => setF({ ...f, dob: v })} testID="e-dob" />
-        <Field label="Contact number (optional)" value={f.contact} keyboardType="phone-pad" onChangeText={v => setF({ ...f, contact: v })} testID="e-contact" />
+        <Field label={t('fields.firstName')} value={f.firstName} onChangeText={v => setF({ ...f, firstName: v })} autoCapitalize="words" testID="e-first" />
+        <Field label={t('fields.middleNames')} value={f.middleNames} onChangeText={v => setF({ ...f, middleNames: v })} autoCapitalize="words" testID="e-middle" />
+        <Field label={t('fields.surname')} value={f.lastName} onChangeText={v => setF({ ...f, lastName: v })} autoCapitalize="words" testID="e-last" />
+        <DateField label={t('fields.dob')} limit="past" value={f.dob} onChange={v => setF({ ...f, dob: v })} testID="e-dob" />
+        <Field label={t('fields.contact')} value={f.contact} keyboardType="phone-pad" onChangeText={v => setF({ ...f, contact: v })} testID="e-contact" />
       </Card>
-      {sec('Sign-in')}
+      {sec(t('accounts.signIn'))}
       <Card>
-        <Field label="Username" value={username} onChangeText={setUsername} testID="e-username" />
-        <Field label="Set new password (leave blank to keep current)" value={pw} onChangeText={setPw} secureTextEntry testID="e-password" />
+        <Field label={t('fields.username')} value={username} onChangeText={setUsername} testID="e-username" />
+        <Field label={t('accounts.setPassword')} value={pw} onChangeText={setPw} secureTextEntry testID="e-password" />
       </Card>
-      {sec('Access')}
+      {sec(t('accounts.access'))}
       <Card>
-        <Text style={s.small}>Access tier</Text>
-        <View style={[s.row, { marginTop: 6 }]}>{allowedRoles.map(r => <Chip key={r} testID={`e-tier-${r}`} label={roleName[r]} active={role === r} onPress={() => !self && setRole(r)} />)}</View>
+        <Text style={s.small}>{t('fields.accessTier')}</Text>
+        <View style={[s.row, { marginTop: 6 }]}>{allowedRoles.map(r => <Chip key={r} testID={`e-tier-${r}`} label={tierName(r)} active={role === r} onPress={() => !self && setRole(r)} />)}</View>
         {role === 'admin' && <>
-          <Text style={s.small}>Administers departments</Text>
-          <View style={[s.row, { marginTop: 6 }]}>{data.departments.map(d => <Chip key={d.id} testID={`e-adminof-${d.id}`} icon={deptIcon(d.id)} label={d.name} color={d.color} active={adminOf.includes(d.id)} onPress={() => setAdminOf(toggle(adminOf, d.id))} />)}</View>
+          <Text style={s.small}>{t('accounts.administers')}</Text>
+          <View style={[s.row, { marginTop: 6 }]}>{data.departments.map(d => <Chip key={d.id} testID={`e-adminof-${d.id}`} icon={deptIcon(d.id)} label={deptName(d.id)} color={d.color} active={adminOf.includes(d.id)} onPress={() => setAdminOf(toggle(adminOf, d.id))} />)}</View>
         </>}
-        <Text style={s.small}>Status</Text>
+        <Text style={s.small}>{t('fields.status')}</Text>
         <View style={[s.row, { marginTop: 6 }]}>
-          <Chip label="Active" color={colors.green} active={active} onPress={() => setActive(true)} />
-          {!self && <Chip testID="e-deactivate" label="Deactivated" color={colors.red} active={!active} onPress={() => setActive(false)} />}
+          <Chip label={t('common.active')} color={colors.green} active={active} onPress={() => setActive(true)} />
+          {!self && <Chip testID="e-deactivate" label={t('common.deactivated')} color={colors.red} active={!active} onPress={() => setActive(false)} />}
         </View>
-        {self && <Text style={s.small}>You can't change your own tier or deactivate yourself.</Text>}
+        {self && <Text style={s.small}>{t('accounts.selfLimit')}</Text>}
       </Card>
-      {sec('Departments & roles')}
+      {sec(t('profile.departmentsRoles'))}
       {data.departments.map(d => {
         const inDep = depIds.includes(d.id);
         return (
           <Card key={d.id} style={{ borderLeftWidth: 3, borderLeftColor: inDep ? d.color : colors.border }}>
-            <Chip testID={`e-dep-${d.id}`} icon={inDep ? 'checkmark' : deptIcon(d.id)} label={d.name} color={d.color} active={inDep}
+            <Chip testID={`e-dep-${d.id}`} icon={inDep ? 'checkmark' : deptIcon(d.id)} label={deptName(d.id)} color={d.color} active={inDep}
               onPress={() => { setDepIds(toggle(depIds, d.id)); if (!positions[d.id]) setPositions({ ...positions, [d.id]: [] }); }} />
-            {inDep && <View style={s.row}>{d.positions.map(r => <Chip key={r} testID={`e-role-${d.id}-${r}`} label={r} color={d.color} active={(positions[d.id] ?? []).includes(r)}
+            {inDep && <View style={s.row}>{d.positions.map(r => <Chip key={r} testID={`e-role-${d.id}-${r}`} label={roleName(d.id, r)} color={d.color} active={(positions[d.id] ?? []).includes(r)}
               onPress={() => setPositions({ ...positions, [d.id]: toggle(positions[d.id] ?? [], r) })} />)}</View>}
           </Card>
         );
       })}
-      {sec('Unavailable dates')}
+      {sec(t('availability.unavailableDates'))}
       <Card>
-        <DateField label="Add unavailable date" limit="future" value={newDate} onChange={setNewDate} testID="e-unavail" />
-        <Button label="Add date" outline testID="e-unavail-add" onPress={() => {
-          const iso = toIso(newDate); if (!iso || iso < todayIso()) return setErr('Enter a real future date as DD/MM/YYYY.');
+        <DateField label={t('availability.add')} limit="future" value={newDate} onChange={setNewDate} testID="e-unavail" />
+        <Button label={t('availability.addShort')} outline testID="e-unavail-add" onPress={() => {
+          const iso = toIso(newDate); if (!iso || iso < todayIso()) return setErr(t('errors.futureDateInvalid'));
           setDates([...new Set([...dates, iso])].sort()); setNewDate(''); setErr(null);
         }} />
-        {dates.length === 0 ? <Text style={[s.small, { marginTop: 8 }]}>No unavailable dates.</Text> : dates.map(iso => (
+        {dates.length === 0 ? <Text style={[s.small, { marginTop: 8 }]}>{t('availability.noDates')}</Text> : dates.map(iso => (
           <View key={iso} style={[s.row, { justifyContent: 'space-between', marginTop: 8 }]}>
             <Text style={{ color: colors.text }}>{iso.split('-').reverse().join('/')}</Text>
-            <Pressable onPress={() => setDates(dates.filter(x => x !== iso))}><Text style={{ color: colors.red, fontWeight: '700' }}>Remove</Text></Pressable>
+            <Pressable onPress={() => setDates(dates.filter(x => x !== iso))}><Text style={{ color: colors.red, fontWeight: '700' }}>{t('common.remove')}</Text></Pressable>
           </View>
         ))}
       </Card>
       {err && <Notice tone="error" text={err} />}
-      <Button label="Save" onPress={save} testID="e-save" />
-      <Button label="Cancel" outline onPress={() => onClose()} />
+      <Button label={t('common.save')} onPress={save} testID="e-save" />
+      <Button label={t('common.cancel')} outline onPress={() => onClose()} />
     </Screen>
   );
 }
 
 function NewAccount({ onClose }: { onClose: (m?: string) => void }) {
-  const { data, allowedRoles, saveAccount } = useMe();
+  const { data, allowedRoles, saveAccount, t, deptName, roleName, tierName } = useMe();
   const [f, setF] = useState({ firstName: '', middleNames: '', lastName: '', dob: '', contact: '' });
   const [username, setUsername] = useState(''); const [userEdited, setUserEdited] = useState(false);
   const [pw, setPw] = useState(''); const [mustChange, setMustChange] = useState(true);
@@ -188,56 +187,56 @@ function NewAccount({ onClose }: { onClose: (m?: string) => void }) {
   const taken = username.trim() !== '' && data.users.some(u => fold(u.username) === fold(username.trim()));
   const name = [f.firstName, f.middleNames, f.lastName].map(x => x.trim()).filter(Boolean).join(' ');
   const save = async () => {
-    if (!f.firstName.trim()) return setErr('First name is required.');
-    if (taken) return setErr('That username is already taken.');
+    if (!f.firstName.trim()) return setErr(t('errors.firstNameRequired'));
+    if (taken) return setErr(t('errors.usernameTaken'));
     const e = await saveAccount(null, { name, username, role, departmentIds: depIds, tempPassword: pw, ...f, positions, adminOf, mustChange });
-    if (e) setErr(e); else onClose(`Created @${username.trim()}.${mustChange ? " They'll be asked to choose their own password at first sign-in." : ''}`);
+    if (e) setErr(e); else onClose(t(mustChange ? 'accounts.createdMustChange' : 'accounts.created', { name, username: username.trim() }));
   };
-  const sec = (t: string) => <Text style={[s.section, { marginTop: 18 }]}>{t}</Text>;
+  const sec = (label: string) => <Text style={[s.section, { marginTop: 18 }]}>{label}</Text>;
   return (
-    <Screen title="New account" subtitle="Set up a sign-in for a new person.">
-      {sec('Personal details')}
+    <Screen title={t('accounts.newAccount')} subtitle={t('accounts.newSubtitle')}>
+      {sec(t('profile.personalDetails'))}
       <Card>
-        <Field label="First name" value={f.firstName} autoCapitalize="words" testID="n-first"
+        <Field label={t('fields.firstName')} value={f.firstName} autoCapitalize="words" testID="n-first"
           onChangeText={v => { setF({ ...f, firstName: v }); if (!userEdited) setUsername(autoUser(v)); }} />
-        <Field label="Middle names (optional)" value={f.middleNames} onChangeText={v => setF({ ...f, middleNames: v })} autoCapitalize="words" testID="n-middle" />
-        <Field label="Surname" value={f.lastName} onChangeText={v => setF({ ...f, lastName: v })} autoCapitalize="words" testID="n-last" />
-        <DateField label="Date of birth (optional)" limit="past" value={f.dob} onChange={v => setF({ ...f, dob: v })} testID="n-dob" />
-        <Field label="Contact number (optional)" value={f.contact} keyboardType="phone-pad" onChangeText={v => setF({ ...f, contact: v })} testID="n-contact" />
+        <Field label={t('fields.middleNames')} value={f.middleNames} onChangeText={v => setF({ ...f, middleNames: v })} autoCapitalize="words" testID="n-middle" />
+        <Field label={t('fields.surname')} value={f.lastName} onChangeText={v => setF({ ...f, lastName: v })} autoCapitalize="words" testID="n-last" />
+        <DateField label={t('fields.dob')} limit="past" value={f.dob} onChange={v => setF({ ...f, dob: v })} testID="n-dob" />
+        <Field label={t('fields.contact')} value={f.contact} keyboardType="phone-pad" onChangeText={v => setF({ ...f, contact: v })} testID="n-contact" />
       </Card>
-      {sec('Sign-in')}
+      {sec(t('accounts.signIn'))}
       <Card>
-        <Field label="Username" value={username} onChangeText={v => { setUsername(v); setUserEdited(true); }} testID="n-username" />
-        {taken && <Text style={{ color: colors.red, marginTop: -6, marginBottom: 8 }} testID="n-taken">@{username.trim()} is already taken — choose another.</Text>}
-        <Field label="Password" value={pw} onChangeText={setPw} secureTextEntry testID="n-password" />
+        <Field label={t('fields.username')} value={username} onChangeText={v => { setUsername(v); setUserEdited(true); }} testID="n-username" />
+        {taken && <Text style={{ color: colors.red, marginTop: -6, marginBottom: 8 }} testID="n-taken">{t('accounts.usernameTaken', { username: username.trim() })}</Text>}
+        <Field label={t('fields.password')} value={pw} onChangeText={setPw} secureTextEntry testID="n-password" />
         <View style={s.row}>
-          <Chip icon={mustChange ? 'checkmark' : 'square-outline'} label="Ask them to change it at first sign-in" active={mustChange} onPress={() => setMustChange(!mustChange)} testID="n-mustchange" />
+          <Chip icon={mustChange ? 'checkmark' : 'square-outline'} label={t('accounts.askChange')} active={mustChange} onPress={() => setMustChange(!mustChange)} testID="n-mustchange" />
         </View>
       </Card>
-      {sec('Access')}
+      {sec(t('accounts.access'))}
       <Card>
-        <Text style={s.small}>Access tier</Text>
-        <View style={[s.row, { marginTop: 6 }]}>{allowedRoles.map(r => <Chip key={r} testID={`n-tier-${r}`} label={roleName[r]} active={role === r} onPress={() => setRole(r)} />)}</View>
+        <Text style={s.small}>{t('fields.accessTier')}</Text>
+        <View style={[s.row, { marginTop: 6 }]}>{allowedRoles.map(r => <Chip key={r} testID={`n-tier-${r}`} label={tierName(r)} active={role === r} onPress={() => setRole(r)} />)}</View>
         {role === 'admin' && <>
-          <Text style={s.small}>Administers departments</Text>
-          <View style={[s.row, { marginTop: 6 }]}>{data.departments.map(d => <Chip key={d.id} testID={`n-adminof-${d.id}`} icon={deptIcon(d.id)} label={d.name} color={d.color} active={adminOf.includes(d.id)} onPress={() => setAdminOf(toggle(adminOf, d.id))} />)}</View>
+          <Text style={s.small}>{t('accounts.administers')}</Text>
+          <View style={[s.row, { marginTop: 6 }]}>{data.departments.map(d => <Chip key={d.id} testID={`n-adminof-${d.id}`} icon={deptIcon(d.id)} label={deptName(d.id)} color={d.color} active={adminOf.includes(d.id)} onPress={() => setAdminOf(toggle(adminOf, d.id))} />)}</View>
         </>}
       </Card>
-      {sec('Departments & roles')}
+      {sec(t('profile.departmentsRoles'))}
       {data.departments.map(d => {
         const inDep = depIds.includes(d.id);
         return (
           <Card key={d.id} style={{ borderLeftWidth: 3, borderLeftColor: inDep ? d.color : colors.border }}>
-            <Chip testID={`n-dep-${d.id}`} icon={inDep ? 'checkmark' : deptIcon(d.id)} label={d.name} color={d.color} active={inDep}
+            <Chip testID={`n-dep-${d.id}`} icon={inDep ? 'checkmark' : deptIcon(d.id)} label={deptName(d.id)} color={d.color} active={inDep}
               onPress={() => { setDepIds(toggle(depIds, d.id)); if (!positions[d.id]) setPositions({ ...positions, [d.id]: [] }); }} />
-            {inDep && <View style={s.row}>{d.positions.map(r => <Chip key={r} testID={`n-role-${d.id}-${r}`} label={r} color={d.color} active={(positions[d.id] ?? []).includes(r)}
+            {inDep && <View style={s.row}>{d.positions.map(r => <Chip key={r} testID={`n-role-${d.id}-${r}`} label={roleName(d.id, r)} color={d.color} active={(positions[d.id] ?? []).includes(r)}
               onPress={() => setPositions({ ...positions, [d.id]: toggle(positions[d.id] ?? [], r) })} />)}</View>}
           </Card>
         );
       })}
       {err && <Notice tone="error" text={err} />}
-      <Button label="Create account" onPress={save} testID="saveaccount" />
-      <Button label="Cancel" outline onPress={() => onClose()} />
+      <Button label={t('accounts.createAccount')} onPress={save} testID="saveaccount" />
+      <Button label={t('common.cancel')} outline onPress={() => onClose()} />
     </Screen>
   );
 }

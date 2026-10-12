@@ -4,39 +4,39 @@ import { useApp } from '../state/AppContext';
 import { Button, Card, Field, Screen, colors, s, Notice } from '../components/ui';
 
 export function SignInScreen() {
-  const { signIn } = useApp();
+  const { signIn, t, ownerName } = useApp();
   const [u, setU] = useState(''); const [p, setP] = useState(''); const [err, setErr] = useState<string | null>(null);
   const go = async () => setErr(await signIn(u, p));
   return (
-    <Screen title="Mega Hub" subtitle="Sign in to see your services and rota.">
+    <Screen title={t('common.appName')} subtitle={t('auth.signInSubtitle')}>
       <Card>
-        <Field label="Username" value={u} onChangeText={setU} testID="username" />
-        <Field label="Password" value={p} onChangeText={setP} secureTextEntry onSubmitEditing={go} testID="password" />
+        <Field label={t('fields.username')} value={u} onChangeText={setU} testID="username" />
+        <Field label={t('fields.password')} value={p} onChangeText={setP} secureTextEntry onSubmitEditing={go} testID="password" />
         {err && <Notice tone="error" text={err} />}
-        <Button label="Sign in" onPress={go} testID="signin" />
+        <Button label={t('auth.signIn')} onPress={go} testID="signin" />
       </Card>
-      <Text style={[s.small, { textAlign: 'center', marginTop: 8 }]}>No account? Ask your department admin or Vini to create one for you.</Text>
+      <Text style={[s.small, { textAlign: 'center', marginTop: 8 }]}>{t('auth.noAccount', { owner: ownerName })}</Text>
     </Screen>
   );
 }
 
 export function ChangePasswordScreen({ firstTime, onDone, onCancel }: { firstTime?: boolean; onDone?: () => void; onCancel?: () => void }) {
-  const { changePassword, signOut } = useApp();
+  const { changePassword, signOut, t } = useApp();
   const [o, setO] = useState(''); const [n, setN] = useState(''); const [c, setC] = useState('');
   const [err, setErr] = useState<string | null>(null);
   const go = async () => {
-    if (n !== c) return setErr("New passwords don't match.");
+    if (n !== c) return setErr(t('auth.passwordsDontMatch'));
     const e = await changePassword(o, n); setErr(e); if (!e) onDone?.();
   };
   return (
-    <Screen title="Choose a new password" subtitle={firstTime ? 'Your password is temporary. Please set your own before continuing.' : 'Change your password'}>
+    <Screen title={firstTime ? t('auth.choosePassword') : t('auth.changePassword')} subtitle={firstTime ? t('auth.tempIntro') : t('auth.changeYourPassword')}>
       <Card>
-        <Field label={firstTime ? 'Temporary password' : 'Current password'} value={o} onChangeText={setO} secureTextEntry testID="oldpw" />
-        <Field label="New password (min 4 characters)" value={n} onChangeText={setN} secureTextEntry testID="newpw" />
-        <Field label="Confirm new password" value={c} onChangeText={setC} secureTextEntry testID="confirmpw" />
+        <Field label={firstTime ? t('auth.temporaryPassword') : t('auth.currentPassword')} value={o} onChangeText={setO} secureTextEntry testID="oldpw" />
+        <Field label={t('auth.newPassword')} value={n} onChangeText={setN} secureTextEntry testID="newpw" />
+        <Field label={t('auth.confirmPassword')} value={c} onChangeText={setC} secureTextEntry testID="confirmpw" />
         {err && <Notice tone="error" text={err} />}
-        <Button label="Save password" onPress={go} testID="savepw" />
-        {firstTime ? <Button label="Sign out" outline onPress={signOut} /> : onCancel ? <Button label="Cancel" outline onPress={onCancel} /> : null}
+        <Button label={t('auth.savePassword')} onPress={go} testID="savepw" />
+        {firstTime ? <Button label={t('auth.signOut')} outline onPress={signOut} /> : onCancel ? <Button label={t('common.cancel')} outline onPress={onCancel} /> : null}
       </Card>
     </Screen>
   );

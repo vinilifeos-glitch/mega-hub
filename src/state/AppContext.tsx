@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useMemo, useState } from '
 import { AppData, Department, Role, Service, User } from '../types';
 import { repository } from '../data/repository';
 import { hashPassword, newSalt } from '../data/auth';
-import { DEFAULT_LANG, Lang, TKey, TParams, translate } from '../i18n';
+import { DEFAULT_LANG, Lang, TKey, TParams, deptLabel, formatDateShort, roleLabel, tierLabel, translate } from '../i18n';
 
 export interface AccountInput { name: string; username: string; role: Role; departmentIds: string[]; tempPassword?: string;
   firstName?: string; middleNames?: string; lastName?: string; dob?: string; contact?: string; positions?: Record<string, string[]>; adminOf?: string[]; mustChange?: boolean; }
@@ -26,6 +26,13 @@ interface Ctx {
   language: Lang;
   setLanguage: (lang: Lang) => void;
   t: (key: TKey, params?: TParams) => string;
+  /** Display helpers in the current language (stored ids/role names are unchanged). */
+  deptName: (deptId: string) => string;
+  roleName: (deptId: string, role: string) => string;
+  tierName: (tier: Role) => string;
+  fmtDate: (iso: string) => string;
+  /** First name of the (first active) owner, for messages like "ask {owner}". */
+  ownerName: string;
   saveProfile: (id: string, p: ProfileInput) => string | null;
   saveMyContact: (contact: string) => string | null;
   holdsRole: (userId: string, departmentId: string, position: string) => boolean;
@@ -99,6 +106,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     return {
       ready: !!data, data: d, currentUser, canManage, language, t,
+      deptName: id => deptLabel(id, language, d.departments.find(x => x.id === id)?.name),
+      roleName: (dep, r) => roleLabel(dep, r, language),
+      tierName: tr => tierLabel(tr, language),
+      fmtDate: iso => formatDateShort(iso, language),
+      ownerName: d.users.find(u => u.role === 'owner' && u.active)?.firstName ?? translate(language, 'tiers.owner'),
       setLanguage: lang => {
         setDeviceLang(lang); repository.setDeviceLanguage(lang);
         if (currentUser) update(x => ({ ...x, users: x.users.map(u => u.id === currentUser.id ? { ...u, language: lang } : u) }));
@@ -111,7 +123,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (!u.active) return t('errors.deactivated');
         setSession(u.id); return null;
       },
-      signOut: () => setSession(null),
+      // keep the language this person was using for the sign-in screen (device's last language)
+      signOut: () => { setDeviceLang(language); repository.setDeviceLanguage(language); setSession(null); },
       changePassword: async (oldPw, newPw) => {
         if (!currentUser) return t('errors.notSignedIn');
         if ((await hashPassword(currentUser.salt, oldPw)) !== currentUser.passwordHash) return t('errors.currentPasswordWrong');

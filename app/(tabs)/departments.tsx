@@ -4,15 +4,15 @@ import { Card, DeptTitle, Screen, colors, s } from '../../src/components/ui';
 import { RolesView } from '../../src/screens/Profile';
 
 export default function Departments() {
-  const { data, canManage, currentUser } = useMe();
+  const { data, canManage, currentUser, t, ownerName, roleName } = useMe();
   const seesAll = currentUser.role !== 'volunteer';
   return (
-    <Screen title="Departments" subtitle="Where you serve and the roles you hold.">
-      <Text style={s.section}>My departments & roles</Text>
+    <Screen title={t('departmentsScreen.title')} subtitle={t('departmentsScreen.subtitle')}>
+      <Text style={s.section}>{t('departmentsScreen.mine')}</Text>
       <RolesView user={currentUser} />
-      {currentUser.role !== 'owner' && <Text style={[s.small, { marginBottom: 8 }]}>Departments and roles are assigned by Vini (the owner).</Text>}
+      {currentUser.role !== 'owner' && <Text style={[s.small, { marginBottom: 8 }]}>{t('departmentsScreen.assignedBy', { owner: ownerName })}</Text>}
       {seesAll && <>
-        <Text style={s.section}>All departments</Text>
+        <Text style={s.section}>{t('departmentsScreen.all')}</Text>
         {data.departments.map(d => {
           const admins = data.users.filter(u => u.active && u.role === 'admin' && (u.adminOf ?? []).includes(d.id));
           const members = data.users.filter(u => u.active && u.departmentIds.includes(d.id));
@@ -20,11 +20,11 @@ export default function Departments() {
             <Card key={d.id} style={{ borderLeftWidth: 3, borderLeftColor: d.color }}>
               <View style={[s.row, { justifyContent: 'space-between' }]}>
                 <DeptTitle dep={d} />
-                {canManage(d.id) && <Text style={{ color: d.color, fontWeight: '600', fontSize: 12 }}>You manage</Text>}
+                {canManage(d.id) && <Text style={{ color: d.color, fontWeight: '600', fontSize: 12 }}>{t('common.youManage')}</Text>}
               </View>
-              <Text style={[s.small, { marginTop: 4 }]}>{admins.length ? `Admins: ${admins.map(a => a.name).join(', ')}` : 'No admins yet. The owner (Vini) manages this department.'}</Text>
-              <Text style={s.small}>Roles: {d.positions.join(', ')}</Text>
-              <Text style={{ marginTop: 6, color: colors.text }}>{members.length ? `${members.length} ${members.length === 1 ? 'member' : 'members'}: ${members.map(m => m.firstName).join(', ')}` : 'No members yet'}</Text>
+              <Text style={[s.small, { marginTop: 4 }]}>{admins.length ? t('departmentsScreen.admins', { names: admins.map(a => a.name).join(', ') }) : t('departmentsScreen.noAdmins', { owner: ownerName })}</Text>
+              <Text style={s.small}>{t('departmentsScreen.roles', { roles: d.positions.map(p => roleName(d.id, p)).join(', ') })}</Text>
+              <Text style={{ marginTop: 6, color: colors.text }}>{members.length ? t(members.length === 1 ? 'departmentsScreen.member' : 'departmentsScreen.members', { count: members.length, names: members.map(m => m.firstName).join(', ') }) : t('departmentsScreen.noMembers')}</Text>
             </Card>
           );
         })}

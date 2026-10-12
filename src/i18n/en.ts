@@ -25,6 +25,8 @@ export const en = {
     prevMonth: 'Previous month', nextMonth: 'Next month', prevYear: 'Previous year', nextYear: 'Next year', openCalendar: 'Open calendar',
     placeholder: 'DD/MM/YYYY',
   },
+  rows: { firstName: 'First name', middleNames: 'Middle names', surname: 'Surname', dob: 'Date of birth', contact: 'Contact number', username: 'Username', accountType: 'Account type' },
+  dateField: { openFor: 'Open calendar for {label}', closeFor: 'Close calendar for {label}', dayA11y: '{day} {month} {year}' },
   fields: {
     firstName: 'First name', middleNames: 'Middle names (optional)', surname: 'Surname (optional)', dob: 'Date of birth (optional)',
     contact: 'Contact number (optional)', contactPlaceholder: '+44 7700 900123', username: 'Username', password: 'Password',
@@ -51,6 +53,9 @@ export const en = {
     removedPicks: 'Removed {names} — unavailable on the new date or slot removed.',
     legendAvailable: 'Available', legendAway: 'Away that day', legendBusy: 'Already serving', onlyHolders: 'Only people who hold the role are listed.',
     busy: '(busy)', away: '(away)',
+    nobodyHoldsDept: 'No one in {dept} holds {role} yet. Add the role to a member on the Team or Accounts screen.',
+    noneAvailable: 'No one available for this role on this date. Check Availability or department members.',
+    assignedCount: '{n} of {total} assigned', noSlots: 'No slots', slotsA11y: '{dept} slots', assignA11y: 'Assign people in {dept}', slotNumber: '{role} {n}',
   },
   availability: {
     title: 'Availability', subtitle: "Add the days you can't serve. Every other day you're available.", dateLabel: "Date I'm unavailable",
@@ -61,7 +66,7 @@ export const en = {
   departmentsScreen: {
     title: 'Departments', subtitle: 'Where you serve and the roles you hold.', mine: 'My departments & roles', all: 'All departments',
     assignedBy: 'Departments and roles are assigned by {owner} (the owner).', admins: 'Admins: {names}', noAdmins: 'No admins yet. The owner ({owner}) manages this department.',
-    roles: 'Roles: {roles}', people: '{count} people: {names}', notAssigned: 'Not assigned to any department yet.', noRoles: 'No roles assigned yet.', adminSuffix: ' · Admin',
+    roles: 'Roles: {roles}', people: '{count} people: {names}', member: '1 member: {names}', members: '{count} members: {names}', noMembers: 'No members yet', notAssigned: 'Not assigned to any department yet.', noRoles: 'No roles assigned yet.', adminSuffix: ' · Admin',
   },
   team: {
     title: 'Team', subtitle: 'Manage the people in the departments you administer.', noDepts: "You don't administer any departments yet. {owner} (the owner) assigns them.",
@@ -72,16 +77,17 @@ export const en = {
   profile: {
     title: 'My profile', subtitle: 'Your personal details.', editTitle: 'Edit my profile', usernameLocked: 'Username @{username} can only be changed by the owner',
     editDetails: 'Edit my details', saved: 'Profile saved.', personalDetails: 'Personal details', departmentsRoles: 'Departments & roles',
+    rolesHint: 'Roles in {dept} (tap to select several)', accountSection: 'Account',
     editProfile: 'Edit profile', saveProfile: 'Save profile', savedFor: 'Saved profile for {name}.',
   },
   accounts: {
-    title: 'Accounts', subtitle: '{count} active accounts', newAccount: 'New account', newSubtitle: 'Set up a sign-in for a new person.',
+    title: 'Accounts', subtitle: '{count} active accounts', listSubtitle: 'Everyone who can sign in to Mega Hub.', ownerOnlySubtitle: "Create and manage everyone's sign-in.", editTitle: 'Edit {name}', editA11y: 'Edit {name}', newAccount: 'New account', newSubtitle: 'Set up a sign-in for a new person.',
     ownerOnly: 'Only the owner can manage accounts.', noMatch: 'No accounts match.', department: 'Department', noDepartment: 'No department',
     roleIn: 'Role in {dept}', clearFilters: 'Clear filters', adminOf: 'Admin of: {depts}', noneYet: 'none yet', noDeptYet: 'No department yet',
     signIn: 'Sign-in', access: 'Access', administers: 'Administers departments', setPassword: 'Set new password (leave blank to keep current)',
     selfLimit: "You can't change your own tier or deactivate yourself.", askChange: 'Ask them to change it at first sign-in',
-    usernameTaken: '@{username} is already taken — choose another.', createAccount: 'Create account',
-    created: 'Created @{username}.', createdMustChange: "Created @{username}. They'll be asked to choose their own password at first sign-in.",
+    usernameTaken: 'Username @{username} is already taken — choose another.', createAccount: 'Create account',
+    created: 'Created account for {name} (username @{username}).', createdMustChange: "Created account for {name} (username @{username}). They'll be asked to choose their own password at first sign-in.",
     saved: 'Saved {name}.', savedPw: 'Saved {name} (password changed).',
   },
   errors: {

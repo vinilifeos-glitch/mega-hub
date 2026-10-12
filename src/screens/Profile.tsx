@@ -5,41 +5,41 @@ import { formatDobInput, fullName, ProfileInput, useMe } from '../state/AppConte
 import { Button, DeptTitle, deptIcon, Card, Chip, Field, Screen, colors, s, Notice } from '../components/ui';
 import { User } from '../types';
 
-const roleName = { owner: 'Owner', admin: 'Admin', volunteer: 'Volunteer' };
-const fmtDob = (d: string) => d || 'Not set';
 
 function Row({ k, v }: { k: string; v: string }) {
-  return <View style={{ marginBottom: 8 }}><Text style={s.small}>{k}</Text><Text style={{ fontSize: 16, color: colors.text }}>{v || 'Not set'}</Text></View>;
+  const { t } = useMe();
+  return <View style={{ marginBottom: 8 }}><Text style={s.small}>{k}</Text><Text style={{ fontSize: 16, color: colors.text }}>{v || t('common.notSet')}</Text></View>;
 }
 
 export function PersonalInfo({ user, title }: { user: User; title?: string }) {
+  const { t, tierName } = useMe();
   return (
     <Card>
       <Text style={[s.h2, { marginBottom: 10 }]}>{title ?? user.name}</Text>
-      <Row k="First name" v={user.firstName} />
-      <Row k="Middle names" v={user.middleNames} />
-      <Row k="Surname" v={user.lastName} />
-      <Row k="Date of birth" v={fmtDob(user.dob)} />
-      <Row k="Username" v={`@${user.username}`} />
-      <Row k="Contact number" v={user.contact ?? ''} />
-      <Row k="Account type" v={roleName[user.role]} />
+      <Row k={t('rows.firstName')} v={user.firstName} />
+      <Row k={t('rows.middleNames')} v={user.middleNames} />
+      <Row k={t('rows.surname')} v={user.lastName} />
+      <Row k={t('rows.dob')} v={user.dob} />
+      <Row k={t('rows.username')} v={`@${user.username}`} />
+      <Row k={t('rows.contact')} v={user.contact ?? ''} />
+      <Row k={t('rows.accountType')} v={tierName(user.role)} />
     </Card>
   );
 }
 
 export function RolesView({ user }: { user: User }) {
-  const { data } = useMe();
+  const { data, t, roleName } = useMe();
   const deps = data.departments.filter(d => user.departmentIds.includes(d.id));
   return (
     <>
-      {deps.length === 0 && <Card><Text style={s.small}>Not assigned to any department yet.</Text></Card>}
+      {deps.length === 0 && <Card><Text style={s.small}>{t('departmentsScreen.notAssigned')}</Text></Card>}
       {deps.map(d => {
         const roles = user.positions?.[d.id] ?? [];
         return (
           <Card key={d.id} style={{ borderLeftWidth: 3, borderLeftColor: d.color }}>
-            <DeptTitle dep={d} suffix={(user.role === 'admin' && (user.adminOf ?? []).includes(d.id)) || user.role === 'owner' ? ' · Admin' : ''} />
+            <DeptTitle dep={d} suffix={(user.role === 'admin' && (user.adminOf ?? []).includes(d.id)) || user.role === 'owner' ? t('departmentsScreen.adminSuffix') : ''} />
             <View style={[s.row, { marginTop: 8 }]}>
-              {roles.length ? roles.map(r => <Chip key={r} label={r} color={d.color} active />) : <Text style={s.small}>No roles assigned yet.</Text>}
+              {roles.length ? roles.map(r => <Chip key={r} label={roleName(d.id, r)} color={d.color} active />) : <Text style={s.small}>{t('departmentsScreen.noRoles')}</Text>}
             </View>
           </Card>
         );
@@ -49,11 +49,12 @@ export function RolesView({ user }: { user: User }) {
 }
 
 export function ProfileView({ user, title }: { user: User; title?: string }) {
-  return (<><PersonalInfo user={user} title={title} /><Text style={s.section}>Departments & roles</Text><RolesView user={user} /></>);
+  const { t } = useMe();
+  return (<><PersonalInfo user={user} title={title} /><Text style={s.section}>{t('profile.departmentsRoles')}</Text><RolesView user={user} /></>);
 }
 
 export function ProfileEditor({ user, onClose }: { user: User; onClose: (msg?: string) => void }) {
-  const { data, saveProfile } = useMe();
+  const { data, saveProfile, t, deptName, roleName } = useMe();
   const [f, setF] = useState<ProfileInput>({
     contact: user.contact ?? '', firstName: user.firstName, middleNames: user.middleNames, lastName: user.lastName, dob: user.dob,
     departmentIds: [...user.departmentIds], positions: JSON.parse(JSON.stringify(user.positions ?? {})),
@@ -66,27 +67,27 @@ export function ProfileEditor({ user, onClose }: { user: User; onClose: (msg?: s
     const cur = p.positions[dep] ?? [];
     return { ...p, positions: { ...p.positions, [dep]: cur.includes(r) ? cur.filter(x => x !== r) : [...cur, r] } };
   });
-  const save = () => { const e = saveProfile(user.id, f); if (e) setErr(e); else onClose(`Saved profile for ${fullName(f)}.`); };
+  const save = () => { const e = saveProfile(user.id, f); if (e) setErr(e); else onClose(t('profile.savedFor', { name: fullName(f) })); };
   return (
-    <Screen title={`Edit profile`} subtitle={`@${user.username}`}>
+    <Screen title={t('profile.editProfile')} subtitle={`${t('rows.username')}: @${user.username}`}>
       <Card>
-        <Field label="First name" value={f.firstName} onChangeText={v => setF({ ...f, firstName: v })} autoCapitalize="words" testID="pf-first" />
-        <Field label="Middle names (optional)" value={f.middleNames} onChangeText={v => setF({ ...f, middleNames: v })} autoCapitalize="words" testID="pf-middle" />
-        <Field label="Surname" value={f.lastName} onChangeText={v => setF({ ...f, lastName: v })} autoCapitalize="words" testID="pf-last" />
-        <Field label="Contact number (optional)" value={f.contact} placeholder="+44 7700 900123" keyboardType="phone-pad" onChangeText={v => setF({ ...f, contact: v })} testID="pf-contact" />
-        <DateField label="Date of birth" limit="past" value={f.dob} onChange={v => setF({ ...f, dob: v })} testID="pf-dob" />
+        <Field label={t('fields.firstName')} value={f.firstName} onChangeText={v => setF({ ...f, firstName: v })} autoCapitalize="words" testID="pf-first" />
+        <Field label={t('fields.middleNames')} value={f.middleNames} onChangeText={v => setF({ ...f, middleNames: v })} autoCapitalize="words" testID="pf-middle" />
+        <Field label={t('fields.surname')} value={f.lastName} onChangeText={v => setF({ ...f, lastName: v })} autoCapitalize="words" testID="pf-last" />
+        <Field label={t('fields.contact')} value={f.contact} placeholder={t('fields.contactPlaceholder')} keyboardType="phone-pad" onChangeText={v => setF({ ...f, contact: v })} testID="pf-contact" />
+        <DateField label={t('fields.dob')} limit="past" value={f.dob} onChange={v => setF({ ...f, dob: v })} testID="pf-dob" />
       </Card>
-      <Text style={s.section}>Departments & roles</Text>
+      <Text style={s.section}>{t('profile.departmentsRoles')}</Text>
       {data.departments.map(d => {
         const inDep = f.departmentIds.includes(d.id);
         return (
           <Card key={d.id} style={{ borderLeftWidth: 3, borderLeftColor: inDep ? d.color : colors.border }}>
-            <Chip testID={`dep-${d.id}`} icon={inDep ? 'checkmark' : deptIcon(d.id)} label={d.name} color={d.color} active={inDep} onPress={() => toggleDep(d.id)} />
+            <Chip testID={`dep-${d.id}`} icon={inDep ? 'checkmark' : deptIcon(d.id)} label={deptName(d.id)} color={d.color} active={inDep} onPress={() => toggleDep(d.id)} />
             {inDep && (
               <>
-                <Text style={[s.small, { marginBottom: 6 }]}>Roles in {d.name} (tap to select several)</Text>
+                <Text style={[s.small, { marginBottom: 6 }]}>{t('profile.rolesHint', { dept: deptName(d.id) })}</Text>
                 <View style={s.row}>
-                  {d.positions.map(r => <Chip key={r} testID={`role-${d.id}-${r}`} label={r} color={d.color} active={(f.positions[d.id] ?? []).includes(r)} onPress={() => toggleRole(d.id, r)} />)}
+                  {d.positions.map(r => <Chip key={r} testID={`role-${d.id}-${r}`} label={roleName(d.id, r)} color={d.color} active={(f.positions[d.id] ?? []).includes(r)} onPress={() => toggleRole(d.id, r)} />)}
                 </View>
               </>
             )}
@@ -94,8 +95,8 @@ export function ProfileEditor({ user, onClose }: { user: User; onClose: (msg?: s
         );
       })}
       {err && <Notice tone="error" text={err} />}
-      <Button label="Save profile" onPress={save} testID="pf-save" />
-      <Button label="Cancel" outline onPress={() => onClose()} />
+      <Button label={t('profile.saveProfile')} onPress={save} testID="pf-save" />
+      <Button label={t('common.cancel')} outline onPress={() => onClose()} />
     </Screen>
   );
 }
