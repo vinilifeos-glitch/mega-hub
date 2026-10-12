@@ -6,6 +6,7 @@ import { Card, Empty, Icon, Screen, useColors, useStyles } from '../components/u
 import { LiveButton, RotaRoleCard, RotaTeamCard } from '../components/rota';
 import { isoToDdmm } from '../data/dates';
 import { teamFor } from '../data/rota';
+import { displayName } from '../display';
 
 /** My Rota detail: service info, my roles, the team per department; setlist + Live only for Music people (data is already scoped). */
 export function RotaView({ serviceId }: { serviceId: string }) {
@@ -33,8 +34,8 @@ export function RotaView({ serviceId }: { serviceId: string }) {
         <RotaRoleCard title={t('myRota.yourRoles')} roles={mine.flatMap(a => { const dep = data.departments.find(d => d.id === a.departmentId); return dep ? [{ dep, role: roleName(a.departmentId, a.position), testID: `rota-myrole-${a.id}` }] : []; })} />
         {mine.filter(a => !data.departments.some(d => d.id === a.departmentId)).map(a => <View key={a.id} testID={`rota-myrole-${a.id}`}><Text style={s.label}>{roleName(a.departmentId, a.position)}</Text></View>)}
         {team.map(g => (
-          <RotaTeamCard at={false} key={g.departmentId} testID={`rota-team-${g.departmentId}`} title={`${t('myRota.team')} · ${deptName(g.departmentId)}`}
-            rows={g.members.map(m => ({ role: roleName(g.departmentId, m.position), name: m.name, suffix: m.userId === currentUser.id ? `(${t('myRota.you')})` : undefined, testID: `rota-member-${m.assignmentId}` }))} />))}
+          <RotaTeamCard key={g.departmentId} testID={`rota-team-${g.departmentId}`} title={`${t('myRota.team')} · ${deptName(g.departmentId)}`}
+            rows={g.members.map(m => ({ role: roleName(g.departmentId, m.position), name: displayName({ username: m.username }).replace(/^@/, ''), suffix: m.userId === currentUser.id ? `(${t('myRota.you')})` : undefined, testID: `rota-member-${m.assignmentId}` }))} />))}
         {hasSetlist && <SetlistPreview service={sv} onOpen={() => router.navigate({ pathname: '/', params: { svc: sv.id } })} />}
         {hasSetlist && canLive(sv.id) && <LiveButton label={t('live.open')} onPress={() => router.push(`/live/${sv.id}` as any)} testID="rota-live-open" />}
       </View>
