@@ -42,9 +42,12 @@ export const MUSIC_DEPT = 'd-music';
 export const canEditSetlistRule = (actor: { role: Tier; adminOf?: string[] } | null | undefined) =>
   !!actor && (actor.role === 'owner' || (actor.role === 'admin' && (actor.adminOf ?? []).includes(MUSIC_DEPT)));
 /** Owner, admins, Music members, or anyone assigned on that service may see its setlist. */
-export const canSeeSetlistRule = (actor: { id: string; role: Tier; departmentIds?: string[] } | null | undefined, serviceId: string, assignments: { serviceId: string; userId: string }[]) =>
-  !!actor && (actor.role === 'owner' || actor.role === 'admin' || (actor.departmentIds ?? []).includes(MUSIC_DEPT)
-    || assignments.some(a => a.serviceId === serviceId && a.userId === actor.id));
+/** STRICT scoping: owner sees all; admins/volunteers see a department only if they administer it or are a member. */
+export const canViewDeptRule = (actor: { role: Tier; adminOf?: string[]; departmentIds?: string[] } | null | undefined, deptId: string) =>
+  !!actor && (actor.role === 'owner' || (actor.role === 'admin' && (actor.adminOf ?? []).includes(deptId)) || (actor.departmentIds ?? []).includes(deptId));
+/** Setlists/chords: owner, Music admins, Music members (assigned non-Music people no longer see them). */
+export const canSeeSetlistRule = (actor: { id: string; role: Tier; adminOf?: string[]; departmentIds?: string[] } | null | undefined, _serviceId?: string, _assignments?: { serviceId: string; userId: string }[]) =>
+  canViewDeptRule(actor, MUSIC_DEPT);
 /** Strip setlists the actor may not see (applied after draft filtering). */
 export function visibleSetlists<D extends { services: { id: string; setlist?: unknown }[]; assignments: { serviceId: string; userId: string }[] }>(actor: Parameters<typeof canSeeSetlistRule>[0], d: D): D {
   if (!d.services.some(s => s.setlist && !canSeeSetlistRule(actor, s.id, d.assignments))) return d;
@@ -55,11 +58,15 @@ export function visibleSetlists<D extends { services: { id: string; setlist?: un
 export const canEditDeptRule = (actor: { role: Tier; adminOf?: string[] } | null | undefined, deptId: string) =>
   !!actor && (actor.role === 'owner' || (actor.role === 'admin' && (actor.adminOf ?? []).includes(deptId)));
 /** Song library: staff + Music members see all; others only songs used in setlists they can see. */
-export function visibleSongs<D extends { songs?: { id: string }[]; services: { setlist?: { songId?: string | null }[] }[] }>(actor: { role: Tier; departmentIds?: string[] } | null | undefined, d: D): D {
+export function visibleSongs<D extends { songs?: { id: string; deptId?: string }[] }>(actor: { role: Tier; adminOf?: string[]; departmentIds?: string[] } | null | undefined, d: D): D {
   if (!d.songs) return d;
-  if (actor && (actor.role === 'owner' || actor.role === 'admin' || (actor.departmentIds ?? []).includes(MUSIC_DEPT))) return d;
-  const used = new Set(d.services.flatMap(s => (s.setlist ?? []).map(x => x.songId)).filter(Boolean));
-  return { ...d, songs: actor ? d.songs.filter(x => used.has(x.id)) : [] };
+  if (d.songs.every(x => canViewDeptRule(actor, x.deptId ?? MUSIC_DEPT))) return d;
+  return { ...d, songs: d.songs.filter(x => canViewDeptRule(actor, x.deptId ?? MUSIC_DEPT)) };
+}
+/** Strip department page content (description/resources) the actor may not view. */
+export function visibleDeptPages<D extends { departments: { id: string; description?: string; resources?: unknown[] }[] }>(actor: Parameters<typeof canViewDeptRule>[0], d: D): D {
+  if (!d.departments.some(x => (x.description !== undefined || x.resources !== undefined) && !canViewDeptRule(actor, x.id))) return d;
+  return { ...d, departments: d.departments.map(x => canViewDeptRule(actor, x.id) ? x : (({ description, resources, ...r }) => r)(x) as typeof x) };
 }
 /** http(s) URL with a host; returns normalised string or null. */
 export function cleanUrl(v: string): string | null {

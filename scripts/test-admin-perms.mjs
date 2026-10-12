@@ -3,7 +3,7 @@
 import ts from 'typescript'; import fs from 'fs'; import assert from 'assert';
 const src = fs.readFileSync(new URL('../src/state/permissions.ts', import.meta.url), 'utf8');
 const js = ts.transpileModule(src, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2020 } }).outputText;
-const { canEditPersonal, changedProtected, canEditMemberRule, pickPref, visibleServiceData, isDraft, canEditSetlistRule, canSeeSetlistRule, visibleSetlists, canEditDeptRule, visibleSongs, cleanUrl, canLiveRule } = await import('data:text/javascript,' + encodeURIComponent(js));
+const { canEditPersonal, changedProtected, canEditMemberRule, pickPref, visibleServiceData, isDraft, canEditSetlistRule, canSeeSetlistRule, visibleSetlists, canEditDeptRule, visibleSongs, cleanUrl, canLiveRule, canViewDeptRule, visibleDeptPages } = await import('data:text/javascript,' + encodeURIComponent(js));
 const owner = { id: 'o', role: 'owner' }, admin = { id: 'a', role: 'admin', adminOf: ['music'] }, vol = { id: 'v', role: 'volunteer' };
 const tgt = { id: 'x', firstName: 'Miguel', middleNames: '', lastName: 'S', contact: '123', email: 'miguel@x.com', departmentIds: ['music'], positions: { music: ['keys'] } };
 // Same gate order as adminSaveMember (scope check already passed for these actors)
@@ -57,9 +57,9 @@ const kidsAdmin = { id: 'k', role: 'admin', adminOf: ['d-kids'] }, musicAdmin = 
 ok(canEditSetlistRule(owner) && canEditSetlistRule(musicAdmin), 'owner + Music admin edit setlist');
 ok(!canEditSetlistRule(kidsAdmin) && !canEditSetlistRule(vol) && !canEditSetlistRule(null), 'Kids admin / volunteer / signed-out cannot edit setlist');
 const S = { services: [{ id: 's1', setlist: [{ id: 'x', title: 'Song' }] }, { id: 's2' }], assignments: [{ serviceId: 's1', userId: 'v1' }] };
-ok(canSeeSetlistRule({ id: 'v1', role: 'volunteer', departmentIds: ['d-kids'] }, 's1', S.assignments), 'assigned volunteer sees setlist');
+ok(!canSeeSetlistRule({ id: 'v1', role: 'volunteer', departmentIds: ['d-kids'] }, 's1', S.assignments), 'STRICT: assigned non-Music volunteer no longer sees setlist');
 ok(canSeeSetlistRule({ id: 'v2', role: 'volunteer', departmentIds: ['d-music'] }, 's1', S.assignments), 'Music member sees setlist');
-ok(canSeeSetlistRule(kidsAdmin, 's1', []), 'any admin sees setlist');
+ok(!canSeeSetlistRule(kidsAdmin, 's1', []) && canSeeSetlistRule(musicAdmin, 's1', []), 'STRICT: Kids admin cannot see setlist, Music admin can');
 const VS = visibleSetlists({ id: 'v3', role: 'volunteer', departmentIds: ['d-kids'] }, S);
 ok(!('setlist' in VS.services[0]) && VS.services.length === 2, 'unassigned non-Music volunteer gets no setlist');
 ok(visibleSetlists(owner, S) === S, 'owner data untouched');
@@ -73,8 +73,8 @@ ok(!canEditDeptRule(musicAdmin, 'd-kids') && !canEditDeptRule(vol, 'd-kids') && 
 ok(cleanUrl('example.com/x') === 'https://example.com/x' && cleanUrl('http://a.org') === 'http://a.org/', 'url normalised');
 ok(cleanUrl('javascript:alert(1)') === null && cleanUrl('notaurl') === null && cleanUrl('') === null && cleanUrl('ftp://a.org') === null, 'bad urls rejected');
 const SD = { songs: [{ id: 'g1' }, { id: 'g2' }], services: [{ setlist: [{ songId: 'g2' }] }] };
-ok(visibleSongs(musicAdmin, SD) === SD && visibleSongs({ role: 'volunteer', departmentIds: ['d-music'] }, SD) === SD, 'staff + Music members see library');
-ok(visibleSongs({ role: 'volunteer', departmentIds: ['d-kids'] }, SD).songs.map(x => x.id).join() === 'g2', 'others only see songs in visible setlists');
+ok(visibleSongs(musicAdmin, SD) === SD && visibleSongs({ role: 'volunteer', departmentIds: ['d-music'] }, SD) === SD && visibleSongs(owner, SD) === SD, 'owner, Music admin, Music members see library');
+ok(visibleSongs({ role: 'volunteer', departmentIds: ['d-kids'] }, SD).songs.length === 0 && visibleSongs(kidsAdmin, SD).songs.length === 0, 'STRICT: Kids volunteer / Kids admin see no songs');
 ok(visibleSongs(null, SD).songs.length === 0, 'signed-out no songs');
 const NS = { services: [] }; ok(visibleSongs(vol, NS) === NS, 'legacy data (no songs) untouched');
 
@@ -85,3 +85,16 @@ ok(canLiveRule({ id: 'mm', role: 'volunteer', departmentIds: ['d-music'] }, 's1'
 ok(!canLiveRule({ id: 'mm', role: 'volunteer', departmentIds: ['d-music'] }, 's2', LA), 'Music member not assigned on that service cannot');
 ok(!canLiveRule({ id: 'kv', role: 'volunteer', departmentIds: ['d-kids'] }, 's1', LA), 'assigned non-Music volunteer cannot');
 ok(!canLiveRule(kidsAdmin, 's1', LA) && !canLiveRule(null, 's1', LA), 'Kids admin / signed-out cannot');
+
+// STRICT admin scoping
+const lucasT = { id: 'l', role: 'admin', adminOf: ['d-music'], departmentIds: [] }, camilaT = { id: 'c', role: 'admin', adminOf: ['d-kids'], departmentIds: [] };
+ok(canViewDeptRule(owner, 'd-kids') && canViewDeptRule(lucasT, 'd-music') && canViewDeptRule({ role: 'volunteer', departmentIds: ['d-kids'] }, 'd-kids'), 'owner all; admin own dept; member own dept');
+ok(!canViewDeptRule(lucasT, 'd-kids') && !canViewDeptRule(camilaT, 'd-music'), 'admin cannot view other depts');
+ok(canViewDeptRule({ role: 'admin', adminOf: ['d-kids'], departmentIds: ['d-music'] }, 'd-music'), 'admin who is a Music member can view Music');
+const DP = { departments: [{ id: 'd-kids', description: 'k', resources: [{ id: 'r' }] }, { id: 'd-music', resources: [] }] };
+const LV = visibleDeptPages(lucasT, DP);
+ok(!('resources' in LV.departments[0]) && !('description' in LV.departments[0]) && 'resources' in LV.departments[1], 'Lucas cannot view Kids resources/description');
+ok(visibleDeptPages(owner, DP) === DP, 'owner sees all dept pages');
+ok(visibleSongs(camilaT, { songs: [{ id: 'g', deptId: 'd-music' }] }).songs.length === 0 && !canEditSetlistRule(camilaT), 'Camila cannot view or create Music songs');
+ok(!canLiveRule(camilaT, 's1', [{ serviceId: 's1', userId: 'c' }]), 'Camila cannot open Live even if assigned');
+ok(!canEditDeptRule(lucasT, 'd-kids') && canEditDeptRule(lucasT, 'd-music'), 'edit only administered depts');
