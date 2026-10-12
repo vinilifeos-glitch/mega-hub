@@ -110,3 +110,8 @@ Run tests: `npm run test:supabase` (no account or Docker needed).
 - `department_roles.default_count` holds the default slots for new services: Assembly 3; Backing Vocals and Kids Assistant 2; others 1. The adapter writes it from `DEFAULT_SLOT_COUNTS`.
 - `services.location` defaults to '1 Main St, Farcet, Peterborough PE7 3AN' for new rows. Existing locations are unchanged.
 - Merged main (delete/confirm fix, multi-tab sync). Multi-tab rebase is disabled in Supabase mode, where the server is the source of truth.
+
+## One-role rule (migration 20261012080000_one_role.sql)
+- Trigger `one_role_guard` on `assignments` (insert/update): within a service a person may hold at most one non-exempt role; Desk and Assembly (`is_exempt_role`, by role id) are exempt; never two slots of the same role. It raises `role conflict` (check_violation).
+- Only new writes are checked. Unchanged rows and the service-role import (`auth.uid()` null) bypass it, so legacy conflicts are kept as-is. The app shows them as a warning.
+- Adapter/app: the same rule runs in `src/data/rota.ts` (`roleConflict` / `newConflict`), used by AppContext before any write.
