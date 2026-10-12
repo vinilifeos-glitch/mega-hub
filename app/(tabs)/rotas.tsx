@@ -37,7 +37,7 @@ export default function Rotas() {
             </View>
             <Text style={[s.small, { marginBottom: 8 }]}>{person ? `Assigned: ${person.name}` : 'Unfilled — tap a volunteer'}</Text>
             <View style={s.row}>
-              {members.filter(m => holdsRole(m.id, dep.id, pos)).length === 0 && <Text style={s.small}>Nobody holds this role yet. The owner can add it to someone's profile.</Text>}
+              {members.filter(m => holdsRole(m.id, dep.id, pos)).length === 0 && <Text style={s.small}>Nobody holds this role yet. An admin of this department or Vini can add it to someone's profile.</Text>}
               {members.filter(m => holdsRole(m.id, dep.id, pos)).map(m => {
                 const av = isAvailable(m.id, serviceId!);
                 const blocked = av === false || busy(m.id);
