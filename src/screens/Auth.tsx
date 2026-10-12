@@ -15,7 +15,7 @@ export function SignInScreen() {
         {err && <Text style={{ color: colors.red, marginBottom: 6 }}>{err}</Text>}
         <Button label="Sign in" onPress={go} testID="signin" />
       </Card>
-      <Text style={s.small}>No account? Ask your department leader or an admin to create one for you.</Text>
+      <Text style={s.small}>No account? Ask your department admin or Vini to create one for you.</Text>
     </Screen>
   );
 }

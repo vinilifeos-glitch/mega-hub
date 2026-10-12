@@ -4,7 +4,7 @@ import { formatDobInput, fullName, ProfileInput, useMe } from '../state/AppConte
 import { Button, Card, Chip, Field, Screen, colors, s } from '../components/ui';
 import { User } from '../types';
 
-const roleName = { owner: 'Owner', admin: 'Admin', leader: 'Department Leader', volunteer: 'Volunteer' };
+const roleName = { owner: 'Owner', admin: 'Admin', volunteer: 'Volunteer' };
 const fmtDob = (d: string) => d || 'Not set';
 
 function Row({ k, v }: { k: string; v: string }) {
@@ -36,7 +36,7 @@ export function RolesView({ user }: { user: User }) {
         const roles = user.positions?.[d.id] ?? [];
         return (
           <Card key={d.id} style={{ borderLeftWidth: 5, borderLeftColor: d.color }}>
-            <Text style={s.h2}>{d.emoji}  {d.name}{d.leaderId === user.id ? '  · Leader' : ''}</Text>
+            <Text style={s.h2}>{d.emoji}  {d.name}{(user.role === 'admin' && (user.adminOf ?? []).includes(d.id)) || user.role === 'owner' ? '  · Admin' : ''}</Text>
             <View style={[s.row, { marginTop: 8 }]}>
               {roles.length ? roles.map(r => <Chip key={r} label={r} color={d.color} active />) : <Text style={s.small}>No roles assigned yet</Text>}
             </View>

@@ -5,8 +5,8 @@ import { Button, Card, Chip, Empty, Field, Screen, colors, s } from '../../src/c
 import { Role, User } from '../../src/types';
 import { ProfileEditor } from '../../src/screens/Profile';
 
-const roleName: Record<Role, string> = { owner: 'Owner', admin: 'Admin', leader: 'Leader', volunteer: 'Volunteer' };
-const order: Role[] = ['owner', 'admin', 'leader', 'volunteer'];
+const roleName: Record<Role, string> = { owner: 'Owner', admin: 'Admin', volunteer: 'Volunteer' };
+const order: Role[] = ['owner', 'admin', 'volunteer'];
 
 export default function Accounts() {
   const { data, canManageAccounts, currentUser } = useMe();
@@ -33,6 +33,7 @@ export default function Accounts() {
             <Text style={{ color: colors.primary, fontWeight: '700', fontSize: 12 }}>{roleName[u.role].toUpperCase()}</Text>
           </View>
           <Text style={s.small}>@{u.username}{u.contact ? ` · ${u.contact}` : ''}</Text>
+          {u.role === 'admin' && <Text style={s.small}>Admin of: {(u.adminOf ?? []).map(depName).join(', ') || 'none yet'}</Text>}
           <Text style={s.small}>{u.departmentIds.length ? u.departmentIds.map(depName).join(', ') : 'No department yet'}{u.active ? '' : ' · Deactivated'}</Text>
           <View style={[s.row, { marginTop: 8 }]}>
             <Chip testID={`profile-${u.username}`} label="Profile & roles" onPress={() => { setNotice(null); setMode({ kind: 'profile', id: u.id }); }} />
@@ -50,9 +51,11 @@ function AccountEditor({ user, onClose }: { user: User; onClose: (m?: string) =>
   const [role, setRole] = useState<Role>(user.role);
   const [active, setActive] = useState(user.active);
   const [pw, setPw] = useState('');
+  const [adminOf, setAdminOf] = useState<string[]>(user.adminOf ?? []);
+  const { data } = useMe();
   const [err, setErr] = useState<string | null>(null);
   const save = async () => {
-    const e = await ownerUpdateAccount(user.id, { username, role, active, newPassword: pw });
+    const e = await ownerUpdateAccount(user.id, { username, role, active, newPassword: pw, adminOf });
     if (e) setErr(e); else onClose(`Saved account @${username}${pw ? ' (password changed)' : ''}.`);
   };
   return (
@@ -62,6 +65,12 @@ function AccountEditor({ user, onClose }: { user: User; onClose: (m?: string) =>
         <Field label="Set new password (leave blank to keep current)" value={pw} onChangeText={setPw} secureTextEntry testID="acc-password" />
         <Text style={s.section}>Access tier</Text>
         <View style={s.row}>{allowedRoles.map(r => <Chip key={r} testID={`tier-${r}`} label={roleName[r]} active={role === r} onPress={() => setRole(r)} />)}</View>
+        {role === 'admin' && <>
+          <Text style={s.section}>Administers departments</Text>
+          <View style={s.row}>{data.departments.map(d => <Chip key={d.id} testID={`adminof-${d.id}`} label={`${d.emoji} ${d.name}`} color={d.color} active={adminOf.includes(d.id)}
+            onPress={() => setAdminOf(adminOf.includes(d.id) ? adminOf.filter(x => x !== d.id) : [...adminOf, d.id])} />)}</View>
+          <Text style={s.small}>Admins can edit people, roles and availability in these departments and build their rotas.</Text>
+        </>}
         <Text style={s.section}>Status</Text>
         <View style={s.row}>
           <Chip label="Active" color={colors.green} active={active} onPress={() => setActive(true)} />

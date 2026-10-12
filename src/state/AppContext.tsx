@@ -31,10 +31,13 @@ interface Ctx {
   changePassword: (oldPw: string, newPw: string) => Promise<string | null>;
   isAvailable: (userId: string, serviceId: string) => boolean | undefined;
   setAvailability: (userId: string, serviceId: string, available: boolean) => void;
-  addUnavailable: (isoDate: string) => void;
-  removeUnavailable: (isoDate: string) => void;
+  addUnavailable: (isoDate: string, userId?: string) => void;
+  removeUnavailable: (isoDate: string, userId?: string) => void;
+  canEditMember: (target: User) => boolean;
+  myAdminDeps: string[];
+  adminSaveMember: (id: string, p: { firstName: string; middleNames: string; lastName: string; dob: string; contact: string; departments: Record<string, string[] | null> }) => string | null;
   saveMyProfile: (p: { firstName: string; middleNames: string; lastName: string; dob: string; contact: string }) => string | null;
-  ownerUpdateAccount: (id: string, a: { username: string; role: Role; active: boolean; newPassword: string }) => Promise<string | null>;
+  ownerUpdateAccount: (id: string, a: { username: string; role: Role; active: boolean; newPassword: string; adminOf: string[] }) => Promise<string | null>;
   assign: (serviceId: string, departmentId: string, position: string, userId: string) => void;
   unassign: (assignmentId: string) => void;
   canManage: (departmentId: string) => boolean;
@@ -71,12 +74,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const found = d.users.find(u => u.id === sessionId && u.active);
     const currentUser = found ?? null;
     const role = currentUser?.role;
-    const isTop = role === 'owner' || role === 'admin';
     const isOwner = role === 'owner';
-    const canManage = (depId: string) => !!currentUser && (isTop ||
-      (role === 'leader' && d.departments.find(x => x.id === depId)?.leaderId === currentUser.id));
+    const myAdminDeps = isOwner ? d.departments.map(x => x.id) : role === 'admin' ? (currentUser?.adminOf ?? []) : [];
+    const canEditMember = (t: User) => !!currentUser && (isOwner || t.id === currentUser.id ||
+      (role === 'admin' && t.role !== 'owner' && (t.departmentIds.some(dep => myAdminDeps.includes(dep)) || (t.role === 'volunteer' && t.departmentIds.length === 0))));
+    const canManage = (depId: string) => !!currentUser && (isOwner ||
+      (role === 'admin' && (currentUser.adminOf ?? []).includes(depId)));
     const canEditAccount = (_t: User) => isOwner;
-    const allowedRoles: Role[] = isOwner ? ['owner', 'admin', 'leader', 'volunteer'] : [];
+    const allowedRoles: Role[] = isOwner ? ['owner', 'admin', 'volunteer'] : [];
     const usernameTaken = (username: string, exceptId: string | null) =>
       d.users.some(u => norm(u.username) === norm(username) && u.id !== exceptId);
 
@@ -117,15 +122,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           const salt = newSalt(); const passwordHash = await hashPassword(salt, pw);
           const parts = name.split(' ');
           const user: User = { id: `u-${Date.now().toString(36)}`, name, firstName: parts[0], middleNames: parts.slice(1, -1).join(' '), lastName: parts.length > 1 ? parts[parts.length - 1] : '', dob: '', positions: {}, username, role: input.role, departmentIds, salt, passwordHash, mustChangePassword: true, active: true };
-          update(x => ({ ...x, users: [...x.users, user], departments: x.departments.map(dep => user.role === 'leader' && departmentIds.includes(dep.id) ? { ...dep, leaderId: user.id } : dep) }));
+          update(x => ({ ...x, users: [...x.users, user] }));
         } else {
           update(x => ({
             ...x,
             users: x.users.map(u => u.id === id ? { ...u, ...(name !== u.name ? { firstName: name.split(' ')[0], middleNames: name.split(' ').slice(1, -1).join(' '), lastName: name.split(' ').length > 1 ? name.split(' ').slice(-1)[0] : '' } : {}), name, username, role: input.role, departmentIds, positions: Object.fromEntries(departmentIds.map(dp => [dp, u.positions?.[dp] ?? []])) } : u),
             // leaving a department / no longer leader: clean up
-            departments: x.departments.map(dep =>
-              input.role === 'leader' && departmentIds.includes(dep.id) ? { ...dep, leaderId: id }
-              : dep.leaderId === id ? { ...dep, leaderId: null } : dep),
             assignments: x.assignments.filter(a => a.userId !== id || departmentIds.includes(a.departmentId)),
           }));
         }
@@ -159,8 +161,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         update(x => ({
           ...x,
           users: x.users.map(u => u.id === id ? { ...u, firstName: p.firstName.trim(), middleNames: p.middleNames.trim(), lastName: p.lastName.trim(), name: fullName(p), dob: p.dob, contact: p.contact.trim(), departmentIds, positions } : u),
-          departments: x.departments.map(dep => dep.leaderId === id && !departmentIds.includes(dep.id) ? { ...dep, leaderId: null }
-            : x.users.find(u => u.id === id)?.role === 'leader' && departmentIds.includes(dep.id) && !dep.leaderId ? { ...dep, leaderId: id } : dep),
           assignments: x.assignments.filter(a => a.userId !== id || (positions[a.departmentId] ?? []).includes(a.position)),
         }));
         return null;
@@ -186,19 +186,45 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (a.newPassword) { const salt = newSalt(); pw = { salt, passwordHash: await hashPassword(salt, a.newPassword), mustChangePassword: false }; }
         update(x => ({
           ...x,
-          users: x.users.map(u => u.id === id ? { ...u, username, role: a.role, active: a.active, ...pw } : u),
-          departments: x.departments.map(dep => dep.leaderId === id && a.role !== 'leader' ? { ...dep, leaderId: null } : dep),
+          users: x.users.map(u => u.id === id ? { ...u, username, role: a.role, active: a.active, adminOf: a.role === 'admin' ? a.adminOf : [], ...pw } : u),
         }));
         return null;
       },
-      addUnavailable: iso => currentUser && update(x => ({
-        ...x,
-        users: x.users.map(u => u.id === currentUser.id ? { ...u, unavailable: [...new Set([...(u.unavailable ?? []), iso])].sort() } : u),
-        assignments: x.assignments.filter(a => !(a.userId === currentUser.id && x.services.find(s => s.id === a.serviceId)?.date === iso)),
-      })),
-      removeUnavailable: iso => currentUser && update(x => ({
-        ...x, users: x.users.map(u => u.id === currentUser.id ? { ...u, unavailable: (u.unavailable ?? []).filter(v => v !== iso) } : u),
-      })),
+      canEditMember, myAdminDeps,
+      addUnavailable: (iso, userId) => {
+        const uid = userId ?? currentUser?.id; const t0 = d.users.find(u => u.id === uid);
+        if (!t0 || !canEditMember(t0)) return;
+        update(x => ({
+          ...x,
+          users: x.users.map(u => u.id === uid ? { ...u, unavailable: [...new Set([...(u.unavailable ?? []), iso])].sort() } : u),
+          assignments: x.assignments.filter(a => !(a.userId === uid && x.services.find(s => s.id === a.serviceId)?.date === iso)),
+        }));
+      },
+      removeUnavailable: (iso, userId) => {
+        const uid = userId ?? currentUser?.id; const t0 = d.users.find(u => u.id === uid);
+        if (!t0 || !canEditMember(t0)) return;
+        update(x => ({ ...x, users: x.users.map(u => u.id === uid ? { ...u, unavailable: (u.unavailable ?? []).filter(v => v !== iso) } : u) }));
+      },
+      adminSaveMember: (id, p) => {
+        const t0 = d.users.find(u => u.id === id);
+        if (!t0 || !canEditMember(t0)) return 'You can only edit people in departments you administer.';
+        if (!p.firstName.trim()) return 'First name is required.';
+        if (p.dob && !validDob(p.dob)) return 'Date of birth must be a real date as DD/MM/YYYY.';
+        if (!validContact(p.contact.trim())) return 'Contact number looks invalid.';
+        const v = { firstName: p.firstName.trim(), middleNames: p.middleNames.trim(), lastName: p.lastName.trim(), dob: p.dob, contact: p.contact.trim() };
+        let departmentIds = [...t0.departmentIds]; const positions = { ...(t0.positions ?? {}) };
+        for (const [dep, roles] of Object.entries(p.departments)) {
+          if (!canManage(dep)) continue; // admins only touch their own departments
+          if (roles === null) { departmentIds = departmentIds.filter(x => x !== dep); delete positions[dep]; }
+          else { if (!departmentIds.includes(dep)) departmentIds.push(dep); positions[dep] = roles; }
+        }
+        update(x => ({
+          ...x,
+          users: x.users.map(u => u.id === id ? { ...u, ...v, name: fullName(v), departmentIds, positions } : u),
+          assignments: x.assignments.filter(a => a.userId !== id || (positions[a.departmentId] ?? []).includes(a.position)),
+        }));
+        return null;
+      },
       saveMyContact: contact => {
         if (!currentUser) return 'Not signed in.';
         if (!validContact(contact.trim())) return 'Contact number looks invalid.';

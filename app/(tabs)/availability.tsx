@@ -1,15 +1,8 @@
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { formatDobInput, useMe } from '../../src/state/AppContext';
+import { toIso, todayIso } from '../../src/data/dates';
 import { Button, Card, Empty, Field, Screen, colors, formatDate, s } from '../../src/components/ui';
-
-const toIso = (ddmmyyyy: string) => {
-  const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(ddmmyyyy); if (!m) return null;
-  const [d, mo, y] = [+m[1], +m[2], +m[3]]; const dt = new Date(y, mo - 1, d);
-  if (dt.getFullYear() !== y || dt.getMonth() !== mo - 1 || dt.getDate() !== d) return null;
-  return `${m[3]}-${m[2]}-${m[1]}`;
-};
-const todayIso = () => { const t = new Date(); return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`; };
 
 export default function AvailabilityScreen() {
   const { data, currentUser, addUnavailable, removeUnavailable } = useMe();

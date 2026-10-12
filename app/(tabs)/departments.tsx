@@ -14,7 +14,7 @@ export default function Departments() {
       {seesAll && <>
         <Text style={s.section}>All departments</Text>
         {data.departments.map(d => {
-          const leader = data.users.find(u => u.id === d.leaderId);
+          const admins = data.users.filter(u => u.active && u.role === 'admin' && (u.adminOf ?? []).includes(d.id));
           const members = data.users.filter(u => u.active && u.departmentIds.includes(d.id));
           return (
             <Card key={d.id} style={{ borderLeftWidth: 5, borderLeftColor: d.color }}>
@@ -22,7 +22,7 @@ export default function Departments() {
                 <Text style={s.h2}>{d.emoji}  {d.name}</Text>
                 {canManage(d.id) && <Text style={{ color: d.color, fontWeight: '700', fontSize: 12 }}>YOU MANAGE</Text>}
               </View>
-              <Text style={[s.small, { marginTop: 4 }]}>Leader: {leader?.name ?? 'Not assigned'}</Text>
+              <Text style={[s.small, { marginTop: 4 }]}>Admins: {admins.map(a => a.name).join(', ') || 'None yet (Vini covers)'}</Text>
               <Text style={s.small}>Roles: {d.positions.join(', ')}</Text>
               <Text style={{ marginTop: 6, color: colors.text }}>{members.length} people: {members.map(m => m.firstName).join(', ') || '—'}</Text>
             </Card>

@@ -2,7 +2,7 @@ import { Text, View } from 'react-native';
 import { useMe } from '../../src/state/AppContext';
 import { Button, Card, Screen, colors, formatDate, s } from '../../src/components/ui';
 
-const roleLabel = { owner: 'Owner', admin: 'Overall Admin', leader: 'Department Leader', volunteer: 'Volunteer' };
+const roleLabel = { owner: 'Owner', admin: 'Admin', volunteer: 'Volunteer' };
 
 export default function Home() {
   const { data, currentUser, managedDepartments, signOut } = useMe();
@@ -22,7 +22,7 @@ export default function Home() {
           <Text style={s.small}>{formatDate(next.date)} · {next.time}</Text>
           {currentUser.role !== 'volunteer' && (
             <Text style={{ marginTop: 8, color: colors.primary, fontWeight: '600' }}>
-              {filled(myDeps)} / {slots(myDeps)} rota slots filled{currentUser.role === 'leader' ? ' in your department' : ''}
+              {filled(myDeps)} / {slots(myDeps)} rota slots filled{currentUser.role === 'admin' ? ' in your departments' : ''}
             </Text>
           )}
         </Card>

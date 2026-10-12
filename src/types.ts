@@ -1,7 +1,8 @@
-export type Role = 'owner' | 'admin' | 'leader' | 'volunteer';
+export type Role = 'owner' | 'admin' | 'volunteer';
 export interface User {
   id: string; username: string; name: string; role: Role; departmentIds: string[];
   firstName: string; middleNames: string; lastName: string; dob: string; // DD/MM/YYYY or ''
+  adminOf?: string[]; // departments this admin administers (set by owner)
   unavailable?: string[]; // ISO YYYY-MM-DD dates the person can't serve
   contact?: string; // optional phone number, not used for sign-in
   positions: Record<string, string[]>; // departmentId -> roles held

@@ -12,14 +12,14 @@ export default function TabsLayout() {
   if (!currentUser) return <SignInScreen />;
   if (currentUser.mustChangePassword) return <ChangePasswordScreen firstTime />;
   const manager = currentUser.role !== 'volunteer';
-  const serves = currentUser.role === 'volunteer' || currentUser.departmentIds.length > 0;
   return (
     <Tabs screenOptions={{ tabBarActiveTintColor: colors.primary, tabBarLabelStyle: { fontSize: 10 }, headerStyle: { backgroundColor: colors.bg }, headerTitleStyle: { fontWeight: '800' } }}>
       <Tabs.Screen name="index" options={{ title: 'Home', headerTitle: 'Mega Hub', tabBarIcon: icon('🏠') }} />
       <Tabs.Screen name="departments" options={{ title: 'Depts', headerTitle: 'Departments', tabBarIcon: icon('⛪') }} />
-      <Tabs.Screen name="availability" options={{ title: 'Available', headerTitle: 'Availability', tabBarIcon: icon('📅'), href: serves ? undefined : null }} />
-      <Tabs.Screen name="my-rota" options={{ title: 'My Rota', tabBarIcon: icon('🙋'), href: serves ? undefined : null }} />
+      <Tabs.Screen name="availability" options={{ title: 'Available', headerTitle: 'Availability', tabBarIcon: icon('📅'), }} />
+      <Tabs.Screen name="my-rota" options={{ title: 'My Rota', tabBarIcon: icon('🙋'), }} />
       <Tabs.Screen name="rotas" options={{ title: 'Rotas', headerTitle: 'Build Rotas', tabBarIcon: icon('🗂️'), href: manager ? undefined : null }} />
+      <Tabs.Screen name="team" options={{ title: 'Team', headerTitle: 'My Team', tabBarIcon: icon('🧑‍🤝‍🧑'), href: currentUser.role === 'admin' ? undefined : null }} />
       <Tabs.Screen name="profile" options={{ title: 'Profile', headerTitle: 'My Profile', tabBarIcon: icon('👤') }} />
       <Tabs.Screen name="accounts" options={{ title: 'Accounts', tabBarIcon: icon('👥'), href: canManageAccounts ? undefined : null }} />
     </Tabs>

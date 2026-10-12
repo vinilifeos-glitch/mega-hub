@@ -14,6 +14,10 @@ export function migrate(d: AppData): AppData {
       ...(iso ? { dob: `${iso[3]}/${iso[2]}/${iso[1]}` } : {}),
       ...(u0.positions ? { positions: Object.fromEntries(Object.entries(u0.positions).map(([k, v]) => [k, v.filter(r => valid(k, r))])) } : {}),
     };
+    if ((u.role as string) === 'leader') {
+      const led = d.departments.filter(x => x.leaderId === u.id).map(x => x.id);
+      u.role = 'admin'; u.adminOf = [...new Set([...led, ...u.departmentIds])];
+    }
     if (!u.unavailable) {
       u.unavailable = [...new Set(d.availability.filter(a => a.userId === u.id && !a.available)
         .map(a => d.services.find(s => s.id === a.serviceId)?.date).filter((x): x is string => !!x))].sort();
@@ -28,7 +32,7 @@ export function migrate(d: AppData): AppData {
     };
   });
   const assignments = d.assignments.filter(a => departments.find(x => x.id === a.departmentId)?.positions.includes(a.position));
-  return { ...d, users, departments, assignments };
+  return { ...d, users, departments: departments.map(x => ({ ...x, leaderId: null })), assignments };
 }
 
 /**
