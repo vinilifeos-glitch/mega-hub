@@ -21,12 +21,11 @@ export type AssignMode = 'double' | 'swap';
 /**
  * Apply an assignment to a slot. If the user already serves elsewhere in this service:
  *  - no mode -> 'busy' error; 'double' -> keep both;
- *  - 'swap' -> user moves from their other slot (`from`) into this one; the slot's previous occupant (if any)
- *    moves into `from` when `canTake(occupant, from)`; otherwise `from` is left open.
+ *  - 'swap' -> user moves from their other slot into this one; that other slot is cleared (left unfilled).
+ *    Any previous occupant of this slot is simply replaced (unassigned), never moved.
  * Returns the new assignments list or an error code.
  */
-export function planAssign(as: Assignment[], target: Omit<Assignment, 'id'>, mode: AssignMode | undefined,
-  canTake: (userId: string, slot: Assignment) => boolean = () => true): { assignments: Assignment[] } | { error: 'busy' | 'noSwapSource' } {
+export function planAssign(as: Assignment[], target: Omit<Assignment, 'id'>, mode: AssignMode | undefined): { assignments: Assignment[] } | { error: 'busy' | 'noSwapSource' } {
   const id = `${target.serviceId}:${target.departmentId}:${target.position}:${target.index}`;
   const prev = as.find(a => a.id === id);
   if (prev?.userId === target.userId) return { assignments: as };
@@ -37,8 +36,7 @@ export function planAssign(as: Assignment[], target: Omit<Assignment, 'id'>, mod
   if (!mode) return { error: 'busy' };
   if (mode === 'double') return { assignments: [...rest, mine] };
   const from = others[0];
-  let out = rest.filter(a => a.id !== from.id);
-  if (prev && canTake(prev.userId, from)) out = [...out, { ...from, userId: prev.userId }];
+  const out = rest.filter(a => a.id !== from.id);
   return { assignments: [...out, mine] };
 }
 /** Picker status for a person on a service. */

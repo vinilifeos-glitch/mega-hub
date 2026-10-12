@@ -368,10 +368,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (!(u.positions?.[departmentId] ?? []).includes(position)) return t('errors.doesntHoldRole', { name: u.firstName, role: position });
         if (awayOn(u, sv.date)) return t('errors.unavailableThatDay', { name: u.firstName });
         if (mode === 'swap') { const from = d.assignments.find(a => a.serviceId === serviceId && a.userId === userId && a.id !== `${serviceId}:${departmentId}:${position}:${index}`); if (from && !canManage(from.departmentId)) return t('errors.slotScope'); }
-        const canTake = (uid: string, slot: Assignment) => { const o = d.users.find(x => x.id === uid); return !!o && o.active && (o.positions?.[slot.departmentId] ?? []).includes(slot.position) && !awayOn(o, sv.date) && canManage(slot.departmentId); };
-        const r = planAssign(d.assignments, { serviceId, departmentId, position, index, userId }, mode, canTake);
+        const r = planAssign(d.assignments, { serviceId, departmentId, position, index, userId }, mode);
         if ('error' in r) return t('errors.alreadyServing', { name: u.firstName });
-        update(x => { const q = planAssign(x.assignments, { serviceId, departmentId, position, index, userId }, mode, canTake); return 'error' in q ? x : { ...x, assignments: q.assignments }; });
+        update(x => { const q = planAssign(x.assignments, { serviceId, departmentId, position, index, userId }, mode); return 'error' in q ? x : { ...x, assignments: q.assignments }; });
         return null;
       },
       saveService: (id, sv, picks) => {
