@@ -40,7 +40,6 @@ export function SetlistCard({ service: sv }: { service: Service }) {
           <Text style={{ color: colors.primaryText, fontWeight: '700' }}>{t('setlist.edit')}</Text>
         </Pressable>}
       </View>
-      {list.length > 0 && canLive(sv.id) && <Button label={t('live.open')} onPress={() => router.push(`/live/${sv.id}` as any)} testID="live-open" />}
       {list.length === 0 && <View style={{ alignItems: 'center', paddingVertical: 20 }}>
         <Icon name="musical-note-outline" size={28} color={colors.subtle} style={{ marginBottom: 6 }} />
         <Text style={[s.small, { textAlign: 'center' }]} testID="setlist-empty">{t('setlist.empty')}</Text>
