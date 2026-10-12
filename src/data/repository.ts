@@ -63,6 +63,18 @@ export interface Repository {
 }
 
 const DATA_KEY = 'megahub:data:v4';
+/** Raw JSON this tab last loaded/saved; used to detect writes from other tabs/windows (web). */
+let lastRaw: string | null = null;
+const ls = (): Storage | null => { try { return typeof window !== 'undefined' && window.localStorage ? window.localStorage : null; } catch { return null; } };
+/**
+ * Web only: if another tab/window (e.g. a stale Safari tab or home-screen app) wrote newer data since this tab last
+ * loaded/saved, return that data (migrated) so we never overwrite it with a stale in-memory copy. Otherwise null.
+ */
+export function newerFromOtherTab(): AppData | null {
+  const st = ls(); if (!st) return null;
+  try { const raw = st.getItem(DATA_KEY); if (!raw || raw === lastRaw) return null; const d = migrate(JSON.parse(raw) as AppData); lastRaw = raw; return d; } catch { return null; }
+}
+export const DATA_STORAGE_KEY = DATA_KEY;
 const SESSION_KEY = 'megahub:session:v4';
 const LANG_KEY = 'megahub:lang';
 const THEME_KEY = 'megahub:theme';
@@ -71,13 +83,13 @@ class DeviceRepository implements Repository {
   async load() {
     try {
       const raw = await AsyncStorage.getItem(DATA_KEY);
-      if (raw) return migrate(JSON.parse(raw) as AppData);
+      if (raw) { const d = migrate(JSON.parse(raw) as AppData); lastRaw = raw; return d; }
     } catch {}
     const seed: AppData = JSON.parse(JSON.stringify(mockData));
     await this.save(seed);
     return seed;
   }
-  async save(data: AppData) { await AsyncStorage.setItem(DATA_KEY, JSON.stringify(data)); }
+  async save(data: AppData) { const raw = JSON.stringify(data); lastRaw = raw; const st = ls(); if (st) { try { st.setItem(DATA_KEY, raw); return; } catch {} } await AsyncStorage.setItem(DATA_KEY, raw); }
   async getSession() { return AsyncStorage.getItem(SESSION_KEY); }
   async setSession(id: string | null) {
     if (id) await AsyncStorage.setItem(SESSION_KEY, id); else await AsyncStorage.removeItem(SESSION_KEY);

@@ -3,7 +3,7 @@ import { AppData, Department, Resource, Role, Service, SetlistItem, Song, Theme,
 import { planAssign, AssignMode } from '../data/rota';
 import { NOTE_MAX, awayOn, covers, getUnavailableFor, rangeError } from '../data/unavailability';
 import { todayIso as todayIsoFn } from '../data/dates';
-import { repository } from '../data/repository';
+import { repository, newerFromOtherTab, DATA_STORAGE_KEY } from '../data/repository';
 import { hashPassword, newSalt } from '../data/auth';
 import { canEditMemberRule, canEditPersonal, changedProtected, pickPref, visibleServiceData, visibleSetlists, canEditSetlistRule, canEditDeptRule, visibleSongs, cleanUrl, canLiveRule, canViewDeptRule, visibleDeptPages } from './permissions';
 import { keyLabel, parseKey } from '../data/music';
@@ -116,7 +116,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const update = (fn: (d: AppData) => AppData) =>
-    setData(prev => { if (!prev) return prev; const next = fn(prev); repository.save(next); return next; });
+    setData(prev => { if (!prev) return prev; const base = newerFromOtherTab() ?? prev; const next = fn(base); repository.save(next); return next; });
+  // keep this tab in sync when another tab/window changes the data (and when returning to a backgrounded tab)
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.addEventListener) return;
+    const sync = () => { const d = newerFromOtherTab(); if (d) setData(d); };
+    const onStorage = (e: StorageEvent) => { if (!e.key || e.key === DATA_STORAGE_KEY) sync(); };
+    const onVis = () => { if (typeof document === 'undefined' || document.visibilityState === 'visible') sync(); };
+    window.addEventListener('storage', onStorage); window.addEventListener('focus', onVis); window.addEventListener('pageshow', onVis);
+    if (typeof document !== 'undefined') document.addEventListener('visibilitychange', onVis);
+    return () => { window.removeEventListener('storage', onStorage); window.removeEventListener('focus', onVis); window.removeEventListener('pageshow', onVis); if (typeof document !== 'undefined') document.removeEventListener('visibilitychange', onVis); };
+  }, []);
 
   const setSession = (id: string | null) => { setSessionId(id); repository.setSession(id); };
 
