@@ -1,4 +1,6 @@
 import { useTabReset } from '../tabReset';
+import { useLocalSearchParams, router } from 'expo-router';
+import { SetlistCard } from './Setlist';
 import { displayName } from '../display';
 import { DateField } from '../components/DateField';
 import { useEffect, useState } from 'react';
@@ -9,6 +11,12 @@ import { Badge, DeptBadge, StatusBadge, Button, DeptTitle, Icon, IconButton, dep
 import { Service, Slot } from '../types';
 import { formatTimeInput, isoToDdmm, toIso, todayIso, upcomingSundayIso } from '../data/dates';
 
+/** Cross-platform confirm: window.confirm on web, Alert on native. */
+function confirmAsk(title: string, msg: string, okLabel: string, cancelLabel: string, go: () => void) {
+  if (Platform.OS === 'web') { if (globalThis.confirm?.(msg)) go(); }
+  else Alert.alert(title, msg, [{ text: cancelLabel, style: 'cancel' }, { text: okLabel, style: 'destructive', onPress: go }]);
+}
+
 const DOUBLE: Record<string, number> = { 'd-kids:Assistant': 2, 'd-music:Backing Vocals': 2 };
 
 export function ServicesHome() {
@@ -16,14 +24,16 @@ export function ServicesHome() {
   const { data, currentUser, t, fmtDate, roleName } = useMe();
   const [view, setView] = useState<{ kind: 'detail' | 'edit'; id: string } | { kind: 'new' } | null>(null);
   useTabReset(() => { setView(null); setMsg(null); });
+  const { svc } = useLocalSearchParams<{ svc?: string }>();
+  useEffect(() => { if (svc) { setView({ kind: 'detail', id: svc }); router.setParams({ svc: undefined }); } }, [svc]);
   const [msg, setMsg] = useState<string | null>(null);
   const isOwner = currentUser.role === 'owner';
   if (view?.kind === 'new') return <ServiceForm onClose={(m, id) => { setMsg(m ?? null); setView(id ? { kind: 'detail', id } : null); }} />;
   if (view) {
     const sv = data.services.find(x => x.id === view.id);
     if (!sv) { setView(null); return null; }
-    if (view.kind === 'edit') return <ServiceForm service={sv} onClose={m => { setMsg(m ?? null); setView({ kind: 'detail', id: sv.id }); }} />;
-    return <ServiceDetail service={sv} msg={msg} onBack={() => { setMsg(null); setView(null); }} onEdit={() => setView({ kind: 'edit', id: sv.id })} onDeleted={() => { setMsg(t('services.deleted')); setView(null); }} />;
+    if (view.kind === 'edit') return <ServiceForm service={sv} onDeleted={m => { setMsg(m); setView(null); }} onClose={m => { setMsg(m ?? null); setView({ kind: 'detail', id: sv.id }); }} />;
+    return <ServiceDetail service={sv} msg={msg} onBack={() => { setMsg(null); setView(null); }} onEdit={() => setView({ kind: 'edit', id: sv.id })} onDeleted={m => { setMsg(m); setView(null); }} />;
   }
   const upcoming = data.services.filter(x => x.date >= todayIso()).sort((a, b) => (a.date + a.start).localeCompare(b.date + b.start));
   return (
@@ -36,8 +46,8 @@ export function ServicesHome() {
         const mine = data.assignments.filter(a => a.serviceId === sv.id && a.userId === currentUser.id);
         return (
           <Pressable key={sv.id} testID={`svc-${sv.date}`} onPress={() => { setMsg(null); setView({ kind: 'detail', id: sv.id }); }}>
-            <Card style={mine.length ? { borderColor: colors.primary, borderWidth: 1.5 } : undefined}>
-              <Text style={s.h2}>{sv.title}</Text>
+            <Card style={sv.status === 'draft' ? { borderStyle: 'dashed', borderColor: colors.amber, borderWidth: 1.5, backgroundColor: colors.soft } : mine.length ? { borderColor: colors.primary, borderWidth: 1.5 } : undefined}>
+              <View style={[s.row, { justifyContent: 'space-between' }]}><Text style={s.h2}>{sv.title}</Text>{sv.status === 'draft' && <StatusBadge status="draft" label={t('services.draft')} testID={`draft-badge-${sv.date}`} />}</View>
               <Text style={s.small}>{fmtDate(sv.date)} · {isoToDdmm(sv.date)} · {sv.start}–{sv.end}</Text>
               {sv.location ? <View style={[s.row, { flexWrap: 'nowrap', marginTop: 2 }]}><Icon name="location-outline" size={14} style={{ marginRight: 4 }} /><Text style={[s.small, { flexShrink: 1 }]}>{sv.location}</Text></View> : null}
               {mine.length > 0 && <View style={{ marginTop: 8 }}><StatusBadge status="assigned" label={t('services.youreServing', { roles: mine.map(a => roleName(a.departmentId, a.position)).join(', ') })} /></View>}
@@ -57,20 +67,21 @@ export function ServicesHome() {
   );
 }
 
-function ServiceDetail({ service: sv, msg, onBack, onEdit, onDeleted }: { service: Service; msg: string | null; onBack: () => void; onEdit: () => void; onDeleted: () => void }) {
+function ServiceDetail({ service: sv, msg, onBack, onEdit, onDeleted }: { service: Service; msg: string | null; onBack: () => void; onEdit: () => void; onDeleted: (msg: string) => void }) {
   const colors = useColors(); const s = useStyles();
-  const { data, currentUser, canManage, assign, unassign, whyBlocked, deleteService, t, fmtDate, deptName, roleName } = useMe();
+  const { data, currentUser, canManage, assign, unassign, whyBlocked, deleteService, publishService, t, fmtDate, deptName, roleName } = useMe();
   const [open, setOpen] = useState<string | null>(null); // slot key being filled
   const [err, setErr] = useState<string | null>(null);
   const isOwner = currentUser.role === 'owner';
-  const del = () => {
-    const go = () => { deleteService(sv.id); onDeleted(); };
-    if (Platform.OS === 'web') { if (globalThis.confirm?.(t('services.deleteConfirm', { title: sv.title, date: isoToDdmm(sv.date) }))) go(); }
-    else Alert.alert(t('services.deleteConfirmTitle'), t('services.deleteConfirm', { title: sv.title, date: isoToDdmm(sv.date) }), [{ text: t('common.cancel') }, { text: t('common.delete'), style: 'destructive', onPress: go }]);
-  };
+  const draft = sv.status === 'draft';
+  const del = () => confirmAsk(draft ? t('services.deleteDraft') : t('services.deleteConfirmTitle'), t(draft ? 'services.deleteDraftConfirm' : 'services.deleteConfirm', { title: sv.title, date: isoToDdmm(sv.date) }),
+    t('common.delete'), t('common.cancel'), () => { deleteService(sv.id); onDeleted(draft ? t('services.draftDeleted') : t('services.deleted')); });
+  const [pubMsg, setPubMsg] = useState<string | null>(null);
   return (
     <Screen title={sv.title} subtitle={`${fmtDate(sv.date)} · ${isoToDdmm(sv.date)} · ${sv.start}–${sv.end}${sv.location ? ` · ${sv.location}` : ''}`}>
       {msg && <Notice text={msg} />}
+      {pubMsg && <Notice text={pubMsg} />}
+      {draft && <View style={[s.row, { marginBottom: 8 }]}><StatusBadge status="draft" label={t('services.draft')} testID="draft-badge" /><Text style={[s.small, { marginLeft: 8, flex: 1 }]}>{t('services.draftHint')}</Text></View>}
       {err && <Notice tone="error" text={err} />}
       {data.departments.map(d => {
         const slots = sv.slots.filter(z => z.departmentId === d.id);
@@ -115,10 +126,12 @@ function ServiceDetail({ service: sv, msg, onBack, onEdit, onDeleted }: { servic
           </Card>
         );
       })}
+      <SetlistCard service={sv} />
       <View style={[s.row, { marginTop: 4, marginBottom: 4 }]}>{([['checkmark-circle-outline', t('services.legendAvailable')], ['close-circle-outline', t('services.legendAway')], ['time-outline', t('services.legendBusy')]] as const).map(([n, l]) => <View key={l} style={[s.row, { marginRight: 16, marginBottom: 4 }]}><Icon name={n} size={16} style={{ marginRight: 4 }} /><Text style={s.small}>{l}</Text></View>)}</View>
       <Text style={s.small}>{t('services.onlyHolders')}</Text>
+      {isOwner && draft && <Button label={t('services.publish')} onPress={() => { publishService(sv.id); setPubMsg(t('services.published')); }} testID="publish-service" />}
       {isOwner && <Button label={t('services.editService')} outline onPress={onEdit} testID="edit-service" />}
-      {isOwner && <Button label={t('services.deleteService')} color={colors.red} outline onPress={del} testID="delete-service" />}
+      {isOwner && <Button label={draft ? t('services.deleteDraft') : t('services.deleteService')} color={colors.red} outline onPress={del} testID={draft ? 'delete-draft' : 'delete-service'} />}
       <Button label={t('services.backToServices')} outline onPress={onBack} testID="back-services" />
     </Screen>
   );
@@ -128,9 +141,9 @@ type Row = { id: string; dep: string; role: string; assigneeId?: string };
 let rowSeq = 0;
 const newRowId = () => `r${++rowSeq}`;
 
-function ServiceForm({ service, onClose }: { service?: Service; onClose: (msg?: string, id?: string) => void }) {
+function ServiceForm({ service, onClose, onDeleted }: { service?: Service; onClose: (msg?: string, id?: string) => void; onDeleted?: (msg: string) => void }) {
   const colors = useColors(); const s = useStyles();
-  const { data, saveService, canManage, t, deptName, roleName } = useMe();
+  const { data, saveService, deleteService, canManage, t, deptName, roleName } = useMe();
   const [title, setTitle] = useState(service?.title ?? t('services.defaultName'));
   const [location, setLocation] = useState(service?.location ?? data.settings?.lastLocation ?? '');
   const [date, setDate] = useState(isoToDdmm(service?.date ?? upcomingSundayIso()));
@@ -166,7 +179,8 @@ function ServiceForm({ service, onClose }: { service?: Service; onClose: (msg?: 
     if (bad.length) { setRows(next); setNotice(t('services.removedPicks', { names: bad.join(', ') })); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [iso]);
-  const save = () => {
+  const isDraftSv = service?.status === 'draft';
+  const save = (status: 'draft' | 'published') => {
     if (!iso) return setErr(t('errors.dateInvalid'));
     if (!service && iso < todayIso()) return setErr(t('errors.datePast'));
     const slots: Slot[] = []; const pk: { departmentId: string; position: string; index: number; userId: string }[] = [];
@@ -176,9 +190,9 @@ function ServiceForm({ service, onClose }: { service?: Service; onClose: (msg?: 
       slots.push({ departmentId: d.id, position: p, count: rs.length });
       rs.forEach((x, i) => { if (x.assigneeId) pk.push({ departmentId: d.id, position: p, index: i, userId: x.assigneeId }); });
     }
-    const e = saveService(service?.id ?? null, { title, location, date: iso, start, end, slots }, pk);
+    const e = saveService(service?.id ?? null, { title, location, date: iso, start, end, slots, status }, pk);
     if (e) return setErr(e);
-    onClose(service ? t('services.updated') : t('services.created'));
+    onClose(status === 'draft' ? t('services.draftSaved') : isDraftSv ? t('services.published') : service ? t('services.updated') : t('services.created'));
   };
   return (
     <Screen title={service ? t('services.editService') : t('services.newService')} subtitle={t('services.formSubtitle')}>
@@ -249,7 +263,9 @@ function ServiceForm({ service, onClose }: { service?: Service; onClose: (msg?: 
         );
       })}
       {err && <Notice tone="error" text={err} />}
-      <Button label={service ? t('services.saveService') : t('services.createService')} onPress={save} testID="sv-save" />
+      <Button label={!service ? t('services.createService') : isDraftSv ? t('services.publish') : t('services.saveService')} onPress={() => save('published')} testID="sv-save" />
+      {(!service || isDraftSv) && <Button label={t('services.saveDraft')} outline onPress={() => save('draft')} testID="sv-save-draft" />}
+      {isDraftSv && <Button label={t('services.deleteDraft')} color={colors.red} outline testID="sv-delete-draft" onPress={() => confirmAsk(t('services.deleteDraft'), t('services.deleteDraftConfirm', { title: service!.title, date: isoToDdmm(service!.date) }), t('common.delete'), t('common.cancel'), () => { deleteService(service!.id); onDeleted?.(t('services.draftDeleted')); })} />}
       <Button label={t('common.cancel')} outline onPress={() => onClose()} />
     </Screen>
   );

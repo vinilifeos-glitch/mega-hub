@@ -43,6 +43,7 @@ export const en = {
   },
   services: {
     title: 'Services', greeting: 'Hi {name}. Upcoming services and who\'s serving.', newService: 'New service', editService: 'Edit service',
+draft: 'Draft', saveDraft: 'Save draft', publish: 'Publish', published: 'Service published.', draftSaved: 'Draft saved.', deleteDraft: 'Delete draft', deleteDraftConfirm: 'Delete draft {title} on {date}? Its assignments will be removed too.', draftDeleted: 'Draft deleted.', draftHint: 'Draft — only the owner and admins can see it.',
     deleteService: 'Delete service', deleteConfirmTitle: 'Delete service?', deleteConfirm: 'Delete {title} on {date}?', backToServices: 'Back to services',
     createService: 'Create service', saveService: 'Save service', created: 'Service created.', updated: 'Service updated.', deleted: 'Service deleted.',
     emptyOwner: 'No upcoming services yet. Tap “New service” to add one.', empty: 'No upcoming services yet. Check back soon.',
@@ -91,7 +92,9 @@ export const en = {
     created: 'Created account for {name} (username @{username}).', createdMustChange: "Created account for {name} (username @{username}). They'll be asked to choose their own password at first sign-in.",
     saved: 'Saved {name}.', savedPw: 'Saved {name} (password changed).',
   },
+  setlist: { title: 'Setlist', count: '{n} songs', key: 'Key', notes: 'Notes', songTitle: 'Song title', addSong: '+ Add song', edit: 'Edit', done: 'Done', empty: 'No songs yet.', more: '+{n} more', up: 'Move {title} up', down: 'Move {title} down', remove: 'Remove {title}', save: 'Save song', cancel: 'Cancel', customKey: 'Other key' },
   errors: {
+    setlistScope: 'Only the owner and Music admins can edit the setlist.', songTitle: 'Song title is required.',
     wrongCredentials: 'Wrong username or password.', deactivated: 'This account has been deactivated. Ask an admin.', notSignedIn: 'Not signed in.',
     currentPasswordWrong: 'Current password is incorrect.', passwordTooShort: 'Password must be at least 4 characters.',
     samePassword: 'Choose a different password from the temporary one.', ownerOnlyAccounts: 'Only the owner can manage accounts.',
@@ -108,11 +111,11 @@ export const en = {
   },
   // ── UI v2 (Tina) ──
   appearance: { title: 'Appearance', hint: 'Choose light or dark mode.', light: 'Light', dark: 'Dark' },
-  badges: { assigned: 'Assigned', open: 'Open', away: 'Away' },
+  badges: { assigned: 'Assigned', open: 'Open', away: 'Away', draft: 'Draft' },
   more: {
     title: 'More', subtitle: 'Your profile, settings and admin tools.', back: 'Back to More',
     profile: 'My profile', profileHint: 'Personal details, language and appearance', team: 'My team', teamHint: 'People in the departments you administer',
     accounts: 'Accounts', ownerOnlyField: 'Only the owner can change name and contact details.', accountsHint: "Create and manage everyone's sign-in", settings: 'Settings', admin: 'Admin tools',
   },
-  ui: { noDeptSection: 'Not in a department yet', rolesLabel: 'Roles', assignPlaceholder: 'Assign', addRole: 'Add role' },
+  ui: { noDeptSection: 'Not in a department yet', rolesLabel: 'Roles', assignPlaceholder: 'Assign', addRole: 'Add role', addSong: 'Add song' },
 };

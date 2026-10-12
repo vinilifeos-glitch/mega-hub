@@ -163,10 +163,10 @@ export function DeptBadge({ dep, label }: { dep: { id: string; color: string }; 
   const { deptName } = useApp();
   return <Badge label={label ?? deptName(dep.id)} color={dep.color} icon={deptIcon(dep.id)} />;
 }
-const STATUS_BADGE: Record<'assigned' | 'open' | 'away', [BadgeTone, IconName]> = { assigned: ['success', 'checkmark-circle'], open: ['neutral', 'ellipse-outline'], away: ['danger', 'airplane'] };
-export function StatusBadge({ status, label }: { status: 'assigned' | 'open' | 'away'; label?: string }) {
+const STATUS_BADGE: Record<'assigned' | 'open' | 'away' | 'draft', [BadgeTone, IconName]> = { assigned: ['success', 'checkmark-circle'], open: ['neutral', 'ellipse-outline'], away: ['danger', 'airplane'], draft: ['warning', 'create-outline'] };
+export function StatusBadge({ status, label, testID }: { status: 'assigned' | 'open' | 'away' | 'draft'; label?: string; testID?: string }) {
   const { t } = useApp(); const [tone, icon] = STATUS_BADGE[status];
-  return <Badge label={label ?? t(`badges.${status}`)} tone={tone} icon={icon} />;
+  return <Badge label={label ?? t(`badges.${status}`)} tone={tone} icon={icon} testID={testID} />;
 }
 
 /* ── Controls ───────────────────────────────────────────────── */

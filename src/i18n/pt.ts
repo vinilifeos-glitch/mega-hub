@@ -45,6 +45,7 @@ export const pt: Dict = {
   },
   services: {
     title: 'Cultos', greeting: 'Olá, {name}. Próximos cultos e quem vai servir.', newService: 'Novo culto', editService: 'Editar culto',
+draft: 'Rascunho', saveDraft: 'Salvar rascunho', publish: 'Publicar', published: 'Culto publicado.', draftSaved: 'Rascunho salvo.', deleteDraft: 'Excluir rascunho', deleteDraftConfirm: 'Excluir o rascunho {title} em {date}? As escalas também serão removidas.', draftDeleted: 'Rascunho excluído.', draftHint: 'Rascunho — só o dono e os admins podem ver.',
     deleteService: 'Excluir culto', deleteConfirmTitle: 'Excluir culto?', deleteConfirm: 'Excluir {title} em {date}?', backToServices: 'Voltar aos cultos',
     createService: 'Criar culto', saveService: 'Salvar culto', created: 'Culto criado.', updated: 'Culto atualizado.', deleted: 'Culto excluído.',
     emptyOwner: 'Nenhum culto agendado. Toque em “Novo culto” para adicionar.', empty: 'Nenhum culto agendado ainda. Volte em breve.',
@@ -93,7 +94,9 @@ export const pt: Dict = {
     created: 'Conta de {name} criada (usuário @{username}).', createdMustChange: 'Conta de {name} criada (usuário @{username}). A pessoa vai escolher a própria senha no primeiro acesso.',
     saved: '{name} salvo(a).', savedPw: '{name} salvo(a) (senha alterada).',
   },
+  setlist: { title: 'Repertório', count: '{n} músicas', key: 'Tom', notes: 'Observações', songTitle: 'Título da música', addSong: '+ Adicionar música', edit: 'Editar', done: 'Concluir', empty: 'Nenhuma música ainda.', more: '+{n} mais', up: 'Subir {title}', down: 'Descer {title}', remove: 'Remover {title}', save: 'Salvar música', cancel: 'Cancelar', customKey: 'Outro tom' },
   errors: {
+    setlistScope: 'Só o dono e os admins do Louvor podem editar o repertório.', songTitle: 'O título da música é obrigatório.',
     wrongCredentials: 'Usuário ou senha incorretos.', deactivated: 'Esta conta foi desativada. Fale com um administrador.', notSignedIn: 'Você não está conectado.',
     currentPasswordWrong: 'A senha atual está incorreta.', passwordTooShort: 'A senha deve ter pelo menos 4 caracteres.',
     samePassword: 'Escolha uma senha diferente da temporária.', ownerOnlyAccounts: 'Só o proprietário pode gerenciar contas.',
@@ -110,11 +113,11 @@ export const pt: Dict = {
   },
   // ── UI v2 (Tina) ──
   appearance: { title: 'Aparência', hint: 'Escolha o modo claro ou escuro.', light: 'Claro', dark: 'Escuro' },
-  badges: { assigned: 'Escalado', open: 'Em aberto', away: 'Ausente' },
+  badges: { assigned: 'Escalado', open: 'Em aberto', away: 'Ausente', draft: 'Rascunho' },
   more: {
     title: 'Mais', subtitle: 'Seu perfil, configurações e ferramentas de administração.', back: 'Voltar para Mais',
     profile: 'Meu perfil', profileHint: 'Dados pessoais, idioma e aparência', team: 'Minha equipe', teamHint: 'Pessoas dos departamentos que você administra',
     accounts: 'Contas', ownerOnlyField: 'Somente o proprietário pode alterar nome e telefone.', accountsHint: 'Crie e gerencie o acesso de todos', settings: 'Configurações', admin: 'Administração',
   },
-  ui: { noDeptSection: 'Ainda sem departamento', rolesLabel: 'Funções', assignPlaceholder: 'Atribuir', addRole: 'Adicionar função' },
+  ui: { noDeptSection: 'Ainda sem departamento', rolesLabel: 'Funções', assignPlaceholder: 'Atribuir', addRole: 'Adicionar função', addSong: 'Adicionar música' },
 };

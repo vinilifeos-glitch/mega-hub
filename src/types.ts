@@ -17,7 +17,10 @@ export interface User {
 }
 export interface Department { id: string; name: string; emoji: string; color: string; leaderId: string | null; positions: string[]; }
 export interface Slot { departmentId: string; position: string; count: number; }
-export interface Service { id: string; title: string; location: string; date: string /* ISO YYYY-MM-DD */; start: string; end: string; slots: Slot[]; }
+export interface Service { id: string; title: string; location: string; date: string /* ISO YYYY-MM-DD */; start: string; end: string; slots: Slot[]; /** missing = published */ status?: 'draft' | 'published';
+  /** Ordered (array index = position). Missing = empty. */ setlist?: SetlistItem[]; }
+/** songId reserved for the phase-2 song library (null/absent = free-text song). */
+export interface SetlistItem { id: string; title: string; key?: string; notes?: string; songId?: string | null; }
 export interface Availability { userId: string; serviceId: string; available: boolean; }
 export interface Assignment { id: string; serviceId: string; departmentId: string; position: string; index: number; userId: string; }
 export interface AppData { users: User[]; departments: Department[]; services: Service[]; availability: Availability[]; assignments: Assignment[]; settings?: { lastLocation?: string }; }
