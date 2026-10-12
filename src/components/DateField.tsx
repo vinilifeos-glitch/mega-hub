@@ -24,22 +24,22 @@ export function DateField({ label, value, onChange, testID, placeholder, limit, 
   while (cells.length % 7) cells.push(null);
   const disabled = (d: Date) => (limit === 'past' && d > today) || (limit === 'future' && d < today);
   const nav = (lbl: string, dm: number, id: string) => (
-    <Pressable onPress={() => move(dm)} testID={testID ? `${testID}-${id}` : undefined} style={{ padding: 6 }}><Text style={{ fontSize: 18, color: colors.primary, fontWeight: '700' }}>{lbl}</Text></Pressable>
+    <Pressable onPress={() => move(dm)} testID={testID ? `${testID}-${id}` : undefined} style={{ padding: 10 }}><Text style={{ fontSize: 18, color: colors.primary, fontWeight: '700' }}>{lbl}</Text></Pressable>
   );
   return (
     <View style={{ marginBottom: 12 }}>
-      <Text style={s.small}>{label}</Text>
+      <Text style={s.label}>{label}</Text>
       <View style={[s.row, { flexWrap: 'nowrap' }]}>
         <TextInput value={value} onChangeText={t => { const v = fmtTyped(t); onChange(v); const p = parse(v); if (p) setView({ y: p.getFullYear(), m: p.getMonth() }); }}
           placeholder={placeholder ?? 'DD/MM/YYYY'} placeholderTextColor="#aaa" keyboardType="number-pad" maxLength={10} onSubmitEditing={onSubmit}
           style={[s.input, { flex: 1 }]} testID={testID} />
         <Pressable onPress={() => { if (sel) setView({ y: sel.getFullYear(), m: sel.getMonth() }); setOpen(!open); }} testID={testID ? `${testID}-cal` : undefined}
-          style={{ marginLeft: 8, marginTop: 4, borderWidth: 1, borderColor: colors.border, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 9, backgroundColor: open ? '#EEE9FF' : '#fff' }}>
+          style={{ marginLeft: 8, borderWidth: 1, borderColor: colors.border, borderRadius: 12, width: 48, height: 48, alignItems: 'center', justifyContent: 'center', marginTop: 6, backgroundColor: open ? colors.primarySoft : colors.card }}>
           <Text style={{ fontSize: 18 }}>📅</Text>
         </Pressable>
       </View>
       {open && (
-        <View style={{ marginTop: 8, borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 8, backgroundColor: '#fff' }}>
+        <View style={{ marginTop: 8, borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 8, backgroundColor: colors.card }}>
           <View style={[s.row, { justifyContent: 'space-between', flexWrap: 'nowrap' }]}>
             <View style={[s.row, { flexWrap: 'nowrap' }]}>{nav('«', -12, 'prevyear')}{nav('‹', -1, 'prev')}</View>
             <Text style={{ fontWeight: '700', color: colors.text }} testID={testID ? `${testID}-month` : undefined}>{MONTHS[view.m]} {view.y}</Text>
@@ -56,7 +56,7 @@ export function DateField({ label, value, onChange, testID, placeholder, limit, 
                   onPress={() => { onChange(`${pad(n)}/${pad(view.m + 1)}/${view.y}`); setOpen(false); }}
                   style={{ width: `${100 / 7}%`, height: 36, alignItems: 'center', justifyContent: 'center' }}>
                   <View style={{ width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: isSel ? colors.primary : 'transparent', borderWidth: isToday && !isSel ? 1 : 0, borderColor: colors.primary }}>
-                    <Text style={{ color: isSel ? '#fff' : off ? '#ccc' : colors.text, fontWeight: isSel ? '700' : '400' }}>{n}</Text>
+                    <Text style={{ color: isSel ? '#fff' : off ? colors.subtle : colors.text, fontWeight: isSel ? '700' : '400' }}>{n}</Text>
                   </View>
                 </Pressable>
               );

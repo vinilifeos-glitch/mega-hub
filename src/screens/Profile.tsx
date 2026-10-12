@@ -2,7 +2,7 @@ import { DateField } from '../components/DateField';
 import { useState } from 'react';
 import { Text, View } from 'react-native';
 import { formatDobInput, fullName, ProfileInput, useMe } from '../state/AppContext';
-import { Button, Card, Chip, Field, Screen, colors, s } from '../components/ui';
+import { Button, Card, Chip, Field, Screen, colors, s, Notice } from '../components/ui';
 import { User } from '../types';
 
 const roleName = { owner: 'Owner', admin: 'Admin', volunteer: 'Volunteer' };
@@ -36,7 +36,7 @@ export function RolesView({ user }: { user: User }) {
       {deps.map(d => {
         const roles = user.positions?.[d.id] ?? [];
         return (
-          <Card key={d.id} style={{ borderLeftWidth: 5, borderLeftColor: d.color }}>
+          <Card key={d.id} style={{ borderLeftWidth: 3, borderLeftColor: d.color }}>
             <Text style={s.h2}>{d.emoji}  {d.name}{(user.role === 'admin' && (user.adminOf ?? []).includes(d.id)) || user.role === 'owner' ? '  · Admin' : ''}</Text>
             <View style={[s.row, { marginTop: 8 }]}>
               {roles.length ? roles.map(r => <Chip key={r} label={r} color={d.color} active />) : <Text style={s.small}>No roles assigned yet</Text>}
@@ -80,7 +80,7 @@ export function ProfileEditor({ user, onClose }: { user: User; onClose: (msg?: s
       {data.departments.map(d => {
         const inDep = f.departmentIds.includes(d.id);
         return (
-          <Card key={d.id} style={{ borderLeftWidth: 5, borderLeftColor: inDep ? d.color : colors.border }}>
+          <Card key={d.id} style={{ borderLeftWidth: 3, borderLeftColor: inDep ? d.color : colors.border }}>
             <Chip testID={`dep-${d.id}`} label={`${inDep ? '✓ ' : ''}${d.emoji} ${d.name}`} color={d.color} active={inDep} onPress={() => toggleDep(d.id)} />
             {inDep && (
               <>
@@ -93,7 +93,7 @@ export function ProfileEditor({ user, onClose }: { user: User; onClose: (msg?: s
           </Card>
         );
       })}
-      {err && <Text style={{ color: colors.red, marginVertical: 6 }}>{err}</Text>}
+      {err && <Notice tone="error" text={err} />}
       <Button label="Save profile" onPress={save} testID="pf-save" />
       <Button label="Cancel" outline onPress={() => onClose()} />
     </Screen>
