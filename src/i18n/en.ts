@@ -43,11 +43,12 @@ export const en = {
   },
   services: {
     title: 'Services', greeting: 'Hi {name}. Upcoming services and who\'s serving.', newService: 'New service', editService: 'Edit service',
+draft: 'Draft', saveDraft: 'Save draft', publish: 'Publish', published: 'Service published.', draftSaved: 'Draft saved.', deleteDraft: 'Delete draft', deleteDraftConfirm: 'Delete draft {title} on {date}? Its assignments will be removed too.', draftDeleted: 'Draft deleted.', draftHint: 'Draft — only the owner and admins can see it.',
     deleteService: 'Delete service', deleteConfirmTitle: 'Delete service?', deleteConfirm: 'Delete {title} on {date}?', backToServices: 'Back to services',
     createService: 'Create service', saveService: 'Save service', created: 'Service created.', updated: 'Service updated.', deleted: 'Service deleted.',
     emptyOwner: 'No upcoming services yet. Tap “New service” to add one.', empty: 'No upcoming services yet. Check back soon.',
     youreServing: "You're serving: {roles}", defaultName: 'Sunday Service', formSubtitle: "Set the date, time and who's needed.",
-    requiredSlots: 'Required slots', addSlot: 'Add a slot:', fewer: 'Fewer {role}', more: 'More {role}',
+    requiredSlots: 'Required slots', slotsAndPeople: 'Slots & people', addRole: '+ Add role', removeSlot: 'Remove slot', addSlot: 'Add a slot:', fewer: 'Fewer {role}', more: 'More {role}',
     assignPeople: 'Assign people (optional)', assignHint: "Only people who hold the role, aren't away on {date} and aren't already in another slot are listed. Leave slots empty for admins to fill later.",
     thatDate: 'that date', assign: 'Assign ▾', leaveUnfilled: 'Leave unfilled', noneEligible: 'No one eligible for {role}.', nobodyHolds: 'Nobody holds {role} yet.',
     removedPicks: 'Removed {names} — unavailable on the new date or slot removed.',

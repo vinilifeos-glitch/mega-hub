@@ -3,7 +3,7 @@ import { AppData, Department, Role, Service, Theme, Unavailability, User } from 
 import { NOTE_MAX, awayOn, getUnavailableFor } from '../data/unavailability';
 import { repository } from '../data/repository';
 import { hashPassword, newSalt } from '../data/auth';
-import { canEditMemberRule, canEditPersonal, changedProtected, pickPref } from './permissions';
+import { canEditMemberRule, canEditPersonal, changedProtected, pickPref, visibleServiceData } from './permissions';
 import { DEFAULT_LANG, Lang, TKey, TParams, deptLabel, formatDateShort, roleLabel, tierLabel, translate } from '../i18n';
 
 export interface AccountInput { name: string; username: string; role: Role; departmentIds: string[]; tempPassword?: string;
@@ -66,6 +66,7 @@ interface Ctx {
   whyBlocked: (serviceId: string, userId: string) => string | null;
   saveService: (id: string | null, s: Omit<Service, 'id'>, picks?: { departmentId: string; position: string; index: number; userId: string }[]) => string | null;
   deleteService: (id: string) => void;
+  publishService: (id: string) => void;
   unassign: (assignmentId: string) => void;
   canManage: (departmentId: string) => boolean;
   managedDepartments: Department[];
@@ -103,10 +104,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const setSession = (id: string | null) => { setSessionId(id); repository.setSession(id); };
 
   const value = useMemo<Ctx>(() => {
+    const x0 = () => raw;
     const raw: AppData = data ?? { users: [], departments: [], services: [], availability: [], assignments: [] };
     const found = raw.users.find(u => u.id === sessionId && u.active);
     // Privacy: screens only ever receive notes they may see (owner, any admin, or the person themself).
-    const d: AppData = { ...raw, users: raw.users.map(u => ({ ...u, unavailable: getUnavailableFor(found, u) })) };
+    // Drafts: volunteers / signed-out never receive draft services or their assignments.
+    const d: AppData = visibleServiceData(found, { ...raw, users: raw.users.map(u => ({ ...u, unavailable: getUnavailableFor(found, u) })) });
     const currentUser = found ?? null;
     const role = currentUser?.role;
     const language: Lang = pickPref<Lang>(!!currentUser, currentUser?.language, deviceLang, DEFAULT_LANG);
@@ -362,7 +365,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (!hm.test(sv.start) || !hm.test(sv.end)) return t('errors.timeFormat');
         if (sv.end <= sv.start) return t('errors.endAfterStart');
         const slots = sv.slots.filter(sl => sl.count > 0);
-        const clean = { ...sv, title: sv.title.trim(), location: sv.location.trim(), slots };
+        const clean: Omit<Service, 'id'> = { ...sv, title: sv.title.trim(), location: sv.location.trim(), slots };
+        const prevSv = id ? x0().services.find(s => s.id === id) : undefined;
+        if (prevSv && prevSv.status !== 'draft') { if (prevSv.status) clean.status = prevSv.status; else delete clean.status; } // published stays published
+        else if (clean.status !== 'draft') clean.status = 'published';
         const sid = id ?? `svc-${Date.now().toString(36)}`;
         update(x => ({
           ...x,
@@ -386,6 +392,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }));
         return null;
       },
+      publishService: id => isOwner && update(x => ({ ...x, services: x.services.map(s => s.id === id ? { ...s, status: 'published' } : s) })),
       deleteService: id => isOwner && update(x => ({ ...x, services: x.services.filter(s => s.id !== id), assignments: x.assignments.filter(a => a.serviceId !== id) })),
       unassign: id => { const a0 = d.assignments.find(a => a.id === id); if (!a0 || !canManage(a0.departmentId)) return; update(x => ({ ...x, assignments: x.assignments.filter(a => a.id !== id) })); },
     };

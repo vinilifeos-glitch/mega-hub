@@ -45,11 +45,12 @@ export const pt: Dict = {
   },
   services: {
     title: 'Cultos', greeting: 'Olá, {name}. Próximos cultos e quem vai servir.', newService: 'Novo culto', editService: 'Editar culto',
+draft: 'Rascunho', saveDraft: 'Salvar rascunho', publish: 'Publicar', published: 'Culto publicado.', draftSaved: 'Rascunho salvo.', deleteDraft: 'Excluir rascunho', deleteDraftConfirm: 'Excluir o rascunho {title} em {date}? As escalas também serão removidas.', draftDeleted: 'Rascunho excluído.', draftHint: 'Rascunho — só o dono e os admins podem ver.',
     deleteService: 'Excluir culto', deleteConfirmTitle: 'Excluir culto?', deleteConfirm: 'Excluir {title} em {date}?', backToServices: 'Voltar aos cultos',
     createService: 'Criar culto', saveService: 'Salvar culto', created: 'Culto criado.', updated: 'Culto atualizado.', deleted: 'Culto excluído.',
     emptyOwner: 'Nenhum culto agendado. Toque em “Novo culto” para adicionar.', empty: 'Nenhum culto agendado ainda. Volte em breve.',
     youreServing: 'Você vai servir: {roles}', defaultName: 'Culto de Domingo', formSubtitle: 'Defina data, horário e quem é necessário.',
-    requiredSlots: 'Vagas necessárias', addSlot: 'Adicionar vaga:', fewer: 'Menos {role}', more: 'Mais {role}',
+    requiredSlots: 'Vagas necessárias', slotsAndPeople: 'Vagas e pessoas', addRole: '+ Adicionar função', removeSlot: 'Remover vaga', addSlot: 'Adicionar vaga:', fewer: 'Menos {role}', more: 'Mais {role}',
     assignPeople: 'Atribuir pessoas (opcional)', assignHint: 'Só aparecem pessoas que têm a função, não estão indisponíveis em {date} e não estão em outra vaga. Deixe vagas em aberto para os administradores preencherem depois.',
     thatDate: 'essa data', assign: 'Atribuir ▾', leaveUnfilled: 'Deixar vago', noneEligible: 'Ninguém disponível para {role}.', nobodyHolds: 'Ninguém tem a função {role} ainda.',
     removedPicks: 'Removido(s): {names} — indisponível na nova data ou vaga removida.',

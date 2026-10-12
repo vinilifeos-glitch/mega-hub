@@ -9,7 +9,7 @@ export default function MyRota() {
   const mine = data.assignments
     .filter(a => a.userId === currentUser.id)
     .map(a => ({ a, sv: data.services.find(x => x.id === a.serviceId), dep: data.departments.find(d => d.id === a.departmentId) }))
-    .filter((x): x is { a: typeof x.a; sv: NonNullable<typeof x.sv>; dep: NonNullable<typeof x.dep> } => !!x.sv && !!x.dep && x.sv.date >= todayIso())
+    .filter((x): x is { a: typeof x.a; sv: NonNullable<typeof x.sv>; dep: NonNullable<typeof x.dep> } => !!x.sv && x.sv.status !== 'draft' && !!x.dep && x.sv.date >= todayIso())
     .sort((x, y) => (x.sv.date + x.sv.start).localeCompare(y.sv.date + y.sv.start));
   return (
     <Screen title={t('myRota.title')} subtitle={t('myRota.subtitle')}>
