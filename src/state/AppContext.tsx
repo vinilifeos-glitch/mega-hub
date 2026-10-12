@@ -5,7 +5,7 @@ import { hashPassword, newSalt } from '../data/auth';
 
 export interface AccountInput { name: string; username: string; role: Role; departmentIds: string[]; tempPassword?: string; }
 
-export interface ProfileInput { firstName: string; middleNames: string; lastName: string; dob: string; departmentIds: string[]; positions: Record<string, string[]>; }
+export interface ProfileInput { contact: string; firstName: string; middleNames: string; lastName: string; dob: string; departmentIds: string[]; positions: Record<string, string[]>; }
 export function validDob(s: string) {
   const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(s); if (!m) return false;
   const [d, mo, y] = [+m[1], +m[2], +m[3]]; const dt = new Date(y, mo - 1, d);
@@ -15,11 +15,13 @@ export const formatDobInput = (raw: string) => {
   const g = raw.replace(/\D/g, '').slice(0, 8);
   return [g.slice(0, 2), g.slice(2, 4), g.slice(4)].filter(Boolean).join('/');
 };
+export const validContact = (c: string) => c === '' || /^\+?[0-9 ()-]{6,20}$/.test(c);
 export const fullName = (f: { firstName: string; middleNames: string; lastName: string }) =>
   [f.firstName, f.middleNames, f.lastName].map(x => x.trim()).filter(Boolean).join(' ');
 
 interface Ctx {
   saveProfile: (id: string, p: ProfileInput) => string | null;
+  saveMyContact: (contact: string) => string | null;
   holdsRole: (userId: string, departmentId: string, position: string) => boolean;
   ready: boolean;
   data: AppData;
@@ -149,16 +151,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       saveProfile: (id, p) => {
         if (role !== 'owner') return 'Only the owner can edit profiles.';
         if (!p.firstName.trim()) return 'First name is required.';
+        if (!validContact(p.contact.trim())) return 'Contact number looks invalid.';
         if (p.dob && !validDob(p.dob)) return 'Date of birth must be a real date as DD/MM/YYYY.';
         const departmentIds = p.departmentIds;
         const positions: Record<string, string[]> = {};
         departmentIds.forEach(dep => { positions[dep] = p.positions[dep] ?? []; });
         update(x => ({
           ...x,
-          users: x.users.map(u => u.id === id ? { ...u, firstName: p.firstName.trim(), middleNames: p.middleNames.trim(), lastName: p.lastName.trim(), name: fullName(p), dob: p.dob, departmentIds, positions } : u),
+          users: x.users.map(u => u.id === id ? { ...u, firstName: p.firstName.trim(), middleNames: p.middleNames.trim(), lastName: p.lastName.trim(), name: fullName(p), dob: p.dob, contact: p.contact.trim(), departmentIds, positions } : u),
           departments: x.departments.map(dep => dep.leaderId === id && !departmentIds.includes(dep.id) ? { ...dep, leaderId: null } : dep),
           assignments: x.assignments.filter(a => a.userId !== id || (positions[a.departmentId] ?? []).includes(a.position)),
         }));
+        return null;
+      },
+      saveMyContact: contact => {
+        if (!currentUser) return 'Not signed in.';
+        if (!validContact(contact.trim())) return 'Contact number looks invalid.';
+        update(x => ({ ...x, users: x.users.map(u => u.id === currentUser.id ? { ...u, contact: contact.trim() } : u) }));
         return null;
       },
       isAvailable: (u, s) => d.availability.find(a => a.userId === u && a.serviceId === s)?.available,

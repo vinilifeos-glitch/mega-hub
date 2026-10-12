@@ -11,20 +11,26 @@ function Row({ k, v }: { k: string; v: string }) {
   return <View style={{ marginBottom: 8 }}><Text style={s.small}>{k}</Text><Text style={{ fontSize: 16, color: colors.text }}>{v || '—'}</Text></View>;
 }
 
-export function ProfileView({ user, title }: { user: User; title?: string }) {
+export function PersonalInfo({ user, title }: { user: User; title?: string }) {
+  return (
+    <Card>
+      <Text style={[s.h2, { marginBottom: 10 }]}>{title ?? user.name}</Text>
+      <Row k="First name" v={user.firstName} />
+      <Row k="Middle names" v={user.middleNames} />
+      <Row k="Last name" v={user.lastName} />
+      <Row k="Date of birth" v={fmtDob(user.dob)} />
+      <Row k="Username" v={`@${user.username}`} />
+      <Row k="Contact number" v={user.contact ?? ''} />
+      <Row k="Account type" v={roleName[user.role]} />
+    </Card>
+  );
+}
+
+export function RolesView({ user }: { user: User }) {
   const { data } = useMe();
   const deps = data.departments.filter(d => user.departmentIds.includes(d.id));
   return (
     <>
-      <Card>
-        <Text style={[s.h2, { marginBottom: 10 }]}>{title ?? user.name}</Text>
-        <Row k="First name" v={user.firstName} />
-        <Row k="Middle names" v={user.middleNames} />
-        <Row k="Last name" v={user.lastName} />
-        <Row k="Date of birth" v={fmtDob(user.dob)} />
-        <Row k="Account" v={`@${user.username} · ${roleName[user.role]}`} />
-      </Card>
-      <Text style={s.section}>Departments & roles</Text>
       {deps.length === 0 && <Card><Text style={s.small}>Not assigned to any department yet.</Text></Card>}
       {deps.map(d => {
         const roles = user.positions?.[d.id] ?? [];
@@ -41,10 +47,14 @@ export function ProfileView({ user, title }: { user: User; title?: string }) {
   );
 }
 
+export function ProfileView({ user, title }: { user: User; title?: string }) {
+  return (<><PersonalInfo user={user} title={title} /><Text style={s.section}>Departments & roles</Text><RolesView user={user} /></>);
+}
+
 export function ProfileEditor({ user, onClose }: { user: User; onClose: (msg?: string) => void }) {
   const { data, saveProfile } = useMe();
   const [f, setF] = useState<ProfileInput>({
-    firstName: user.firstName, middleNames: user.middleNames, lastName: user.lastName, dob: user.dob,
+    contact: user.contact ?? '', firstName: user.firstName, middleNames: user.middleNames, lastName: user.lastName, dob: user.dob,
     departmentIds: [...user.departmentIds], positions: JSON.parse(JSON.stringify(user.positions ?? {})),
   });
   const [err, setErr] = useState<string | null>(null);
@@ -62,6 +72,7 @@ export function ProfileEditor({ user, onClose }: { user: User; onClose: (msg?: s
         <Field label="First name" value={f.firstName} onChangeText={v => setF({ ...f, firstName: v })} autoCapitalize="words" testID="pf-first" />
         <Field label="Middle names (optional)" value={f.middleNames} onChangeText={v => setF({ ...f, middleNames: v })} autoCapitalize="words" testID="pf-middle" />
         <Field label="Last name" value={f.lastName} onChangeText={v => setF({ ...f, lastName: v })} autoCapitalize="words" testID="pf-last" />
+        <Field label="Contact number (optional)" value={f.contact} placeholder="+44 7700 900123" keyboardType="phone-pad" onChangeText={v => setF({ ...f, contact: v })} testID="pf-contact" />
         <Field label="Date of birth (DD/MM/YYYY)" value={f.dob} placeholder="21/04/1995" keyboardType="number-pad" maxLength={10} onChangeText={v => setF({ ...f, dob: formatDobInput(v) })} testID="pf-dob" />
       </Card>
       <Text style={s.section}>Departments & roles</Text>
