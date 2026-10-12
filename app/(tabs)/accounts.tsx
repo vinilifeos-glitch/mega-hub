@@ -1,3 +1,15 @@
+import { AppData } from '../../src/types';
+/** Owner-only one-time export for the Supabase import (enabled only with EXPO_PUBLIC_ENABLE_EXPORT=1). Password hashes are never exported. */
+const EXPORT_ENABLED = process.env.EXPO_PUBLIC_ENABLE_EXPORT === '1';
+function exportData(d: AppData) {
+  const safe = { ...d, users: d.users.map(({ salt, passwordHash, ...u }) => u) };
+  const blob = JSON.stringify({ format: 'megahub-export-v1', exportedAt: new Date().toISOString(), data: safe }, null, 1);
+  const g: any = globalThis;
+  if (g.document && g.URL?.createObjectURL) {
+    const a = g.document.createElement('a'); a.href = g.URL.createObjectURL(new g.Blob([blob], { type: 'application/json' }));
+    a.download = `megahub-export-${new Date().toISOString().slice(0, 10)}.json`; a.click();
+  }
+}
 import { useTabReset } from '../../src/tabReset';
 import { DateField } from '../../src/components/DateField';
 import { useMemo, useState } from 'react';
@@ -40,6 +52,7 @@ export default function Accounts() {
   return (
     <Screen title={t('accounts.title')} subtitle={t('accounts.listSubtitle')}>
       <Button label={t('accounts.newAccount')} onPress={() => { setNotice(null); setMode({ kind: 'new' }); }} testID="newaccount" />
+      {EXPORT_ENABLED && <Button label={t('accounts.exportData')} outline testID="export-data" onPress={() => { exportData(data); setNotice(t('accounts.exported')); }} />}
       {notice && <Card style={{ backgroundColor: colors.greenSoft, borderColor: colors.greenSoft, marginTop: 12 }}><Text selectable style={{ color: colors.text }}>{notice}</Text></Card>}
       <Card style={{ marginTop: 12 }}>
         <Field label={t('fields.search')} value={q} onChangeText={setQ} placeholder={t('fields.searchPlaceholder')} testID="acc-search" />

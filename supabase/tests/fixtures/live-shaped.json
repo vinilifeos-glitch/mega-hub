@@ -1,0 +1,473 @@
+{
+ "users": [
+  {
+   "id": "u-vini",
+   "username": "Vini",
+   "name": "Marcos Alves",
+   "role": "owner",
+   "departmentIds": [],
+   "firstName": "Marcos",
+   "middleNames": "",
+   "lastName": "Alves",
+   "dob": "",
+   "positions": {},
+   "salt": "",
+   "passwordHash": "",
+   "mustChangePassword": false,
+   "active": true,
+   "unavailable": []
+  },
+  {
+   "id": "u-lucas",
+   "username": "Lucas",
+   "name": "Lucas",
+   "role": "admin",
+   "departmentIds": [],
+   "firstName": "Lucas",
+   "middleNames": "",
+   "lastName": "",
+   "dob": "",
+   "positions": {},
+   "salt": "",
+   "passwordHash": "",
+   "mustChangePassword": false,
+   "active": true,
+   "unavailable": [],
+   "adminOf": [
+    "d-music"
+   ],
+   "contact": "",
+   "email": ""
+  },
+  {
+   "id": "u-camila",
+   "username": "Camila",
+   "name": "Camila",
+   "role": "admin",
+   "departmentIds": [],
+   "firstName": "Camila",
+   "middleNames": "",
+   "lastName": "",
+   "dob": "",
+   "positions": {},
+   "salt": "",
+   "passwordHash": "",
+   "mustChangePassword": false,
+   "active": true,
+   "unavailable": [],
+   "adminOf": [
+    "d-kids"
+   ],
+   "contact": "",
+   "email": ""
+  },
+  {
+   "id": "u-miguel",
+   "username": "Miguel",
+   "name": "Miguel",
+   "role": "volunteer",
+   "departmentIds": [
+    "d-music"
+   ],
+   "firstName": "Miguel",
+   "middleNames": "",
+   "lastName": "",
+   "dob": "05/03/1999",
+   "positions": {
+    "d-music": [
+     "Keys"
+    ]
+   },
+   "salt": "",
+   "passwordHash": "",
+   "mustChangePassword": false,
+   "active": true,
+   "unavailable": [
+    {
+     "date": "2026-10-25",
+     "note": "Viagem"
+    },
+    {
+     "date": "2026-11-01"
+    }
+   ],
+   "adminOf": [],
+   "contact": "+55 11 99999-0000",
+   "email": "miguel@example.com",
+   "language": "en",
+   "theme": "dark"
+  },
+  {
+   "id": "u-antony",
+   "username": "Antony",
+   "name": "Antony",
+   "role": "volunteer",
+   "departmentIds": [
+    "d-music"
+   ],
+   "firstName": "Antony",
+   "middleNames": "",
+   "lastName": "",
+   "dob": "",
+   "positions": {
+    "d-music": [
+     "Keys",
+     "Bass"
+    ]
+   },
+   "salt": "",
+   "passwordHash": "",
+   "mustChangePassword": false,
+   "active": true,
+   "unavailable": [],
+   "adminOf": [],
+   "contact": "",
+   "email": ""
+  },
+  {
+   "id": "u-tiago",
+   "username": "Tiago",
+   "name": "Tiago",
+   "role": "volunteer",
+   "departmentIds": [
+    "d-kids"
+   ],
+   "firstName": "Tiago",
+   "middleNames": "",
+   "lastName": "",
+   "dob": "",
+   "positions": {
+    "d-kids": [
+     "Teacher",
+     "Assistant"
+    ]
+   },
+   "salt": "",
+   "passwordHash": "",
+   "mustChangePassword": false,
+   "active": true,
+   "unavailable": [],
+   "adminOf": [],
+   "contact": "",
+   "email": ""
+  },
+  {
+   "id": "u-rodrigo",
+   "username": "Rodrigo",
+   "name": "Rodrigo",
+   "role": "volunteer",
+   "departmentIds": [],
+   "firstName": "Rodrigo",
+   "middleNames": "",
+   "lastName": "",
+   "dob": "",
+   "positions": {},
+   "salt": "",
+   "passwordHash": "",
+   "mustChangePassword": false,
+   "active": true,
+   "unavailable": []
+  },
+  {
+   "id": "u-juliana",
+   "username": "Juliana",
+   "name": "Juliana",
+   "role": "volunteer",
+   "departmentIds": [],
+   "firstName": "Juliana",
+   "middleNames": "",
+   "lastName": "",
+   "dob": "",
+   "positions": {},
+   "salt": "",
+   "passwordHash": "",
+   "mustChangePassword": false,
+   "active": true,
+   "unavailable": []
+  },
+  {
+   "id": "u-juliano",
+   "username": "Juliano",
+   "name": "Juliano",
+   "role": "volunteer",
+   "departmentIds": [],
+   "firstName": "Juliano",
+   "middleNames": "",
+   "lastName": "",
+   "dob": "",
+   "positions": {},
+   "salt": "",
+   "passwordHash": "",
+   "mustChangePassword": false,
+   "active": true,
+   "unavailable": []
+  },
+  {
+   "id": "u-larissa",
+   "username": "Larissa",
+   "name": "Larissa",
+   "role": "volunteer",
+   "departmentIds": [],
+   "firstName": "Larissa",
+   "middleNames": "",
+   "lastName": "",
+   "dob": "",
+   "positions": {},
+   "salt": "",
+   "passwordHash": "",
+   "mustChangePassword": false,
+   "active": true,
+   "unavailable": []
+  },
+  {
+   "id": "u-francieli",
+   "username": "Francieli",
+   "name": "Francieli",
+   "role": "volunteer",
+   "departmentIds": [],
+   "firstName": "Francieli",
+   "middleNames": "",
+   "lastName": "",
+   "dob": "",
+   "positions": {},
+   "salt": "",
+   "passwordHash": "",
+   "mustChangePassword": false,
+   "active": true,
+   "unavailable": []
+  },
+  {
+   "id": "u-anaclara",
+   "username": "Ana",
+   "name": "Ana Clara",
+   "role": "volunteer",
+   "departmentIds": [
+    "d-kids",
+    "d-music"
+   ],
+   "firstName": "Ana",
+   "middleNames": "Clara",
+   "lastName": "",
+   "dob": "",
+   "positions": {
+    "d-kids": [
+     "Teacher"
+    ],
+    "d-music": [
+     "Lead Singer"
+    ]
+   },
+   "salt": "",
+   "passwordHash": "",
+   "mustChangePassword": false,
+   "active": true,
+   "unavailable": [],
+   "adminOf": [],
+   "contact": "",
+   "email": ""
+  },
+  {
+   "id": "u-davi",
+   "username": "Davi",
+   "name": "Davi",
+   "role": "volunteer",
+   "departmentIds": [],
+   "firstName": "Davi",
+   "middleNames": "",
+   "lastName": "",
+   "dob": "",
+   "positions": {},
+   "salt": "",
+   "passwordHash": "",
+   "mustChangePassword": false,
+   "active": true,
+   "unavailable": []
+  },
+  {
+   "id": "u-francisco",
+   "username": "Francisco",
+   "name": "Francisco",
+   "role": "volunteer",
+   "departmentIds": [],
+   "firstName": "Francisco",
+   "middleNames": "",
+   "lastName": "",
+   "dob": "",
+   "positions": {},
+   "salt": "",
+   "passwordHash": "",
+   "mustChangePassword": false,
+   "active": true,
+   "unavailable": []
+  },
+  {
+   "id": "u-andrea",
+   "username": "Andrea",
+   "name": "Andrea",
+   "role": "volunteer",
+   "departmentIds": [],
+   "firstName": "Andrea",
+   "middleNames": "",
+   "lastName": "",
+   "dob": "",
+   "positions": {},
+   "salt": "",
+   "passwordHash": "",
+   "mustChangePassword": false,
+   "active": true,
+   "unavailable": []
+  },
+  {
+   "id": "u-danielly",
+   "username": "Danielly",
+   "name": "Danielly",
+   "role": "volunteer",
+   "departmentIds": [],
+   "firstName": "Danielly",
+   "middleNames": "",
+   "lastName": "",
+   "dob": "",
+   "positions": {},
+   "salt": "",
+   "passwordHash": "",
+   "mustChangePassword": false,
+   "active": true,
+   "unavailable": []
+  },
+  {
+   "id": "u-leidiane",
+   "username": "Leidiane",
+   "name": "Leidiane",
+   "role": "volunteer",
+   "departmentIds": [],
+   "firstName": "Leidiane",
+   "middleNames": "",
+   "lastName": "",
+   "dob": "",
+   "positions": {},
+   "salt": "",
+   "passwordHash": "",
+   "mustChangePassword": false,
+   "active": true,
+   "unavailable": []
+  },
+  {
+   "id": "u-vitoria",
+   "username": "Vitoria",
+   "name": "Vitória",
+   "role": "volunteer",
+   "departmentIds": [],
+   "firstName": "Vitória",
+   "middleNames": "",
+   "lastName": "",
+   "dob": "",
+   "positions": {},
+   "salt": "",
+   "passwordHash": "",
+   "mustChangePassword": false,
+   "active": true,
+   "unavailable": []
+  },
+  {
+   "id": "u-elisa",
+   "username": "Elisa",
+   "name": "Elisa Souza",
+   "role": "volunteer",
+   "departmentIds": [],
+   "firstName": "Elisa",
+   "middleNames": "",
+   "lastName": "Souza",
+   "dob": "",
+   "positions": {},
+   "salt": "",
+   "passwordHash": "",
+   "mustChangePassword": false,
+   "active": true,
+   "unavailable": [],
+   "adminOf": [],
+   "contact": "",
+   "email": ""
+  }
+ ],
+ "departments": [
+  {
+   "id": "d-music",
+   "name": "Music",
+   "emoji": "🎵",
+   "color": "#7C3AED",
+   "leaderId": null,
+   "positions": [
+    "Keys",
+    "Bass",
+    "Drums",
+    "Guitar",
+    "Desk",
+    "Lead Singer",
+    "Backing Vocals"
+   ]
+  },
+  {
+   "id": "d-kids",
+   "name": "Kids",
+   "emoji": "🧸",
+   "color": "#10B981",
+   "leaderId": null,
+   "positions": [
+    "Teacher",
+    "Assistant"
+   ]
+  },
+  {
+   "id": "d-obreiros",
+   "name": "Obreiros",
+   "emoji": "🤝",
+   "color": "#F59E0B",
+   "leaderId": null,
+   "positions": [
+    "Atalaia",
+    "Dízimo",
+    "Abertura",
+    "Projeção",
+    "Mídia"
+   ]
+  }
+ ],
+ "services": [
+  {
+   "id": "svc-test1",
+   "title": "Culto de Domingo",
+   "location": "Templo",
+   "date": "2026-10-18",
+   "start": "16:00",
+   "end": "21:00",
+   "slots": [
+    {
+     "departmentId": "d-music",
+     "position": "Keys",
+     "count": 1
+    },
+    {
+     "departmentId": "d-music",
+     "position": "Backing Vocals",
+     "count": 2
+    },
+    {
+     "departmentId": "d-kids",
+     "position": "Assistant",
+     "count": 2
+    }
+   ]
+  }
+ ],
+ "availability": [],
+ "assignments": [
+  {
+   "id": "svc-test1:d-music:Keys:0",
+   "serviceId": "svc-test1",
+   "departmentId": "d-music",
+   "position": "Keys",
+   "index": 0,
+   "userId": "u-miguel"
+  }
+ ]
+}

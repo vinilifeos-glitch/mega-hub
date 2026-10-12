@@ -84,6 +84,7 @@ export const pt: Dict = {
     editProfile: 'Editar perfil', saveProfile: 'Salvar perfil', savedFor: 'Perfil de {name} salvo.',
   },
   accounts: {
+    exportData: 'Exportar dados (JSON)', exported: 'Exportação baixada. Guarde em local privado: contém dados de contato.',
     title: 'Contas', subtitle: '{count} contas ativas', listSubtitle: 'Todos que podem entrar no Mega Hub.', ownerOnlySubtitle: 'Crie e gerencie o acesso de todos.', editTitle: 'Editar {name}', editA11y: 'Editar {name}', newAccount: 'Nova conta', newSubtitle: 'Crie um acesso para uma nova pessoa.',
     ownerOnly: 'Só o proprietário pode gerenciar contas.', noMatch: 'Nenhuma conta encontrada.', department: 'Departamento', noDepartment: 'Sem departamento',
     roleIn: 'Função em {dept}', clearFilters: 'Limpar filtros', adminOf: 'Administra: {depts}', noneYet: 'nenhum ainda', noDeptYet: 'Ainda sem departamento',

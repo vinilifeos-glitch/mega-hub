@@ -86,4 +86,14 @@ class DeviceRepository implements Repository {
   async setDeviceTheme(theme: Theme) { await AsyncStorage.setItem(THEME_KEY, theme); }
 }
 
-export const repository: Repository = new DeviceRepository();
+import { SupabaseRepository } from './supabaseRepository';
+import type { AuthOps } from './supabaseRepository';
+
+/** Backend switch. Default (unset) = on-device storage, unchanged. Supabase only when explicitly configured. */
+export const BACKEND = process.env.EXPO_PUBLIC_BACKEND === 'supabase' ? 'supabase' : 'local';
+function pick(): Repository & { auth?: AuthOps } {
+  const url = process.env.EXPO_PUBLIC_SUPABASE_URL, key = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+  if (BACKEND === 'supabase' && url && key) return new SupabaseRepository(url, key);
+  return new DeviceRepository();
+}
+export const repository: Repository & { auth?: AuthOps } = pick();

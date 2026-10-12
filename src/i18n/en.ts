@@ -82,6 +82,7 @@ export const en = {
     editProfile: 'Edit profile', saveProfile: 'Save profile', savedFor: 'Saved profile for {name}.',
   },
   accounts: {
+    exportData: 'Export data (JSON)', exported: 'Export downloaded. Keep it private: it contains contact details.',
     title: 'Accounts', subtitle: '{count} active accounts', listSubtitle: 'Everyone who can sign in to Mega Hub.', ownerOnlySubtitle: "Create and manage everyone's sign-in.", editTitle: 'Edit {name}', editA11y: 'Edit {name}', newAccount: 'New account', newSubtitle: 'Set up a sign-in for a new person.',
     ownerOnly: 'Only the owner can manage accounts.', noMatch: 'No accounts match.', department: 'Department', noDepartment: 'No department',
     roleIn: 'Role in {dept}', clearFilters: 'Clear filters', adminOf: 'Admin of: {depts}', noneYet: 'none yet', noDeptYet: 'No department yet',

@@ -94,7 +94,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const update = (fn: (d: AppData) => AppData) =>
-    setData(prev => { if (!prev) return prev; const next = fn(prev); repository.save(next); return next; });
+    setData(prev => { if (!prev) return prev; const next = fn(prev);
+      const saving = repository.save(next);
+      // Supabase mode: if the server (RLS) rejects a write, resync to the server's truth
+      if (repository.auth) saving.catch(async () => setData(await repository.load()));
+      return next; });
 
   const setSession = (id: string | null) => { setSessionId(id); repository.setSession(id); };
 
@@ -138,15 +142,30 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       managedDepartments: d.departments.filter(x => canManage(x.id)),
       canManageAccounts: isOwner, canEditAccount, allowedRoles,
       signIn: async (username, password) => {
+        if (repository.auth) {   // Supabase mode: Auth verifies the password, then load what RLS lets this user see
+          const res = await repository.auth.signIn(username, password);
+          if (res.error) return t(res.error === 'wrong' ? 'errors.wrongCredentials' : 'errors.notAllowed');
+          const fresh = await repository.load(); setData(fresh);
+          if (!fresh.users.find(u => u.id === res.userId)?.active) { await repository.auth.signOut(); return t('errors.deactivated'); }
+          setSession(res.userId!); return null;
+        }
         const u = d.users.find(x => norm(x.username) === norm(username));
         if (!u || (await hashPassword(u.salt, password)) !== u.passwordHash) return t('errors.wrongCredentials');
         if (!u.active) return t('errors.deactivated');
         setSession(u.id); return null;
       },
       // keep the language this person was using for the sign-in screen (device's last language)
-      signOut: () => { setDeviceLang(language); repository.setDeviceLanguage(language); setDeviceThemeState(theme); repository.setDeviceTheme(theme); setSession(null); },
+      signOut: () => { repository.auth?.signOut(); setDeviceLang(language); repository.setDeviceLanguage(language); setDeviceThemeState(theme); repository.setDeviceTheme(theme); setSession(null); },
       changePassword: async (oldPw, newPw) => {
         if (!currentUser) return t('errors.notSignedIn');
+        if (repository.auth) {
+          if (newPw.length < 6) return t('errors.passwordTooShort');   // Supabase Auth minimum
+          if (newPw === oldPw) return t('errors.samePassword');
+          const r = await repository.auth.changePassword(currentUser.username, oldPw, newPw);
+          if (r === 'wrong') return t('errors.currentPasswordWrong');
+          if (r !== 'ok') return t('errors.notAllowed');
+          setData(await repository.load()); return null;
+        }
         if ((await hashPassword(currentUser.salt, oldPw)) !== currentUser.passwordHash) return t('errors.currentPasswordWrong');
         if (newPw.length < 4) return t('errors.passwordTooShort');
         if (newPw === oldPw) return t('errors.samePassword');
@@ -165,6 +184,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const existing = id ? d.users.find(u => u.id === id) : undefined;
         if (existing && !canEditAccount(existing)) return t('errors.editNotAllowed');
         const departmentIds = input.departmentIds;
+        if (!existing && repository.auth) {
+          if ((input.tempPassword ?? '').length < 6) return t('errors.passwordTooShort');
+          if (!validEmail(input.email)) return t('errors.emailInvalid');
+          const res = await repository.auth.createAccount({ ...input, name, username });
+          if (res.error) return res.error;
+          setData(await repository.load()); return null;
+        }
         if (!existing) {
           const pw = input.tempPassword ?? '';
           if (pw.length < 4) return t('errors.passwordTooShort');
@@ -195,6 +221,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       resetPassword: async (id, pw) => {
         const tgt = d.users.find(u => u.id === id);
         if (!tgt || !canEditAccount(tgt) || !canEditPersonal(currentUser, id)) return t('errors.notAllowed');
+        if (repository.auth) {
+          if (pw.length < 6) return t('errors.passwordTooShort');
+          const r = await repository.auth.resetPassword(id, pw);
+          if (r.error) return r.error;
+          setData(await repository.load()); return null;
+        }
         if (pw.length < 4) return t('errors.passwordTooShort');
         const salt = newSalt(); const passwordHash = await hashPassword(salt, pw);
         update(x => ({ ...x, users: x.users.map(u => u.id === id ? { ...u, salt, passwordHash, mustChangePassword: true } : u) }));
