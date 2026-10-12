@@ -5,7 +5,7 @@ const src = fs.readFileSync(new URL('../src/state/permissions.ts', import.meta.u
 const js = ts.transpileModule(src, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2020 } }).outputText;
 const { canEditPersonal, changedProtected } = await import('data:text/javascript,' + encodeURIComponent(js));
 const owner = { id: 'o', role: 'owner' }, admin = { id: 'a', role: 'admin', adminOf: ['music'] }, vol = { id: 'v', role: 'volunteer' };
-const tgt = { id: 'x', firstName: 'Miguel', middleNames: '', lastName: 'S', contact: '123', departmentIds: ['music'], positions: { music: ['keys'] } };
+const tgt = { id: 'x', firstName: 'Miguel', middleNames: '', lastName: 'S', contact: '123', email: 'miguel@x.com', departmentIds: ['music'], positions: { music: ['keys'] } };
 // Same gate order as adminSaveMember (scope check already passed for these actors)
 const save = (actor, target, p) => (!canEditPersonal(actor, target.id) && changedProtected(target, { ...target, ...p }).length) ? 'rejected' : 'ok';
 const reset = (actor, id) => actor.role === 'owner' && canEditPersonal(actor, id) ? 'ok' : 'rejected';
@@ -22,4 +22,10 @@ ok(reset(owner, 'x') === 'ok', 'owner can reset password');
 ok(save(admin, { ...tgt, id: 'a' }, { firstName: 'Lucas2', contact: '5' }) === 'ok', 'admin self-edit allowed');
 ok(save(vol, { ...tgt, id: 'v' }, { firstName: 'V2' }) === 'ok', 'volunteer self-edit allowed');
 ok(!canEditPersonal(null, 'x'), 'signed-out actor denied');
+ok(save(admin, tgt, { email: 'new@x.com' }) === 'rejected', 'admin cannot change other email');
+ok(save(admin, { ...tgt, email: undefined }, { email: 'a@b.co' }) === 'rejected', 'admin cannot add email to user lacking one');
+ok(save(admin, tgt, { email: ' MIGUEL@X.COM ' }) === 'ok', 'email case/whitespace resubmit not a change');
+ok(save(admin, { ...tgt, email: undefined }, {}) === 'ok', 'legacy user without email + admin role edit ok');
+ok(save(owner, tgt, { email: 'o@x.com' }) === 'ok', 'owner edits email');
+ok(save(vol, { ...tgt, id: 'v' }, { email: 'me@x.com' }) === 'ok', 'self edits own email');
 console.log(`${n}/${n} passed`);

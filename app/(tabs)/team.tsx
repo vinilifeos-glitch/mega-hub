@@ -1,3 +1,5 @@
+import { useTabReset } from '../../src/tabReset';
+import { displayName } from '../../src/display';
 import { canEditPersonal } from '../../src/state/permissions';
 import { DateField } from '../../src/components/DateField';
 import { useState } from 'react';
@@ -12,6 +14,7 @@ export default function Team() {
   const colors = useColors(); const s = useStyles();
   const { data, myAdminDeps, currentUser, canEditMember, t, ownerName, roleName } = useMe();
   const [editId, setEditId] = useState<string | null>(null);
+  useTabReset(() => setEditId(null));
   const [msg, setMsg] = useState<string | null>(null);
   const deps = data.departments.filter(d => myAdminDeps.includes(d.id));
   if (editId) return <MemberEditor user={data.users.find(u => u.id === editId)!} onClose={m => { setEditId(null); setMsg(m ?? null); }} />;
@@ -21,7 +24,7 @@ export default function Team() {
     <Pressable key={u.id + (depId ?? '')} testID={`member-${u.username}`} onPress={() => { setMsg(null); setEditId(u.id); }} disabled={!canEditMember(u)}>
       <View style={[s.row, { justifyContent: 'space-between', paddingVertical: 8, borderTopWidth: 1, borderTopColor: colors.border }]}>
         <View style={{ flex: 1 }}>
-          <Text style={{ fontWeight: '600', color: colors.text }}>{u.name}</Text>
+          <Text style={{ fontWeight: '600', color: colors.text }}>{displayName(u)}</Text>
           <Text style={s.small}>{depId ? ((u.positions?.[depId] ?? []).map(r => roleName(depId, r)).join(', ') || t('team.noRolesYet')) : t('team.notInDeptShort')}</Text>
         </View>
         <Text style={{ color: colors.primary, fontWeight: '700' }}>{t('common.editArrow')}</Text>
@@ -60,7 +63,7 @@ function MemberEditor({ user, onClose }: { user: User; onClose: (m?: string) => 
   const toggleRole = (dep: string, r: string) => setDm(p => ({ ...p, [dep]: (p[dep] ?? []).includes(r) ? p[dep]!.filter(x => x !== r) : [...(p[dep] ?? []), r] }));
   const lock = !canEditPersonal(currentUser, user.id);
   return (
-    <Screen title={t('team.editTitle', { name: user.name })} subtitle={t('team.editSubtitle', { owner: ownerName })}>
+    <Screen title={t('team.editTitle', { name: displayName(user) })} subtitle={t('team.editSubtitle', { owner: ownerName })}>
       <Card>
         <Field label={t('fields.firstName')} value={f.firstName} onChangeText={v => setF({ ...f, firstName: v })} editable={!lock} autoCapitalize="words" testID="m-first" />
         <Field label={t('fields.middleNames')} value={f.middleNames} onChangeText={v => setF({ ...f, middleNames: v })} editable={!lock} autoCapitalize="words" />
@@ -80,7 +83,7 @@ function MemberEditor({ user, onClose }: { user: User; onClose: (m?: string) => 
         );
       })}
       {err && <Notice tone="error" text={err} />}
-      <Button label={t('common.saveChanges')} testID="m-save" onPress={() => { const e = adminSaveMember(user.id, { ...f, departments: dm }); if (e) setErr(e); else onClose(t('team.saved', { name: f.firstName })); }} />
+      <Button label={t('common.saveChanges')} testID="m-save" onPress={() => { const e = adminSaveMember(user.id, { ...f, departments: dm }); if (e) setErr(e); else onClose(t('team.saved', { name: displayName(user) })); }} />
       <Text style={s.section}>{t('availability.unavailableDates')}</Text>
       <Card>
         <DateField label={t('availability.add')} limit="future" value={date} onChange={setDate} testID="m-unavail" />

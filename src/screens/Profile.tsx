@@ -24,6 +24,7 @@ export function PersonalInfo({ user, title }: { user: User; title?: string }) {
       <Row k={t('rows.dob')} v={user.dob} />
       <Row k={t('rows.username')} v={`@${user.username}`} />
       <Row k={t('rows.contact')} v={user.contact ?? ''} />
+      <Row k={t('rows.email')} v={user.email ?? ''} />
       <Row k={t('rows.accountType')} v={tierName(user.role)} />
     </Card>
   );

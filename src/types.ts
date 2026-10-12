@@ -8,6 +8,8 @@ export interface User {
   adminOf?: string[]; // departments this admin administers (set by owner)
   unavailable?: Unavailability[]; // days the person can't serve (legacy data stored plain ISO strings; migrated on load)
   contact?: string;
+  /** Optional, stored lowercase-trimmed. Private: own Profile + owner Accounts only. */
+  email?: string;
   language?: 'pt' | 'en'; // app language for this user; unset = device's last, else 'pt'
   theme?: Theme; // UI theme for this user; unset = device's last, else 'light'
   positions: Record<string, string[]>; // departmentId -> roles held

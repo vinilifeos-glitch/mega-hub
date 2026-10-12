@@ -1,3 +1,4 @@
+import { useTabReset } from '../../src/tabReset';
 import { DateField } from '../../src/components/DateField';
 import { useState } from 'react';
 import { Text } from 'react-native';
@@ -10,7 +11,8 @@ export default function MyProfile() {
   const colors = useColors(); const s = useStyles();
   const { currentUser: me, saveMyProfile, signOut, t, language, setLanguage, theme, setTheme } = useMe();
   const [mode, setMode] = useState<'view' | 'edit' | 'password'>('view');
-  const init = () => ({ firstName: me.firstName, middleNames: me.middleNames, lastName: me.lastName, dob: me.dob, contact: me.contact ?? '' });
+  useTabReset(() => setMode('view'));
+  const init = () => ({ firstName: me.firstName, middleNames: me.middleNames, lastName: me.lastName, dob: me.dob, contact: me.contact ?? '', email: me.email ?? '' });
   const [f, setF] = useState(init);
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -23,6 +25,7 @@ export default function MyProfile() {
         <Field label={t('fields.surname')} value={f.lastName} onChangeText={v => setF({ ...f, lastName: v })} autoCapitalize="words" testID="me-last" />
         <DateField label={t('fields.dob')} limit="past" value={f.dob} onChange={v => setF({ ...f, dob: v })} testID="me-dob" />
         <Field label={t('fields.contact')} value={f.contact} placeholder={t('fields.contactPlaceholder')} keyboardType="phone-pad" onChangeText={v => setF({ ...f, contact: v })} testID="me-contact" />
+        <Field label={t('fields.email')} value={f.email} placeholder={t('fields.emailPlaceholder')} keyboardType="email-address" autoCapitalize="none" onChangeText={v => setF({ ...f, email: v })} testID="me-email" />
         {err && <Notice tone="error" text={err} />}
         <Button label={t('common.save')} testID="me-save" onPress={() => { const e = saveMyProfile(f); setErr(e); if (!e) { setMode('view'); setMsg(t('profile.saved')); } }} />
         <Button label={t('common.cancel')} outline onPress={() => { setErr(null); setMode('view'); }} />

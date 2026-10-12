@@ -1,3 +1,5 @@
+import { useTabReset } from '../tabReset';
+import { displayName } from '../display';
 import { DateField } from '../components/DateField';
 import { useEffect, useState } from 'react';
 import { Alert, Platform, Pressable, Text, View } from 'react-native';
@@ -13,6 +15,7 @@ export function ServicesHome() {
   const colors = useColors(); const s = useStyles();
   const { data, currentUser, t, fmtDate, roleName } = useMe();
   const [view, setView] = useState<{ kind: 'detail' | 'edit'; id: string } | { kind: 'new' } | null>(null);
+  useTabReset(() => { setView(null); setMsg(null); });
   const [msg, setMsg] = useState<string | null>(null);
   const isOwner = currentUser.role === 'owner';
   if (view?.kind === 'new') return <ServiceForm onClose={(m, id) => { setMsg(m ?? null); setView(id ? { kind: 'detail', id } : null); }} />;
@@ -88,7 +91,7 @@ function ServiceDetail({ service: sv, msg, onBack, onEdit, onDeleted }: { servic
                   <View style={[s.row, { justifyContent: 'space-between' }]}>
                     <Text style={{ fontWeight: '600', color: colors.text }}>{roleName(d.id, sl.position)}{sl.count > 1 ? ` ${i + 1}` : ''}</Text>
                     <View style={s.row}>
-                      <Text style={{ color: who ? (me ? colors.primary : colors.text) : colors.muted, fontWeight: me ? '800' : '400' }}>{who ? `${who.name}${me ? ` ${t('common.you')}` : ''}` : t('common.unfilled')}</Text>
+                      <Text style={{ color: who ? (me ? colors.primary : colors.text) : colors.muted, fontWeight: me ? '800' : '400' }}>{who ? `${displayName(who)}${me ? ` ${t('common.you')}` : ''}` : t('common.unfilled')}</Text>
                       {manage && <Pressable testID={`slot-${d.id}-${sl.position}-${i}`} onPress={() => { setErr(null); setOpen(open === key ? null : key); }}><Text style={{ color: colors.primary, fontWeight: '700', marginLeft: 10 }}>{who ? t('common.change') : t('common.fill')}</Text></Pressable>}
                     </View>
                   </View>
@@ -99,7 +102,7 @@ function ServiceDetail({ service: sv, msg, onBack, onEdit, onDeleted }: { servic
                       {holders.map(m => {
                         const why = m.id === who?.id ? null : whyBlocked(sv.id, m.id);
                         return <Chip key={m.id} testID={`pick-${m.username}`} color={why ? colors.subtle : d.color} active={m.id === who?.id}
-                          icon={why === 'unavailable' ? 'close-circle-outline' : why === 'busy' ? 'time-outline' : 'checkmark-circle-outline'} label={`${m.name}${why === 'busy' ? ` ${t('services.busy')}` : why === 'unavailable' ? ` ${noteOn(m, sv.date) ? `· ${t('services.awayNote', { note: noteOn(m, sv.date)! })}` : t('services.away')}` : ''}`}
+                          icon={why === 'unavailable' ? 'close-circle-outline' : why === 'busy' ? 'time-outline' : 'checkmark-circle-outline'} label={`${displayName(m)}${why === 'busy' ? ` ${t('services.busy')}` : why === 'unavailable' ? ` ${noteOn(m, sv.date) ? `· ${t('services.awayNote', { note: noteOn(m, sv.date)! })}` : t('services.away')}` : ''}`}
                           onPress={why ? undefined : () => { const e = assign(sv.id, d.id, sl.position, i, m.id); setErr(e); if (!e) setOpen(null); }} />;
                       })}
                       {a && <Chip label={t('common.clear')} color={colors.red} onPress={() => { unassign(a.id); setOpen(null); }} />}
@@ -149,7 +152,7 @@ function ServiceForm({ service, onClose }: { service?: Service; onClose: (msg?: 
       const [dep, pos, idx] = k.split(':'); const sl = slots.find(z => z.departmentId === dep && z.position === pos);
       const u = userById(uid);
       const ok = !!sl && +idx < sl.count && !!u && !awayOn(u, iso);
-      if (!ok && u) bad.push(`${u.name} (${roleName(dep, pos)})`);
+      if (!ok && u) bad.push(`${displayName(u)} (${roleName(dep, pos)})`);
       return ok;
     }));
     if (bad.length) { setPicks(next); setNotice(t('services.removedPicks', { names: bad.join(', ') })); }
@@ -234,12 +237,12 @@ function ServiceForm({ service, onClose }: { service?: Service; onClose: (msg?: 
                   <View style={[s.row, { justifyContent: 'space-between' }]}>
                     <Text style={{ fontWeight: '600', color: colors.text }}>{roleName(d.id, z.position)}{z.count > 1 ? ` ${i + 1}` : ''}</Text>
                     <Pressable testID={`fp-${d.id}-${z.position}-${i}`} onPress={() => setOpenPick(openPick === key ? null : key)}>
-                      <Text style={{ color: who ? colors.text : colors.primary, fontWeight: '600' }}>{who ? `${who.name} ▾` : t('services.assign')}</Text>
+                      <Text style={{ color: who ? colors.text : colors.primary, fontWeight: '600' }}>{who ? `${displayName(who)} ▾` : t('services.assign')}</Text>
                     </Pressable>
                   </View>
                   {openPick === key && <View style={[s.row, { marginTop: 8 }]}>
                     {opts.length === 0 && <Text style={s.small}>{t('services.noneAvailable')}</Text>}
-                    {opts.map(u => <Chip key={u.id} testID={`fpick-${u.username}`} label={u.name} color={d.color} active={who?.id === u.id}
+                    {opts.map(u => <Chip key={u.id} testID={`fpick-${u.username}`} label={displayName(u)} color={d.color} active={who?.id === u.id}
                       onPress={() => { setPicks({ ...picks, [key]: u.id }); setOpenPick(null); setNotice(null); }} />)}
                     {who && <Chip label={t('services.leaveUnfilled')} color={colors.red} onPress={() => { const n = { ...picks }; delete n[key]; setPicks(n); setOpenPick(null); }} />}
                   </View>}

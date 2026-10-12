@@ -7,9 +7,9 @@ import { canEditPersonal, changedProtected } from './permissions';
 import { DEFAULT_LANG, Lang, TKey, TParams, deptLabel, formatDateShort, roleLabel, tierLabel, translate } from '../i18n';
 
 export interface AccountInput { name: string; username: string; role: Role; departmentIds: string[]; tempPassword?: string;
-  firstName?: string; middleNames?: string; lastName?: string; dob?: string; contact?: string; positions?: Record<string, string[]>; adminOf?: string[]; mustChange?: boolean; }
+  firstName?: string; middleNames?: string; lastName?: string; dob?: string; contact?: string; email?: string; positions?: Record<string, string[]>; adminOf?: string[]; mustChange?: boolean; }
 
-export interface ProfileInput { contact: string; firstName: string; middleNames: string; lastName: string; dob: string; departmentIds: string[]; positions: Record<string, string[]>; }
+export interface ProfileInput { contact: string; email?: string; firstName: string; middleNames: string; lastName: string; dob: string; departmentIds: string[]; positions: Record<string, string[]>; }
 export function validDob(s: string) {
   const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(s); if (!m) return false;
   const [d, mo, y] = [+m[1], +m[2], +m[3]]; const dt = new Date(y, mo - 1, d);
@@ -19,6 +19,8 @@ export const formatDobInput = (raw: string) => {
   const g = raw.replace(/\D/g, '').slice(0, 8);
   return [g.slice(0, 2), g.slice(2, 4), g.slice(4)].filter(Boolean).join('/');
 };
+export const normEmail = (e?: string) => (e ?? '').trim().toLowerCase();
+export const validEmail = (e?: string) => { const v = normEmail(e); return v === '' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); };
 export const validContact = (c: string) => c === '' || /^\+?[0-9 ()-]{6,20}$/.test(c);
 export const fullName = (f: { firstName: string; middleNames: string; lastName: string }) =>
   [f.firstName, f.middleNames, f.lastName].map(x => x.trim()).filter(Boolean).join(' ');
@@ -55,8 +57,8 @@ interface Ctx {
   removeUnavailable: (isoDate: string, userId?: string) => void;
   canEditMember: (target: User) => boolean;
   myAdminDeps: string[];
-  adminSaveMember: (id: string, p: { firstName: string; middleNames: string; lastName: string; dob: string; contact: string; departments: Record<string, string[] | null> }) => string | null;
-  saveMyProfile: (p: { firstName: string; middleNames: string; lastName: string; dob: string; contact: string }) => string | null;
+  adminSaveMember: (id: string, p: { firstName: string; middleNames: string; lastName: string; dob: string; contact: string; email?: string; departments: Record<string, string[] | null> }) => string | null;
+  saveMyProfile: (p: { firstName: string; middleNames: string; lastName: string; dob: string; contact: string; email?: string }) => string | null;
   ownerUpdateAccount: (id: string, a: { username: string; role: Role; active: boolean; newPassword: string; adminOf: string[] }) => Promise<string | null>;
   assign: (serviceId: string, departmentId: string, position: string, index: number, userId: string) => string | null;
   whyBlocked: (serviceId: string, userId: string) => string | null;
@@ -168,12 +170,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           const parts = name.split(' ');
           if (input.dob && !validDob(input.dob)) return t('errors.dobInvalid');
           if (input.contact && !validContact(input.contact.trim())) return t('errors.contactInvalid');
+          if (!validEmail(input.email)) return t('errors.emailInvalid');
           const positions = Object.fromEntries(departmentIds.map(dp => [dp, input.positions?.[dp] ?? []]));
           const user: User = {
             id: `u-${Date.now().toString(36)}`, name,
             firstName: input.firstName?.trim() ?? parts[0], middleNames: input.middleNames?.trim() ?? parts.slice(1, -1).join(' '),
             lastName: input.lastName?.trim() ?? (parts.length > 1 ? parts[parts.length - 1] : ''),
-            dob: input.dob ?? '', contact: input.contact?.trim() ?? '', positions, adminOf: input.role === 'admin' ? (input.adminOf ?? []) : [],
+            dob: input.dob ?? '', contact: input.contact?.trim() ?? '', ...(normEmail(input.email) ? { email: normEmail(input.email) } : {}), positions, adminOf: input.role === 'admin' ? (input.adminOf ?? []) : [],
             username, role: input.role, departmentIds, salt, passwordHash, mustChangePassword: input.mustChange ?? true, active: true, unavailable: [],
           };
           update(x => ({ ...x, users: [...x.users, user] }));
@@ -208,13 +211,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (role !== 'owner') return t('errors.ownerOnlyProfiles');
         if (!p.firstName.trim()) return t('errors.firstNameRequired');
         if (!validContact(p.contact.trim())) return t('errors.contactInvalid');
+        if (!validEmail(p.email)) return t('errors.emailInvalid');
         if (p.dob && !validDob(p.dob)) return t('errors.dobInvalid');
         const departmentIds = p.departmentIds;
         const positions: Record<string, string[]> = {};
         departmentIds.forEach(dep => { positions[dep] = p.positions[dep] ?? []; });
         update(x => ({
           ...x,
-          users: x.users.map(u => u.id === id ? { ...u, firstName: p.firstName.trim(), middleNames: p.middleNames.trim(), lastName: p.lastName.trim(), name: fullName(p), dob: p.dob, contact: p.contact.trim(), departmentIds, positions } : u),
+          users: x.users.map(u => u.id === id ? { ...u, firstName: p.firstName.trim(), middleNames: p.middleNames.trim(), lastName: p.lastName.trim(), name: fullName(p), dob: p.dob, contact: p.contact.trim(), ...(p.email !== undefined ? { email: normEmail(p.email) } : {}), departmentIds, positions } : u),
           assignments: x.assignments.filter(a => a.userId !== id || (positions[a.departmentId] ?? []).includes(a.position)),
         }));
         return null;
@@ -224,7 +228,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (!p.firstName.trim()) return t('errors.firstNameRequired');
         if (p.dob && !validDob(p.dob)) return t('errors.dobInvalid');
         if (!validContact(p.contact.trim())) return t('errors.contactInvalid');
-        const v = { firstName: p.firstName.trim(), middleNames: p.middleNames.trim(), lastName: p.lastName.trim(), dob: p.dob, contact: p.contact.trim() };
+        if (!validEmail(p.email)) return t('errors.emailInvalid');
+        const v = { firstName: p.firstName.trim(), middleNames: p.middleNames.trim(), lastName: p.lastName.trim(), dob: p.dob, contact: p.contact.trim(), ...(p.email !== undefined ? { email: normEmail(p.email) } : {}) };
         update(x => ({ ...x, users: x.users.map(u => u.id === currentUser.id ? { ...u, ...v, name: fullName(v) } : u) }));
         return null;
       },
@@ -267,7 +272,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (!p.firstName.trim()) return t('errors.firstNameRequired');
         if (p.dob && !validDob(p.dob)) return t('errors.dobInvalid');
         if (!validContact(p.contact.trim())) return t('errors.contactInvalid');
-        const v = { firstName: p.firstName.trim(), middleNames: p.middleNames.trim(), lastName: p.lastName.trim(), dob: p.dob, contact: p.contact.trim() };
+        if (!validEmail(p.email)) return t('errors.emailInvalid');
+        const v = { firstName: p.firstName.trim(), middleNames: p.middleNames.trim(), lastName: p.lastName.trim(), dob: p.dob, contact: p.contact.trim(), ...(p.email !== undefined ? { email: normEmail(p.email) } : {}) };
         let departmentIds = [...t0.departmentIds]; const positions = { ...(t0.positions ?? {}) };
         for (const [dep, roles] of Object.entries(p.departments)) {
           if (!canManage(dep)) continue; // admins only touch their own departments

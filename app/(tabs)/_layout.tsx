@@ -1,4 +1,5 @@
-import { Tabs } from 'expo-router';
+import { Tabs, router } from 'expo-router';
+import { emitTabReset } from '../../src/tabReset';
 import { Ionicons } from '@expo/vector-icons';
 import { ActivityIndicator, Text, View } from 'react-native';
 import { useApp } from '../../src/state/AppContext';
@@ -16,7 +17,7 @@ export default function TabsLayout() {
   if (currentUser.mustChangePassword) return <ChangePasswordScreen firstTime />;
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
-    <Tabs screenOptions={{ headerShown: false, tabBarActiveTintColor: colors.primary, tabBarInactiveTintColor: colors.muted, tabBarLabel: ({ children, color }: { children: string; color: any }) => <Text numberOfLines={2} allowFontScaling style={{ color, fontSize: 11, lineHeight: 13, fontWeight: '600', textAlign: 'center', paddingHorizontal: 1 }}>{children}</Text>, tabBarStyle: { backgroundColor: colors.tabBar, borderTopColor: colors.border, height: 68, paddingTop: 6, paddingBottom: 10, width: '100%', maxWidth: contentMax, alignSelf: 'center' }, sceneStyle: { backgroundColor: colors.bg } }}>
+    <Tabs screenListeners={({ route }) => ({ tabPress: (e: any) => { e.preventDefault(); emitTabReset(); router.navigate((route.name === 'index' ? '/' : `/${route.name}`) as any); } })} screenOptions={{ headerShown: false, tabBarActiveTintColor: colors.primary, tabBarInactiveTintColor: colors.muted, tabBarLabel: ({ children, color }: { children: string; color: any }) => <Text numberOfLines={2} allowFontScaling style={{ color, fontSize: 11, lineHeight: 13, fontWeight: '600', textAlign: 'center', paddingHorizontal: 1 }}>{children}</Text>, tabBarStyle: { backgroundColor: colors.tabBar, borderTopColor: colors.border, height: 68, paddingTop: 6, paddingBottom: 10, width: '100%', maxWidth: contentMax, alignSelf: 'center' }, sceneStyle: { backgroundColor: colors.bg } }}>
       <Tabs.Screen name="index" options={{ title: t('tabs.services'), headerTitle: t('common.appName'), tabBarIcon: icon('home') }} />
       <Tabs.Screen name="my-rota" options={{ title: t('tabs.myRota'), tabBarIcon: icon('clipboard') }} />
       <Tabs.Screen name="availability" options={{ title: t('tabs.availability'), headerTitle: t('availability.title'), tabBarIcon: icon('calendar') }} />

@@ -1,7 +1,8 @@
+import { useTabReset } from '../../src/tabReset';
 import { DateField } from '../../src/components/DateField';
 import { useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
-import { AccountInput, formatDobInput, useMe, validContact, validDob } from '../../src/state/AppContext';
+import { AccountInput, formatDobInput, useMe, validContact, validDob, validEmail } from '../../src/state/AppContext';
 import { Badge, RoleBadge, Button, Icon, deptIcon, Card, Chip, Empty, Field, Screen, Notice, useColors, useStyles } from '../../src/components/ui';
 import { Role, Unavailability, User } from '../../src/types';
 import { NOTE_MAX } from '../../src/data/unavailability';
@@ -14,6 +15,7 @@ export default function Accounts() {
   const colors = useColors(); const s = useStyles();
   const { data, canManageAccounts, currentUser, t, deptName, roleName, tierName } = useMe();
   const [mode, setMode] = useState<{ kind: 'new' } | { kind: 'edit'; id: string } | null>(null);
+  useTabReset(() => setMode(null));
   const [notice, setNotice] = useState<string | null>(null);
   const [q, setQ] = useState('');
   const [dep, setDep] = useState<string>('all'); // 'all' | 'none' | depId
@@ -85,7 +87,7 @@ export default function Accounts() {
 function FullEditor({ user, onClose }: { user: User; onClose: (m?: string) => void }) {
   const colors = useColors(); const s = useStyles();
   const { data, ownerUpdateAccount, saveProfile, addUnavailable, removeUnavailable, allowedRoles, currentUser, t, deptName, roleName, tierName } = useMe();
-  const [f, setF] = useState({ firstName: user.firstName, middleNames: user.middleNames, lastName: user.lastName, dob: user.dob, contact: user.contact ?? '' });
+  const [f, setF] = useState({ firstName: user.firstName, middleNames: user.middleNames, lastName: user.lastName, dob: user.dob, contact: user.contact ?? '', email: user.email ?? '' });
   const [username, setUsername] = useState(user.username);
   const [pw, setPw] = useState('');
   const [role, setRole] = useState<Role>(user.role);
@@ -102,6 +104,7 @@ function FullEditor({ user, onClose }: { user: User; onClose: (m?: string) => vo
     if (!f.firstName.trim()) return setErr(t('errors.firstNameRequired'));
     if (f.dob && !validDob(f.dob)) return setErr(t('errors.dobInvalid'));
     if (!validContact(f.contact.trim())) return setErr(t('errors.contactInvalid'));
+    if (!validEmail(f.email)) return setErr(t('errors.emailInvalid'));
     const e = await ownerUpdateAccount(user.id, { username, role, active, newPassword: pw, adminOf });
     if (e) return setErr(e);
     const e2 = saveProfile(user.id, { ...f, departmentIds: depIds, positions });
@@ -121,6 +124,7 @@ function FullEditor({ user, onClose }: { user: User; onClose: (m?: string) => vo
         <Field label={t('fields.surname')} value={f.lastName} onChangeText={v => setF({ ...f, lastName: v })} autoCapitalize="words" testID="e-last" />
         <DateField label={t('fields.dob')} limit="past" value={f.dob} onChange={v => setF({ ...f, dob: v })} testID="e-dob" />
         <Field label={t('fields.contact')} value={f.contact} keyboardType="phone-pad" onChangeText={v => setF({ ...f, contact: v })} testID="e-contact" />
+        <Field label={t('fields.email')} value={f.email} placeholder={t('fields.emailPlaceholder')} keyboardType="email-address" autoCapitalize="none" onChangeText={v => setF({ ...f, email: v })} testID="e-email" />
       </Card>
       {sec(t('accounts.signIn'))}
       <Card>
@@ -179,7 +183,7 @@ function FullEditor({ user, onClose }: { user: User; onClose: (m?: string) => vo
 function NewAccount({ onClose }: { onClose: (m?: string) => void }) {
   const colors = useColors(); const s = useStyles();
   const { data, allowedRoles, saveAccount, t, deptName, roleName, tierName } = useMe();
-  const [f, setF] = useState({ firstName: '', middleNames: '', lastName: '', dob: '', contact: '' });
+  const [f, setF] = useState({ firstName: '', middleNames: '', lastName: '', dob: '', contact: '', email: '' });
   const [username, setUsername] = useState(''); const [userEdited, setUserEdited] = useState(false);
   const [pw, setPw] = useState(''); const [mustChange, setMustChange] = useState(true);
   const [role, setRole] = useState<Role>('volunteer');
@@ -208,6 +212,7 @@ function NewAccount({ onClose }: { onClose: (m?: string) => void }) {
         <Field label={t('fields.surname')} value={f.lastName} onChangeText={v => setF({ ...f, lastName: v })} autoCapitalize="words" testID="n-last" />
         <DateField label={t('fields.dob')} limit="past" value={f.dob} onChange={v => setF({ ...f, dob: v })} testID="n-dob" />
         <Field label={t('fields.contact')} value={f.contact} keyboardType="phone-pad" onChangeText={v => setF({ ...f, contact: v })} testID="n-contact" />
+        <Field label={t('fields.email')} value={f.email} placeholder={t('fields.emailPlaceholder')} keyboardType="email-address" autoCapitalize="none" onChangeText={v => setF({ ...f, email: v })} testID="n-email" />
       </Card>
       {sec(t('accounts.signIn'))}
       <Card>
