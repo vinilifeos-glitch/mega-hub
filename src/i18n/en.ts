@@ -93,7 +93,9 @@ draft: 'Draft', saveDraft: 'Save draft', publish: 'Publish', published: 'Service
     created: 'Created account for {name} (username @{username}).', createdMustChange: "Created account for {name} (username @{username}). They'll be asked to choose their own password at first sign-in.",
     saved: 'Saved {name}.', savedPw: 'Saved {name} (password changed).',
   },
+  setlist: { title: 'Setlist', count: '{n} songs', key: 'Key', notes: 'Notes', songTitle: 'Song title', addSong: '+ Add song', edit: 'Edit', done: 'Done', empty: 'No songs yet.', more: '+{n} more', up: 'Move {title} up', down: 'Move {title} down', remove: 'Remove {title}', save: 'Save song', cancel: 'Cancel', customKey: 'Other key' },
   errors: {
+    setlistScope: 'Only the owner and Music admins can edit the setlist.', songTitle: 'Song title is required.',
     wrongCredentials: 'Wrong username or password.', deactivated: 'This account has been deactivated. Ask an admin.', notSignedIn: 'Not signed in.',
     currentPasswordWrong: 'Current password is incorrect.', passwordTooShort: 'Password must be at least 4 characters.',
     samePassword: 'Choose a different password from the temporary one.', ownerOnlyAccounts: 'Only the owner can manage accounts.',

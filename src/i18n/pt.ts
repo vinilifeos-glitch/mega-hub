@@ -95,7 +95,9 @@ draft: 'Rascunho', saveDraft: 'Salvar rascunho', publish: 'Publicar', published:
     created: 'Conta de {name} criada (usuário @{username}).', createdMustChange: 'Conta de {name} criada (usuário @{username}). A pessoa vai escolher a própria senha no primeiro acesso.',
     saved: '{name} salvo(a).', savedPw: '{name} salvo(a) (senha alterada).',
   },
+  setlist: { title: 'Repertório', count: '{n} músicas', key: 'Tom', notes: 'Observações', songTitle: 'Título da música', addSong: '+ Adicionar música', edit: 'Editar', done: 'Concluir', empty: 'Nenhuma música ainda.', more: '+{n} mais', up: 'Subir {title}', down: 'Descer {title}', remove: 'Remover {title}', save: 'Salvar música', cancel: 'Cancelar', customKey: 'Outro tom' },
   errors: {
+    setlistScope: 'Só o dono e os admins do Louvor podem editar o repertório.', songTitle: 'O título da música é obrigatório.',
     wrongCredentials: 'Usuário ou senha incorretos.', deactivated: 'Esta conta foi desativada. Fale com um administrador.', notSignedIn: 'Você não está conectado.',
     currentPasswordWrong: 'A senha atual está incorreta.', passwordTooShort: 'A senha deve ter pelo menos 4 caracteres.',
     samePassword: 'Escolha uma senha diferente da temporária.', ownerOnlyAccounts: 'Só o proprietário pode gerenciar contas.',

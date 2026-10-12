@@ -3,7 +3,7 @@
 import ts from 'typescript'; import fs from 'fs'; import assert from 'assert';
 const src = fs.readFileSync(new URL('../src/state/permissions.ts', import.meta.url), 'utf8');
 const js = ts.transpileModule(src, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2020 } }).outputText;
-const { canEditPersonal, changedProtected, canEditMemberRule, pickPref, visibleServiceData, isDraft } = await import('data:text/javascript,' + encodeURIComponent(js));
+const { canEditPersonal, changedProtected, canEditMemberRule, pickPref, visibleServiceData, isDraft, canEditSetlistRule, canSeeSetlistRule, visibleSetlists } = await import('data:text/javascript,' + encodeURIComponent(js));
 const owner = { id: 'o', role: 'owner' }, admin = { id: 'a', role: 'admin', adminOf: ['music'] }, vol = { id: 'v', role: 'volunteer' };
 const tgt = { id: 'x', firstName: 'Miguel', middleNames: '', lastName: 'S', contact: '123', email: 'miguel@x.com', departmentIds: ['music'], positions: { music: ['keys'] } };
 // Same gate order as adminSaveMember (scope check already passed for these actors)
@@ -51,3 +51,18 @@ ok(V.assignments.length === 1 && V.assignments[0].serviceId === 's1', 'volunteer
 ok(visibleServiceData(null, D).services.length === 2, 'signed-out gets no drafts');
 ok(!isDraft({}) && !isDraft({ status: 'published' }) && isDraft({ status: 'draft' }), 'missing status = published');
 const L = { services: [{ id: 's1' }], assignments: [] }; ok(visibleServiceData(vol, L) === L, 'legacy data passed through unchanged');
+
+// Setlist
+const kidsAdmin = { id: 'k', role: 'admin', adminOf: ['d-kids'] }, musicAdmin = { id: 'm', role: 'admin', adminOf: ['d-music'] };
+ok(canEditSetlistRule(owner) && canEditSetlistRule(musicAdmin), 'owner + Music admin edit setlist');
+ok(!canEditSetlistRule(kidsAdmin) && !canEditSetlistRule(vol) && !canEditSetlistRule(null), 'Kids admin / volunteer / signed-out cannot edit setlist');
+const S = { services: [{ id: 's1', setlist: [{ id: 'x', title: 'Song' }] }, { id: 's2' }], assignments: [{ serviceId: 's1', userId: 'v1' }] };
+ok(canSeeSetlistRule({ id: 'v1', role: 'volunteer', departmentIds: ['d-kids'] }, 's1', S.assignments), 'assigned volunteer sees setlist');
+ok(canSeeSetlistRule({ id: 'v2', role: 'volunteer', departmentIds: ['d-music'] }, 's1', S.assignments), 'Music member sees setlist');
+ok(canSeeSetlistRule(kidsAdmin, 's1', []), 'any admin sees setlist');
+const VS = visibleSetlists({ id: 'v3', role: 'volunteer', departmentIds: ['d-kids'] }, S);
+ok(!('setlist' in VS.services[0]) && VS.services.length === 2, 'unassigned non-Music volunteer gets no setlist');
+ok(visibleSetlists(owner, S) === S, 'owner data untouched');
+// drafts + setlist: volunteer assigned on a draft still gets nothing
+const DS = { services: [{ id: 'd', status: 'draft', setlist: [{ id: 'x', title: 'S' }] }], assignments: [{ serviceId: 'd', userId: 'v1' }] };
+ok(visibleSetlists({ id: 'v1', role: 'volunteer' }, visibleServiceData({ id: 'v1', role: 'volunteer' }, DS)).services.length === 0, 'draft setlist hidden from assigned volunteer');

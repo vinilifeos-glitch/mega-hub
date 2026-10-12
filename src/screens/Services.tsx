@@ -1,4 +1,6 @@
 import { useTabReset } from '../tabReset';
+import { useLocalSearchParams, router } from 'expo-router';
+import { SetlistCard } from './Setlist';
 import { displayName } from '../display';
 import { DateField } from '../components/DateField';
 import { useEffect, useState } from 'react';
@@ -22,6 +24,8 @@ export function ServicesHome() {
   const { data, currentUser, t, fmtDate, roleName } = useMe();
   const [view, setView] = useState<{ kind: 'detail' | 'edit'; id: string } | { kind: 'new' } | null>(null);
   useTabReset(() => { setView(null); setMsg(null); });
+  const { svc } = useLocalSearchParams<{ svc?: string }>();
+  useEffect(() => { if (svc) { setView({ kind: 'detail', id: svc }); router.setParams({ svc: undefined }); } }, [svc]);
   const [msg, setMsg] = useState<string | null>(null);
   const isOwner = currentUser.role === 'owner';
   if (view?.kind === 'new') return <ServiceForm onClose={(m, id) => { setMsg(m ?? null); setView(id ? { kind: 'detail', id } : null); }} />;
@@ -121,6 +125,7 @@ function ServiceDetail({ service: sv, msg, onBack, onEdit, onDeleted }: { servic
           </Card>
         );
       })}
+      <SetlistCard service={sv} />
       <View style={[s.row, { marginTop: 4, marginBottom: 4 }]}>{([['checkmark-circle-outline', t('services.legendAvailable')], ['close-circle-outline', t('services.legendAway')], ['time-outline', t('services.legendBusy')]] as const).map(([n, l]) => <View key={l} style={[s.row, { marginRight: 16, marginBottom: 4 }]}><Icon name={n} size={16} style={{ marginRight: 4 }} /><Text style={s.small}>{l}</Text></View>)}</View>
       <Text style={s.small}>{t('services.onlyHolders')}</Text>
       {isOwner && draft && <Button label={t('services.publish')} onPress={() => { publishService(sv.id); setPubMsg(t('services.published')); }} testID="publish-service" />}
