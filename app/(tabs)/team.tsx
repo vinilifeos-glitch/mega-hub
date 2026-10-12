@@ -12,7 +12,7 @@ export default function Team() {
   const [msg, setMsg] = useState<string | null>(null);
   const deps = data.departments.filter(d => myAdminDeps.includes(d.id));
   if (editId) return <MemberEditor user={data.users.find(u => u.id === editId)!} onClose={m => { setEditId(null); setMsg(m ?? null); }} />;
-  if (!deps.length) return <Screen title="Team"><Empty text="You don't administer any departments yet. Vini (the owner) assigns them." /></Screen>;
+  if (!deps.length) return <Screen title="Team" subtitle="Manage the people in the departments you administer."><Empty text="You don't administer any departments yet. Vini (the owner) assigns them." /></Screen>;
   const unassigned = data.users.filter(u => u.active && u.departmentIds.length === 0 && u.role === 'volunteer');
   const row = (u: User, depId?: string) => (
     <Pressable key={u.id + (depId ?? '')} testID={`member-${u.username}`} onPress={() => { setMsg(null); setEditId(u.id); }} disabled={!canEditMember(u)}>
@@ -26,7 +26,7 @@ export default function Team() {
     </Pressable>
   );
   return (
-    <Screen title="Team" subtitle="People in the departments you administer.">
+    <Screen title="Team" subtitle="Manage the people in the departments you administer.">
       {msg && <Notice text={msg} />}
       {deps.map(d => {
         const members = data.users.filter(u => u.active && u.departmentIds.includes(d.id));

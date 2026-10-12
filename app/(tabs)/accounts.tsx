@@ -2,7 +2,7 @@ import { DateField } from '../../src/components/DateField';
 import { useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { AccountInput, formatDobInput, useMe, validContact, validDob } from '../../src/state/AppContext';
-import { Button, deptIcon, Card, Chip, Empty, Field, Screen, colors, s, Notice } from '../../src/components/ui';
+import { Button, Icon, deptIcon, Card, Chip, Empty, Field, Screen, colors, s, Notice } from '../../src/components/ui';
 import { Role, User } from '../../src/types';
 import { toIso, todayIso } from '../../src/data/dates';
 
@@ -27,7 +27,7 @@ export default function Accounts() {
       .filter(u => !tier || u.role === tier)
       .sort((a, b) => order.indexOf(a.role) - order.indexOf(b.role) || a.name.localeCompare(b.name));
   }, [data.users, q, dep, pos, tier]);
-  if (!canManageAccounts) return <Screen title="Accounts"><Empty text="Only the owner can manage accounts." /></Screen>;
+  if (!canManageAccounts) return <Screen title="Accounts" subtitle="Create and manage everyone's sign-in."><Empty text="Only the owner can manage accounts." /></Screen>;
   const close = (m?: string) => { setMode(null); setNotice(m ?? null); };
   if (mode?.kind === 'new') return <NewAccount onClose={close} />;
   if (mode) return <FullEditor user={data.users.find(x => x.id === mode.id)!} onClose={close} />;
@@ -35,7 +35,7 @@ export default function Accounts() {
   const selDep = data.departments.find(d => d.id === dep);
   const filtered = q !== '' || dep !== 'all' || !!pos || !!tier;
   return (
-    <Screen title="Accounts" subtitle={`${data.users.filter(u => u.active).length} active accounts`}>
+    <Screen title="Accounts" subtitle="Everyone who can sign in to Mega Hub.">
       <Button label="New account" onPress={() => { setNotice(null); setMode({ kind: 'new' }); }} testID="newaccount" />
       {notice && <Card style={{ backgroundColor: '#ECFDF5', borderColor: '#A7F3D0', marginTop: 12 }}><Text selectable>{notice}</Text></Card>}
       <Card style={{ marginTop: 12 }}>
@@ -65,16 +65,17 @@ export default function Accounts() {
       </Card>
       {users.length === 0 && <Empty text="No accounts match." />}
       {users.map(u => (
-        <Card key={u.id} style={{ opacity: u.active ? 1 : 0.55 }}>
-          <View style={[s.row, { justifyContent: 'space-between' }]}>
-            <Text style={[s.h2, { flex: 1 }]}>{u.name}{u.id === currentUser.id ? ' (you)' : ''}</Text>
-            <Text style={{ color: colors.primary, fontWeight: '700', fontSize: 12 }}>{roleName[u.role].toUpperCase()}</Text>
+        <Pressable key={u.id} testID={`edit-${u.username}`} accessibilityRole="button" accessibilityLabel={`Edit ${u.name}`} onPress={() => { setNotice(null); setMode({ kind: 'edit', id: u.id }); }}
+          style={({ pressed }) => [s.card, { paddingVertical: 12, marginBottom: 8, flexDirection: 'row', alignItems: 'center', opacity: u.active ? 1 : 0.55, backgroundColor: pressed ? colors.soft : colors.card }]}>
+          <View style={{ flex: 1, marginRight: 12 }}>
+            <View style={[s.row, { flexWrap: 'wrap' }]}>
+              <Text style={[s.h2, { marginRight: 8, flexShrink: 1 }]}>{u.name}{u.id === currentUser.id ? ' (you)' : ''}</Text>
+              <Text style={{ color: colors.primary, fontWeight: '600', fontSize: 12, backgroundColor: colors.primarySoft, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 999, overflow: 'hidden' }}>{roleName[u.role]}{u.active ? '' : ' · Deactivated'}</Text>
+            </View>
+            <Text style={s.small} numberOfLines={2}>@{u.username}{u.role === 'admin' ? ` · Admin of ${(u.adminOf ?? []).map(depName).join(', ') || 'none yet'}` : ''}{u.departmentIds.length ? ` · ${u.departmentIds.map(id => `${depName(id)}${(u.positions?.[id] ?? []).length ? ` (${u.positions![id].join(', ')})` : ''}`).join(' · ')}` : ' · No department yet'}</Text>
           </View>
-          <Text style={s.small}>@{u.username}{u.contact ? ` · ${u.contact}` : ''}</Text>
-          {u.role === 'admin' && <Text style={s.small}>Admin of: {(u.adminOf ?? []).map(depName).join(', ') || 'none yet'}</Text>}
-          <Text style={s.small}>{u.departmentIds.length ? u.departmentIds.map(id => `${depName(id)}${(u.positions?.[id] ?? []).length ? ` (${u.positions![id].join(', ')})` : ''}`).join(' · ') : 'No department yet'}{u.active ? '' : ' · Deactivated'}</Text>
-          <Button label="Edit" outline onPress={() => { setNotice(null); setMode({ kind: 'edit', id: u.id }); }} testID={`edit-${u.username}`} />
-        </Card>
+          <Icon name="chevron-forward" size={20} />
+        </Pressable>
       ))}
     </Screen>
   );
@@ -194,7 +195,7 @@ function NewAccount({ onClose }: { onClose: (m?: string) => void }) {
   };
   const sec = (t: string) => <Text style={[s.section, { marginTop: 18 }]}>{t}</Text>;
   return (
-    <Screen title="New account">
+    <Screen title="New account" subtitle="Set up a sign-in for a new person.">
       {sec('Personal details')}
       <Card>
         <Field label="First name" value={f.firstName} autoCapitalize="words" testID="n-first"

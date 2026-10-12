@@ -16,7 +16,7 @@ export default function AvailabilityScreen() {
     addUnavailable(iso); setV(''); setErr(null);
   };
   return (
-    <Screen title="Availability" subtitle="Add the days you can't serve. Every other day you're available.">
+    <Screen title="Availability" subtitle="Add the days you can't serve. You're available on all other days.">
       <Card>
         <DateField label="Date I'm unavailable" limit="future" value={v} onChange={setV} onSubmit={add} testID="unavail-date" />
         {err && <Notice tone="error" text={err} />}

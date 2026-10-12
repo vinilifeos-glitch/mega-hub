@@ -2,7 +2,7 @@ import { DateField } from '../components/DateField';
 import { useEffect, useState } from 'react';
 import { Alert, Platform, Pressable, Text, View } from 'react-native';
 import { formatDobInput, useMe } from '../state/AppContext';
-import { Button, DeptTitle, Icon, deptIcon, Card, Chip, Empty, Field, Screen, colors, formatDate, s, Notice } from '../components/ui';
+import { Button, DeptTitle, Icon, IconButton, deptIcon, Card, Chip, Empty, Field, Screen, colors, formatDate, s, Notice } from '../components/ui';
 import { Service, Slot } from '../types';
 import { formatTimeInput, isoToDdmm, toIso, todayIso, upcomingSundayIso } from '../data/dates';
 
@@ -91,7 +91,8 @@ function ServiceDetail({ service: sv, msg, onBack, onEdit, onDeleted }: { servic
                   </View>
                   {open === key && (
                     <View style={[s.row, { marginTop: 8 }]}>
-                      {holders.length === 0 && <Text style={s.small}>Nobody holds {sl.position} yet.</Text>}
+                      {holders.length === 0 && <Text style={s.small}>No one in {d.name} holds {sl.position} yet. Add the role to a member on the Team or Accounts screen.</Text>}
+                      {holders.length > 0 && holders.every(m => m.id !== who?.id && !!whyBlocked(sv.id, m.id)) && <Text style={[s.small, { width: '100%', marginBottom: 8 }]}>No one available for this role on this date. Check Availability or department members.</Text>}
                       {holders.map(m => {
                         const why = m.id === who?.id ? null : whyBlocked(sv.id, m.id);
                         return <Chip key={m.id} testID={`pick-${m.username}`} color={why ? colors.subtle : d.color} active={m.id === who?.id}
@@ -130,6 +131,8 @@ function ServiceForm({ service, onClose }: { service?: Service; onClose: (msg?: 
     data.assignments.filter(a => a.serviceId === service?.id).map(a => [`${a.departmentId}:${a.position}:${a.index}`, a.userId])));
   const [notice, setNotice] = useState<string | null>(null);
   const [openPick, setOpenPick] = useState<string | null>(null);
+  const [openSlots, setOpenSlots] = useState<string | null>(null); // UI only: which dept's slot editor is expanded
+  const [openAssign, setOpenAssign] = useState<string | null>(null); // UI only: which dept's assign list is expanded
   const iso = toIso(date);
   const userById = (id: string) => data.users.find(u => u.id === id);
   const eligible = (dep: string, pos: string, key: string) => data.users.filter(u => u.active && u.departmentIds.includes(dep)
@@ -163,7 +166,7 @@ function ServiceForm({ service, onClose }: { service?: Service; onClose: (msg?: 
     onClose(service ? 'Service updated.' : 'Service created.');
   };
   return (
-    <Screen title={service ? 'Edit service' : 'New service'}>
+    <Screen title={service ? 'Edit service' : 'New service'} subtitle="Set the date, time and who's needed.">
       <Card>
         <Field label="Name" value={title} onChangeText={setTitle} autoCapitalize="words" testID="sv-title" />
         <Field label="Location" value={location} onChangeText={setLocation} autoCapitalize="words" placeholder="e.g. Main hall" testID="sv-location" />
@@ -179,19 +182,25 @@ function ServiceForm({ service, onClose }: { service?: Service; onClose: (msg?: 
         const mine = slots.filter(z => z.departmentId === d.id);
         return (
           <Card key={d.id} style={{ borderLeftWidth: 3, borderLeftColor: d.color }}>
-            <DeptTitle dep={d} suffix={` · ${mine.reduce((n, z) => n + z.count, 0)}`} />
-            {mine.map(z => (
+            <Pressable testID={`sl-toggle-${d.id}`} accessibilityRole="button" accessibilityState={{ expanded: openSlots === d.id }} accessibilityLabel={`${d.name} slots`} onPress={() => setOpenSlots(openSlots === d.id ? null : d.id)} style={[s.row, { justifyContent: 'space-between', flexWrap: 'nowrap', minHeight: 44 }]}>
+              <View style={{ flex: 1 }}>
+                <DeptTitle dep={d} suffix={` · ${mine.reduce((n, z) => n + z.count, 0)}`} />
+                {openSlots !== d.id && <Text style={[s.small, { marginTop: 4 }]} numberOfLines={2}>{mine.length ? mine.map(z => z.count > 1 ? `${z.position} ×${z.count}` : z.position).join(', ') : 'No slots'}</Text>}
+              </View>
+              <Icon name={openSlots === d.id ? 'chevron-up' : 'chevron-down'} size={20} />
+            </Pressable>
+            {openSlots === d.id && mine.map(z => (
               <View key={z.position} style={[s.row, { justifyContent: 'space-between', paddingVertical: 6 }]}>
                 <Text style={{ color: colors.text, flex: 1 }}>{z.position}</Text>
                 <View style={[s.row, { flexWrap: 'nowrap' }]}>
-                  <Chip testID={`sl-minus-${d.id}-${z.position}`} label="−" color={d.color} onPress={() => setCount(d.id, z.position, z.count - 1)} />
+                  <IconButton testID={`sl-minus-${d.id}-${z.position}`} icon="remove-circle-outline" label={`Fewer ${z.position}`} color={d.color} onPress={() => setCount(d.id, z.position, z.count - 1)} />
                   <Text style={{ width: 24, textAlign: 'center', fontWeight: '700', marginRight: 8 }} testID={`sl-count-${d.id}-${z.position}`}>{z.count}</Text>
-                  <Chip testID={`sl-plus-${d.id}-${z.position}`} label="+" color={d.color} onPress={() => setCount(d.id, z.position, z.count + 1)} />
+                  <IconButton testID={`sl-plus-${d.id}-${z.position}`} icon="add-circle-outline" label={`More ${z.position}`} color={d.color} onPress={() => setCount(d.id, z.position, z.count + 1)} />
                   <Chip label="Remove" color={colors.red} onPress={() => setCount(d.id, z.position, 0)} />
                 </View>
               </View>
             ))}
-            {missing.length > 0 && <>
+            {openSlots === d.id && missing.length > 0 && <>
               <Text style={[s.small, { marginTop: 6, marginBottom: 6 }]}>Add a slot:</Text>
               <View style={s.row}>{missing.map(p => <Chip key={p} testID={`sl-add-${d.id}-${p}`} label={`+ ${p}`} color={d.color} onPress={() => setCount(d.id, p, 1)} />)}</View>
             </>}
@@ -206,8 +215,14 @@ function ServiceForm({ service, onClose }: { service?: Service; onClose: (msg?: 
         if (!mine.length) return null;
         return (
           <Card key={d.id} style={{ borderLeftWidth: 3, borderLeftColor: d.color }}>
-            <DeptTitle dep={d} />
-            {mine.flatMap(z => Array.from({ length: z.count }, (_, i) => {
+            <Pressable testID={`as-toggle-${d.id}`} accessibilityRole="button" accessibilityState={{ expanded: openAssign === d.id }} accessibilityLabel={`Assign people in ${d.name}`} onPress={() => setOpenAssign(openAssign === d.id ? null : d.id)} style={[s.row, { justifyContent: 'space-between', flexWrap: 'nowrap', minHeight: 44 }]}>
+              <View style={{ flex: 1 }}>
+                <DeptTitle dep={d} />
+                <Text style={[s.small, { marginTop: 4 }]}>{Object.keys(picks).filter(k => k.startsWith(d.id + ':')).length} of {mine.reduce((n, z) => n + z.count, 0)} assigned</Text>
+              </View>
+              <Icon name={openAssign === d.id ? 'chevron-up' : 'chevron-down'} size={20} />
+            </Pressable>
+            {openAssign === d.id && mine.flatMap(z => Array.from({ length: z.count }, (_, i) => {
               const key = `${d.id}:${z.position}:${i}`; const who = picks[key] ? userById(picks[key]) : undefined;
               const opts = eligible(d.id, z.position, key);
               return (
@@ -219,7 +234,7 @@ function ServiceForm({ service, onClose }: { service?: Service; onClose: (msg?: 
                     </Pressable>
                   </View>
                   {openPick === key && <View style={[s.row, { marginTop: 8 }]}>
-                    {opts.length === 0 && <Text style={s.small}>No one eligible for {z.position}.</Text>}
+                    {opts.length === 0 && <Text style={s.small}>No one available for this role on this date. Check Availability or department members.</Text>}
                     {opts.map(u => <Chip key={u.id} testID={`fpick-${u.username}`} label={u.name} color={d.color} active={who?.id === u.id}
                       onPress={() => { setPicks({ ...picks, [key]: u.id }); setOpenPick(null); setNotice(null); }} />)}
                     {who && <Chip label="Leave unfilled" color={colors.red} onPress={() => { const n = { ...picks }; delete n[key]; setPicks(n); setOpenPick(null); }} />}
