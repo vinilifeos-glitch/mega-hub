@@ -3,9 +3,10 @@ import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { formatDobInput, useMe } from '../../src/state/AppContext';
 import { toIso, todayIso } from '../../src/data/dates';
-import { Button, Card, Empty, Field, Screen, colors, s, Notice } from '../../src/components/ui';
+import { Button, Card, Empty, Field, Screen, Notice, useColors, useStyles } from '../../src/components/ui';
 
 export default function AvailabilityScreen() {
+  const colors = useColors(); const s = useStyles();
   const { data, currentUser, addUnavailable, removeUnavailable, t, fmtDate } = useMe();
   const [v, setV] = useState(''); const [err, setErr] = useState<string | null>(null);
   const dates = (currentUser.unavailable ?? []).filter(x => x >= todayIso());

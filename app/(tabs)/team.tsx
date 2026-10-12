@@ -2,11 +2,12 @@ import { DateField } from '../../src/components/DateField';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { formatDobInput, useMe } from '../../src/state/AppContext';
-import { Button, DeptTitle, deptIcon, Card, Chip, Empty, Field, Screen, colors, s, Notice } from '../../src/components/ui';
+import { Button, DeptTitle, deptIcon, Card, Chip, Empty, Field, Screen, Notice, useColors, useStyles } from '../../src/components/ui';
 import { User } from '../../src/types';
 import { toIso, todayIso } from '../../src/data/dates';
 
 export default function Team() {
+  const colors = useColors(); const s = useStyles();
   const { data, myAdminDeps, currentUser, canEditMember, t, ownerName, roleName } = useMe();
   const [editId, setEditId] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
@@ -46,6 +47,7 @@ export default function Team() {
 }
 
 function MemberEditor({ user, onClose }: { user: User; onClose: (m?: string) => void }) {
+  const colors = useColors(); const s = useStyles();
   const { data, myAdminDeps, adminSaveMember, addUnavailable, removeUnavailable, t, ownerName, deptName, roleName } = useMe();
   const deps = data.departments.filter(d => myAdminDeps.includes(d.id));
   const [f, setF] = useState({ firstName: user.firstName, middleNames: user.middleNames, lastName: user.lastName, dob: user.dob, contact: user.contact ?? '' });

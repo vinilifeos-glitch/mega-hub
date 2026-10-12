@@ -1,9 +1,10 @@
 import { Text, View } from 'react-native';
 import { useMe } from '../../src/state/AppContext';
-import { Card, DeptTitle, Screen, colors, s } from '../../src/components/ui';
+import { Badge, Card, DeptTitle, Screen, useColors, useStyles } from '../../src/components/ui';
 import { RolesView } from '../../src/screens/Profile';
 
 export default function Departments() {
+  const colors = useColors(); const s = useStyles();
   const { data, canManage, currentUser, t, ownerName, roleName } = useMe();
   const seesAll = currentUser.role !== 'volunteer';
   return (
@@ -20,7 +21,7 @@ export default function Departments() {
             <Card key={d.id} style={{ borderLeftWidth: 3, borderLeftColor: d.color }}>
               <View style={[s.row, { justifyContent: 'space-between' }]}>
                 <DeptTitle dep={d} />
-                {canManage(d.id) && <Text style={{ color: d.color, fontWeight: '600', fontSize: 12 }}>{t('common.youManage')}</Text>}
+                {canManage(d.id) && <Badge tone="accent" icon="shield-checkmark" label={t('common.youManage')} />}
               </View>
               <Text style={[s.small, { marginTop: 4 }]}>{admins.length ? t('departmentsScreen.admins', { names: admins.map(a => a.name).join(', ') }) : t('departmentsScreen.noAdmins', { owner: ownerName })}</Text>
               <Text style={s.small}>{t('departmentsScreen.roles', { roles: d.positions.map(p => roleName(d.id, p)).join(', ') })}</Text>

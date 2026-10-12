@@ -107,4 +107,12 @@ export const pt: Dict = {
     futureDateInvalid: 'Informe uma data futura real no formato DD/MM/AAAA.', datePast: 'Essa data já passou.', timeFormat: 'Horários devem estar no formato HH:MM (24h).',
     endAfterStart: 'O término deve ser depois do início.', selfDeactivate: 'Você não pode se desativar.', ownerDeactivate: 'A conta do proprietário não pode ser desativada.',
   },
+  // ── UI v2 (Tina) ──
+  appearance: { title: 'Aparência', hint: 'Escolha o modo claro ou escuro.', light: 'Claro', dark: 'Escuro' },
+  badges: { assigned: 'Escalado', open: 'Em aberto', away: 'Ausente' },
+  more: {
+    title: 'Mais', subtitle: 'Seu perfil, configurações e ferramentas de administração.', back: 'Voltar para Mais',
+    profile: 'Meu perfil', profileHint: 'Dados pessoais, idioma e aparência', team: 'Minha equipe', teamHint: 'Pessoas dos departamentos que você administra',
+    accounts: 'Contas', accountsHint: 'Crie e gerencie o acesso de todos', settings: 'Configurações', admin: 'Administração',
+  },
 };

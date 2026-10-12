@@ -1,9 +1,10 @@
 import { Text, View } from 'react-native';
 import { useMe } from '../../src/state/AppContext';
-import { Card, Icon, deptIcon, Empty, Screen, s } from '../../src/components/ui';
+import { DeptBadge, StatusBadge, Card, Icon, deptIcon, Empty, Screen, useColors, useStyles } from '../../src/components/ui';
 import { isoToDdmm, todayIso } from '../../src/data/dates';
 
 export default function MyRota() {
+  const colors = useColors(); const s = useStyles();
   const { data, currentUser, t, fmtDate, deptName, roleName } = useMe();
   const mine = data.assignments
     .filter(a => a.userId === currentUser.id)
@@ -18,8 +19,8 @@ export default function MyRota() {
           <Text style={s.h2}>{sv.title}</Text>
           <Text style={s.small}>{fmtDate(sv.date)} · {isoToDdmm(sv.date)} · {sv.start}–{sv.end}</Text>
           {sv.location ? <Text style={s.small}>{sv.location}</Text> : null}
-          <View style={[s.row, { marginTop: 8 }]}><Icon name={deptIcon(dep.id)} size={18} color={dep.color} style={{ marginRight: 8 }} /><Text style={[s.h2, { color: dep.color }]}>{roleName(dep.id, a.position)}</Text></View>
-          <Text style={s.small}>{deptName(dep.id)}</Text>
+          <Text style={[s.h2, { marginTop: 10, marginBottom: 6 }]}>{roleName(dep.id, a.position)}</Text>
+          <View style={s.row}><DeptBadge dep={dep} /><StatusBadge status="assigned" /></View>
         </Card>
       ))}
     </Screen>

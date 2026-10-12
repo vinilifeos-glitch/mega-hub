@@ -2,13 +2,14 @@ import { DateField } from '../components/DateField';
 import { useEffect, useState } from 'react';
 import { Alert, Platform, Pressable, Text, View } from 'react-native';
 import { formatDobInput, useMe } from '../state/AppContext';
-import { Button, DeptTitle, Icon, IconButton, deptIcon, Card, Chip, Empty, Field, Screen, colors, s, Notice } from '../components/ui';
+import { Badge, DeptBadge, StatusBadge, Button, DeptTitle, Icon, IconButton, deptIcon, Card, Chip, Empty, Field, Screen, Notice, useColors, useStyles } from '../components/ui';
 import { Service, Slot } from '../types';
 import { formatTimeInput, isoToDdmm, toIso, todayIso, upcomingSundayIso } from '../data/dates';
 
 const DOUBLE: Record<string, number> = { 'd-kids:Assistant': 2, 'd-music:Backing Vocals': 2 };
 
 export function ServicesHome() {
+  const colors = useColors(); const s = useStyles();
   const { data, currentUser, t, fmtDate, roleName } = useMe();
   const [view, setView] = useState<{ kind: 'detail' | 'edit'; id: string } | { kind: 'new' } | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
@@ -31,16 +32,16 @@ export function ServicesHome() {
         const mine = data.assignments.filter(a => a.serviceId === sv.id && a.userId === currentUser.id);
         return (
           <Pressable key={sv.id} testID={`svc-${sv.date}`} onPress={() => { setMsg(null); setView({ kind: 'detail', id: sv.id }); }}>
-            <Card style={mine.length ? { borderColor: colors.primary, backgroundColor: colors.primarySoft } : undefined}>
+            <Card style={mine.length ? { borderColor: colors.primary, borderWidth: 1.5 } : undefined}>
               <Text style={s.h2}>{sv.title}</Text>
               <Text style={s.small}>{fmtDate(sv.date)} · {isoToDdmm(sv.date)} · {sv.start}–{sv.end}{sv.location ? ` · ${sv.location}` : ''}</Text>
-              {mine.length > 0 && <Text style={{ color: colors.primary, fontWeight: '700', marginTop: 6 }}>{t('services.youreServing', { roles: mine.map(a => roleName(a.departmentId, a.position)).join(', ') })}</Text>}
+              {mine.length > 0 && <View style={{ marginTop: 8 }}><StatusBadge status="assigned" label={t('services.youreServing', { roles: mine.map(a => roleName(a.departmentId, a.position)).join(', ') })} /></View>}
               <View style={[s.row, { marginTop: 8 }]}>
                 {data.departments.map(d => {
                   const need = sv.slots.filter(z => z.departmentId === d.id).reduce((n, z) => n + z.count, 0);
                   if (!need) return null;
                   const got = data.assignments.filter(a => a.serviceId === sv.id && a.departmentId === d.id).length;
-                  return <View key={d.id} style={[s.row, { marginRight: 16 }]}><Icon name={deptIcon(d.id)} size={16} color={got >= need ? colors.green : d.color} style={{ marginRight: 4 }} /><Text style={{ color: got >= need ? colors.green : d.color, fontWeight: '600', fontSize: 13 }}>{got}/{need}</Text></View>;
+                  return got >= need ? <Badge key={d.id} tone="success" icon={deptIcon(d.id)} label={`${got}/${need}`} /> : <DeptBadge key={d.id} dep={d} label={`${got}/${need}`} />;
                 })}
               </View>
             </Card>
@@ -52,6 +53,7 @@ export function ServicesHome() {
 }
 
 function ServiceDetail({ service: sv, msg, onBack, onEdit, onDeleted }: { service: Service; msg: string | null; onBack: () => void; onEdit: () => void; onDeleted: () => void }) {
+  const colors = useColors(); const s = useStyles();
   const { data, currentUser, canManage, assign, unassign, whyBlocked, deleteService, t, fmtDate, deptName, roleName } = useMe();
   const [open, setOpen] = useState<string | null>(null); // slot key being filled
   const [err, setErr] = useState<string | null>(null);
@@ -118,6 +120,7 @@ function ServiceDetail({ service: sv, msg, onBack, onEdit, onDeleted }: { servic
 }
 
 function ServiceForm({ service, onClose }: { service?: Service; onClose: (msg?: string, id?: string) => void }) {
+  const colors = useColors(); const s = useStyles();
   const { data, saveService, t, deptName, roleName } = useMe();
   const defaults = (): Slot[] => data.departments.flatMap(d => d.positions.map(p => ({ departmentId: d.id, position: p, count: DOUBLE[`${d.id}:${p}`] ?? 1 })));
   const [title, setTitle] = useState(service?.title ?? t('services.defaultName'));
@@ -194,7 +197,7 @@ function ServiceForm({ service, onClose }: { service?: Service; onClose: (msg?: 
                 <Text style={{ color: colors.text, flex: 1 }}>{roleName(d.id, z.position)}</Text>
                 <View style={[s.row, { flexWrap: 'nowrap' }]}>
                   <IconButton testID={`sl-minus-${d.id}-${z.position}`} icon="remove-circle-outline" label={t('services.fewer', { role: roleName(d.id, z.position) })} color={d.color} onPress={() => setCount(d.id, z.position, z.count - 1)} />
-                  <Text style={{ width: 24, textAlign: 'center', fontWeight: '700', marginRight: 8 }} testID={`sl-count-${d.id}-${z.position}`}>{z.count}</Text>
+                  <Text style={{ width: 24, textAlign: 'center', fontWeight: '700', marginRight: 8, color: colors.text }} testID={`sl-count-${d.id}-${z.position}`}>{z.count}</Text>
                   <IconButton testID={`sl-plus-${d.id}-${z.position}`} icon="add-circle-outline" label={t('services.more', { role: roleName(d.id, z.position) })} color={d.color} onPress={() => setCount(d.id, z.position, z.count + 1)} />
                   <Chip label={t('common.remove')} color={colors.red} onPress={() => setCount(d.id, z.position, 0)} />
                 </View>
@@ -209,7 +212,7 @@ function ServiceForm({ service, onClose }: { service?: Service; onClose: (msg?: 
       })}
       <Text style={s.section}>{t('services.assignPeople')}</Text>
       <Text style={[s.small, { marginBottom: 8 }]}>{t('services.assignHint', { date: iso ? isoToDdmm(iso) : t('services.thatDate') })}</Text>
-      {notice && <Card style={{ backgroundColor: '#FFF7ED', borderColor: '#FED7AA' }}><Text testID="sv-notice">{notice}</Text></Card>}
+      {notice && <Card style={{ backgroundColor: colors.amberSoft, borderColor: colors.amberSoft }}><Text testID="sv-notice" style={{ color: colors.text }}>{notice}</Text></Card>}
       {data.departments.map(d => {
         const mine = slots.filter(z => z.departmentId === d.id);
         if (!mine.length) return null;

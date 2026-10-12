@@ -2,7 +2,7 @@ import { DateField } from '../../src/components/DateField';
 import { useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { AccountInput, formatDobInput, useMe, validContact, validDob } from '../../src/state/AppContext';
-import { Button, Icon, deptIcon, Card, Chip, Empty, Field, Screen, colors, s, Notice } from '../../src/components/ui';
+import { Badge, RoleBadge, Button, Icon, deptIcon, Card, Chip, Empty, Field, Screen, Notice, useColors, useStyles } from '../../src/components/ui';
 import { Role, User } from '../../src/types';
 import { toIso, todayIso } from '../../src/data/dates';
 
@@ -10,6 +10,7 @@ const order: Role[] = ['owner', 'admin', 'volunteer'];
 const fold = (x: string) => x.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
 export default function Accounts() {
+  const colors = useColors(); const s = useStyles();
   const { data, canManageAccounts, currentUser, t, deptName, roleName, tierName } = useMe();
   const [mode, setMode] = useState<{ kind: 'new' } | { kind: 'edit'; id: string } | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -36,7 +37,7 @@ export default function Accounts() {
   return (
     <Screen title={t('accounts.title')} subtitle={t('accounts.listSubtitle')}>
       <Button label={t('accounts.newAccount')} onPress={() => { setNotice(null); setMode({ kind: 'new' }); }} testID="newaccount" />
-      {notice && <Card style={{ backgroundColor: '#ECFDF5', borderColor: '#A7F3D0', marginTop: 12 }}><Text selectable>{notice}</Text></Card>}
+      {notice && <Card style={{ backgroundColor: colors.greenSoft, borderColor: colors.greenSoft, marginTop: 12 }}><Text selectable style={{ color: colors.text }}>{notice}</Text></Card>}
       <Card style={{ marginTop: 12 }}>
         <Field label={t('fields.search')} value={q} onChangeText={setQ} placeholder={t('fields.searchPlaceholder')} testID="acc-search" />
         <Text style={s.section}>{t('accounts.department')}</Text>
@@ -69,7 +70,7 @@ export default function Accounts() {
           <View style={{ flex: 1, marginRight: 12 }}>
             <View style={[s.row, { flexWrap: 'wrap' }]}>
               <Text style={[s.h2, { marginRight: 8, flexShrink: 1 }]}>{u.name}{u.id === currentUser.id ? ` ${t('common.you')}` : ''}</Text>
-              <Text style={{ color: colors.primary, fontWeight: '600', fontSize: 12, backgroundColor: colors.primarySoft, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 999, overflow: 'hidden' }}>{tierName(u.role)}{u.active ? '' : ` · ${t('common.deactivated')}`}</Text>
+              <RoleBadge role={u.role} />{u.active ? null : <Badge tone="danger" label={t('common.deactivated')} />}
             </View>
             <Text style={s.small} numberOfLines={2}>{t('rows.username')}: @{u.username}{u.role === 'admin' ? ` · ${t('accounts.adminOf', { depts: (u.adminOf ?? []).map(depName).join(', ') || t('accounts.noneYet') })}` : ''}{u.departmentIds.length ? ` · ${u.departmentIds.map(id => `${depName(id)}${(u.positions?.[id] ?? []).length ? ` (${u.positions![id].map(r => roleName(id, r)).join(', ')})` : ''}`).join(' · ')}` : ` · ${t('accounts.noDeptYet')}`}</Text>
           </View>
@@ -81,6 +82,7 @@ export default function Accounts() {
 }
 
 function FullEditor({ user, onClose }: { user: User; onClose: (m?: string) => void }) {
+  const colors = useColors(); const s = useStyles();
   const { data, ownerUpdateAccount, saveProfile, addUnavailable, removeUnavailable, allowedRoles, currentUser, t, deptName, roleName, tierName } = useMe();
   const [f, setF] = useState({ firstName: user.firstName, middleNames: user.middleNames, lastName: user.lastName, dob: user.dob, contact: user.contact ?? '' });
   const [username, setUsername] = useState(user.username);
@@ -173,6 +175,7 @@ function FullEditor({ user, onClose }: { user: User; onClose: (m?: string) => vo
 }
 
 function NewAccount({ onClose }: { onClose: (m?: string) => void }) {
+  const colors = useColors(); const s = useStyles();
   const { data, allowedRoles, saveAccount, t, deptName, roleName, tierName } = useMe();
   const [f, setF] = useState({ firstName: '', middleNames: '', lastName: '', dob: '', contact: '' });
   const [username, setUsername] = useState(''); const [userEdited, setUserEdited] = useState(false);

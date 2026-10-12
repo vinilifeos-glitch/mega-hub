@@ -2,20 +2,22 @@ import { DateField } from '../components/DateField';
 import { useState } from 'react';
 import { Text, View } from 'react-native';
 import { formatDobInput, fullName, ProfileInput, useMe } from '../state/AppContext';
-import { Button, DeptTitle, deptIcon, Card, Chip, Field, Screen, colors, s, Notice } from '../components/ui';
+import { RoleBadge, Button, DeptTitle, deptIcon, Card, Chip, Field, Screen, Notice, useColors, useStyles } from '../components/ui';
 import { User } from '../types';
 
 
 function Row({ k, v }: { k: string; v: string }) {
+  const colors = useColors(); const s = useStyles();
   const { t } = useMe();
   return <View style={{ marginBottom: 8 }}><Text style={s.small}>{k}</Text><Text style={{ fontSize: 16, color: colors.text }}>{v || t('common.notSet')}</Text></View>;
 }
 
 export function PersonalInfo({ user, title }: { user: User; title?: string }) {
+  const colors = useColors(); const s = useStyles();
   const { t, tierName } = useMe();
   return (
     <Card>
-      <Text style={[s.h2, { marginBottom: 10 }]}>{title ?? user.name}</Text>
+      <View style={[s.row, { justifyContent: 'space-between', marginBottom: 10 }]}><Text style={[s.h2, { flexShrink: 1, marginRight: 8 }]}>{title ?? user.name}</Text><RoleBadge role={user.role} /></View>
       <Row k={t('rows.firstName')} v={user.firstName} />
       <Row k={t('rows.middleNames')} v={user.middleNames} />
       <Row k={t('rows.surname')} v={user.lastName} />
@@ -28,6 +30,7 @@ export function PersonalInfo({ user, title }: { user: User; title?: string }) {
 }
 
 export function RolesView({ user }: { user: User }) {
+  const colors = useColors(); const s = useStyles();
   const { data, t, roleName } = useMe();
   const deps = data.departments.filter(d => user.departmentIds.includes(d.id));
   return (
@@ -49,11 +52,13 @@ export function RolesView({ user }: { user: User }) {
 }
 
 export function ProfileView({ user, title }: { user: User; title?: string }) {
+  const colors = useColors(); const s = useStyles();
   const { t } = useMe();
   return (<><PersonalInfo user={user} title={title} /><Text style={s.section}>{t('profile.departmentsRoles')}</Text><RolesView user={user} /></>);
 }
 
 export function ProfileEditor({ user, onClose }: { user: User; onClose: (msg?: string) => void }) {
+  const colors = useColors(); const s = useStyles();
   const { data, saveProfile, t, deptName, roleName } = useMe();
   const [f, setF] = useState<ProfileInput>({
     contact: user.contact ?? '', firstName: user.firstName, middleNames: user.middleNames, lastName: user.lastName, dob: user.dob,

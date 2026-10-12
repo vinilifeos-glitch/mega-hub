@@ -105,4 +105,12 @@ export const en = {
     futureDateInvalid: 'Enter a real future date as DD/MM/YYYY.', datePast: 'That date is in the past.', timeFormat: 'Times must be HH:MM (24h).',
     endAfterStart: 'End time must be after start time.', selfDeactivate: "You can't deactivate yourself.", ownerDeactivate: "The owner account can't be deactivated.",
   },
+  // ── UI v2 (Tina) ──
+  appearance: { title: 'Appearance', hint: 'Choose light or dark mode.', light: 'Light', dark: 'Dark' },
+  badges: { assigned: 'Assigned', open: 'Open', away: 'Away' },
+  more: {
+    title: 'More', subtitle: 'Your profile, settings and admin tools.', back: 'Back to More',
+    profile: 'My profile', profileHint: 'Personal details, language and appearance', team: 'My team', teamHint: 'People in the departments you administer',
+    accounts: 'Accounts', accountsHint: "Create and manage everyone's sign-in", settings: 'Settings', admin: 'Admin tools',
+  },
 };

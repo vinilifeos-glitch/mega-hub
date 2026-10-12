@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { Text } from 'react-native';
 import { useApp } from '../state/AppContext';
-import { Button, Card, Field, Screen, colors, s, Notice } from '../components/ui';
+import { Button, Card, Field, Screen, Notice, useColors, useStyles } from '../components/ui';
 
 export function SignInScreen() {
+  const colors = useColors(); const s = useStyles();
   const { signIn, t, ownerName } = useApp();
   const [u, setU] = useState(''); const [p, setP] = useState(''); const [err, setErr] = useState<string | null>(null);
   const go = async () => setErr(await signIn(u, p));
@@ -21,6 +22,7 @@ export function SignInScreen() {
 }
 
 export function ChangePasswordScreen({ firstTime, onDone, onCancel }: { firstTime?: boolean; onDone?: () => void; onCancel?: () => void }) {
+  const colors = useColors(); const s = useStyles();
   const { changePassword, signOut, t } = useApp();
   const [o, setO] = useState(''); const [n, setN] = useState(''); const [c, setC] = useState('');
   const [err, setErr] = useState<string | null>(null);

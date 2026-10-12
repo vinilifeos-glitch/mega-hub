@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
-import { Icon, colors, s } from './ui';
+import { Icon, useColors, useStyles } from './ui';
 import { useApp } from '../state/AppContext';
 import { dictionaries } from '../i18n';
 
@@ -13,6 +13,7 @@ export function DateField({ label, value, onChange, testID, placeholder, limit, 
   label: string; value: string; onChange: (v: string) => void; testID?: string; placeholder?: string;
   limit?: 'past' | 'future'; onSubmit?: () => void;
 }) {
+  const colors = useColors(); const s = useStyles();
   const { t, language } = useApp();
   const cal = dictionaries[language].calendar;
   const MONTHS = cal.months;
@@ -60,7 +61,7 @@ export function DateField({ label, value, onChange, testID, placeholder, limit, 
                   onPress={() => { onChange(`${pad(n)}/${pad(view.m + 1)}/${view.y}`); setOpen(false); }}
                   style={{ width: `${100 / 7}%`, height: 36, alignItems: 'center', justifyContent: 'center' }}>
                   <View style={{ width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: isSel ? colors.primary : 'transparent', borderWidth: isToday && !isSel ? 1 : 0, borderColor: colors.primary }}>
-                    <Text style={{ color: isSel ? '#fff' : off ? colors.subtle : colors.text, fontWeight: isSel ? '700' : '400' }}>{n}</Text>
+                    <Text style={{ color: isSel ? colors.onPrimary : off ? colors.subtle : colors.text, fontWeight: isSel ? '700' : '400' }}>{n}</Text>
                   </View>
                 </Pressable>
               );
