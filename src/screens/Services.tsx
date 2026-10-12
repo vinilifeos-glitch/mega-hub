@@ -123,52 +123,59 @@ function ServiceDetail({ service: sv, msg, onBack, onEdit, onDeleted }: { servic
   );
 }
 
+type Row = { id: string; dep: string; role: string; assigneeId?: string };
+let rowSeq = 0;
+const newRowId = () => `r${++rowSeq}`;
+
 function ServiceForm({ service, onClose }: { service?: Service; onClose: (msg?: string, id?: string) => void }) {
   const colors = useColors(); const s = useStyles();
-  const { data, saveService, t, deptName, roleName } = useMe();
-  const defaults = (): Slot[] => data.departments.flatMap(d => d.positions.map(p => ({ departmentId: d.id, position: p, count: DOUBLE[`${d.id}:${p}`] ?? 1 })));
+  const { data, saveService, canManage, t, deptName, roleName } = useMe();
   const [title, setTitle] = useState(service?.title ?? t('services.defaultName'));
   const [location, setLocation] = useState(service?.location ?? data.settings?.lastLocation ?? '');
   const [date, setDate] = useState(isoToDdmm(service?.date ?? upcomingSundayIso()));
   const [start, setStart] = useState(service?.start ?? '16:00');
   const [end, setEnd] = useState(service?.end ?? '21:00');
-  const [slots, setSlots] = useState<Slot[]>(service?.slots ?? defaults());
+  // Form state: flat list of slot rows; converted back to Slot[] + picks on save (data shape unchanged)
+  const [rows, setRows] = useState<Row[]>(() => {
+    const src: Slot[] = service?.slots ?? data.departments.flatMap(d => d.positions.map(p => ({ departmentId: d.id, position: p, count: DOUBLE[`${d.id}:${p}`] ?? 1 })));
+    const asg = data.assignments.filter(a => a.serviceId === service?.id);
+    return src.flatMap(z => Array.from({ length: z.count }, (_, i) => ({ id: newRowId(), dep: z.departmentId, role: z.position,
+      assigneeId: asg.find(a => a.departmentId === z.departmentId && a.position === z.position && a.index === i)?.userId })));
+  });
   const [err, setErr] = useState<string | null>(null);
-  const [picks, setPicks] = useState<Record<string, string>>(() => Object.fromEntries(
-    data.assignments.filter(a => a.serviceId === service?.id).map(a => [`${a.departmentId}:${a.position}:${a.index}`, a.userId])));
   const [notice, setNotice] = useState<string | null>(null);
   const [openPick, setOpenPick] = useState<string | null>(null);
-  const [openSlots, setOpenSlots] = useState<string | null>(null); // UI only: which dept's slot editor is expanded
-  const [openAssign, setOpenAssign] = useState<string | null>(null); // UI only: which dept's assign list is expanded
+  const [openAdd, setOpenAdd] = useState<string | null>(null);
+  const [openDept, setOpenDept] = useState<string | null>(null);
   const iso = toIso(date);
   const userById = (id: string) => data.users.find(u => u.id === id);
-  const eligible = (dep: string, pos: string, key: string) => data.users.filter(u => u.active && u.departmentIds.includes(dep)
-    && (u.positions?.[dep] ?? []).includes(pos) && !awayOn(u, iso)
-    && !Object.entries(picks).some(([k, v]) => v === u.id && k !== key));
-  // re-check picks whenever the date or slots change
+  const addSlot = (dep: string, role: string) => { if (canManage(dep)) setRows(r => [...r, { id: newRowId(), dep, role }]); };
+  const removeSlot = (id: string) => setRows(r => r.filter(x => x.id !== id || !canManage(x.dep)));
+  const assign = (slotId: string, userId: string | null) => setRows(r => r.map(x => x.id === slotId && canManage(x.dep) ? { ...x, assigneeId: userId ?? undefined } : x));
+  const eligibleFor = (slotId: string) => {
+    const row = rows.find(x => x.id === slotId); if (!row) return [];
+    return data.users.filter(u => u.active && u.departmentIds.includes(row.dep) && (u.positions?.[row.dep] ?? []).includes(row.role)
+      && !awayOn(u, iso) && !rows.some(x => x.id !== slotId && x.assigneeId === u.id));
+  };
+  // drop picks that became unavailable when the date changes
   useEffect(() => {
     const bad: string[] = [];
-    const next = Object.fromEntries(Object.entries(picks).filter(([k, uid]) => {
-      const [dep, pos, idx] = k.split(':'); const sl = slots.find(z => z.departmentId === dep && z.position === pos);
-      const u = userById(uid);
-      const ok = !!sl && +idx < sl.count && !!u && !awayOn(u, iso);
-      if (!ok && u) bad.push(`${displayName(u)} (${roleName(dep, pos)})`);
-      return ok;
-    }));
-    if (bad.length) { setPicks(next); setNotice(t('services.removedPicks', { names: bad.join(', ') })); }
+    const next = rows.map(x => { const u = x.assigneeId ? userById(x.assigneeId) : undefined;
+      if (u && awayOn(u, iso)) { bad.push(`${displayName(u)} (${roleName(x.dep, x.role)})`); return { ...x, assigneeId: undefined }; } return x; });
+    if (bad.length) { setRows(next); setNotice(t('services.removedPicks', { names: bad.join(', ') })); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [iso, slots]);
-  const setCount = (dep: string, pos: string, c: number) => setSlots(prev => {
-    const has = prev.some(z => z.departmentId === dep && z.position === pos);
-    if (c <= 0) return prev.filter(z => !(z.departmentId === dep && z.position === pos));
-    return has ? prev.map(z => z.departmentId === dep && z.position === pos ? { ...z, count: Math.min(c, 10) } : z) : [...prev, { departmentId: dep, position: pos, count: c }];
-  });
+  }, [iso]);
   const save = () => {
     if (!iso) return setErr(t('errors.dateInvalid'));
     if (!service && iso < todayIso()) return setErr(t('errors.datePast'));
-    const sid = service?.id ?? null;
-    const pk = Object.entries(picks).map(([k, userId]) => { const [departmentId, position, index] = k.split(':'); return { departmentId, position, index: +index, userId }; });
-    const e = saveService(sid, { title, location, date: iso, start, end, slots }, pk);
+    const slots: Slot[] = []; const pk: { departmentId: string; position: string; index: number; userId: string }[] = [];
+    for (const d of data.departments) for (const p of [...d.positions, ...rows.filter(x => x.dep === d.id && !d.positions.includes(x.role)).map(x => x.role)].filter((v, i, a) => a.indexOf(v) === i)) {
+      const rs = rows.filter(x => x.dep === d.id && x.role === p);
+      if (!rs.length) continue;
+      slots.push({ departmentId: d.id, position: p, count: rs.length });
+      rs.forEach((x, i) => { if (x.assigneeId) pk.push({ departmentId: d.id, position: p, index: i, userId: x.assigneeId }); });
+    }
+    const e = saveService(service?.id ?? null, { title, location, date: iso, start, end, slots }, pk);
     if (e) return setErr(e);
     onClose(service ? t('services.updated') : t('services.created'));
   };
@@ -183,72 +190,49 @@ function ServiceForm({ service, onClose }: { service?: Service; onClose: (msg?: 
           <View style={{ flex: 1 }}><Field label={t('fields.end')} value={end} keyboardType="number-pad" maxLength={5} onChangeText={v => setEnd(formatTimeInput(v))} testID="sv-end" /></View>
         </View>
       </Card>
-      <Text style={s.section}>{t('services.requiredSlots')}</Text>
-      {data.departments.map(d => {
-        const missing = d.positions.filter(p => !slots.some(z => z.departmentId === d.id && z.position === p));
-        const mine = slots.filter(z => z.departmentId === d.id);
-        return (
-          <Card key={d.id} style={{ borderLeftWidth: 3, borderLeftColor: d.color }}>
-            <Pressable testID={`sl-toggle-${d.id}`} accessibilityRole="button" accessibilityState={{ expanded: openSlots === d.id }} accessibilityLabel={t('services.slotsA11y', { dept: deptName(d.id) })} onPress={() => setOpenSlots(openSlots === d.id ? null : d.id)} style={[s.row, { justifyContent: 'space-between', flexWrap: 'nowrap', minHeight: 44 }]}>
-              <View style={{ flex: 1 }}>
-                <DeptTitle dep={d} suffix={` · ${mine.reduce((n, z) => n + z.count, 0)}`} />
-                {openSlots !== d.id && <Text style={[s.small, { marginTop: 4 }]} numberOfLines={2}>{mine.length ? mine.map(z => z.count > 1 ? `${roleName(d.id, z.position)} ×${z.count}` : roleName(d.id, z.position)).join(', ') : t('services.noSlots')}</Text>}
-              </View>
-              <Icon name={openSlots === d.id ? 'chevron-up' : 'chevron-down'} size={20} />
-            </Pressable>
-            {openSlots === d.id && mine.map(z => (
-              <View key={z.position} style={[s.row, { justifyContent: 'space-between', paddingVertical: 6 }]}>
-                <Text style={{ color: colors.text, flex: 1 }}>{roleName(d.id, z.position)}</Text>
-                <View style={[s.row, { flexWrap: 'nowrap' }]}>
-                  <IconButton testID={`sl-minus-${d.id}-${z.position}`} icon="remove-circle-outline" label={t('services.fewer', { role: roleName(d.id, z.position) })} color={d.color} onPress={() => setCount(d.id, z.position, z.count - 1)} />
-                  <Text style={{ width: 24, textAlign: 'center', fontWeight: '700', marginRight: 8, color: colors.text }} testID={`sl-count-${d.id}-${z.position}`}>{z.count}</Text>
-                  <IconButton testID={`sl-plus-${d.id}-${z.position}`} icon="add-circle-outline" label={t('services.more', { role: roleName(d.id, z.position) })} color={d.color} onPress={() => setCount(d.id, z.position, z.count + 1)} />
-                  <Chip label={t('common.remove')} color={colors.red} onPress={() => setCount(d.id, z.position, 0)} />
-                </View>
-              </View>
-            ))}
-            {openSlots === d.id && missing.length > 0 && <>
-              <Text style={[s.small, { marginTop: 6, marginBottom: 6 }]}>{t('services.addSlot')}</Text>
-              <View style={s.row}>{missing.map(p => <Chip key={p} testID={`sl-add-${d.id}-${p}`} label={`+ ${roleName(d.id, p)}`} color={d.color} onPress={() => setCount(d.id, p, 1)} />)}</View>
-            </>}
-          </Card>
-        );
-      })}
-      <Text style={s.section}>{t('services.assignPeople')}</Text>
+      <Text style={s.section}>{t('services.slotsAndPeople')}</Text>
       <Text style={[s.small, { marginBottom: 8 }]}>{t('services.assignHint', { date: iso ? isoToDdmm(iso) : t('services.thatDate') })}</Text>
       {notice && <Card style={{ backgroundColor: colors.amberSoft, borderColor: colors.amberSoft }}><Text testID="sv-notice" style={{ color: colors.text }}>{notice}</Text></Card>}
       {data.departments.map(d => {
-        const mine = slots.filter(z => z.departmentId === d.id);
-        if (!mine.length) return null;
+        const mine = rows.filter(x => x.dep === d.id);
+        const manage = canManage(d.id);
+        const open = openDept === d.id;
         return (
-          <Card key={d.id} style={{ borderLeftWidth: 3, borderLeftColor: d.color }}>
-            <Pressable testID={`as-toggle-${d.id}`} accessibilityRole="button" accessibilityState={{ expanded: openAssign === d.id }} accessibilityLabel={t('services.assignA11y', { dept: deptName(d.id) })} onPress={() => setOpenAssign(openAssign === d.id ? null : d.id)} style={[s.row, { justifyContent: 'space-between', flexWrap: 'nowrap', minHeight: 44 }]}>
+          <Card key={d.id} style={{ borderLeftWidth: 3, borderLeftColor: d.color, opacity: manage ? 1 : 0.6 }}>
+            <Pressable testID={`dept-toggle-${d.id}`} accessibilityRole="button" accessibilityState={{ expanded: open }} accessibilityLabel={t('services.slotsA11y', { dept: deptName(d.id) })} onPress={() => setOpenDept(open ? null : d.id)} style={[s.row, { justifyContent: 'space-between', flexWrap: 'nowrap', minHeight: 44 }]}>
               <View style={{ flex: 1 }}>
                 <DeptTitle dep={d} />
-                <Text style={[s.small, { marginTop: 4 }]}>{t('services.assignedCount', { n: Object.keys(picks).filter(k => k.startsWith(d.id + ':')).length, total: mine.reduce((n, z) => n + z.count, 0) })}</Text>
+                <Text style={[s.small, { marginTop: 4 }]} testID={`dept-status-${d.id}`}>{mine.length ? t('services.assignedCount', { n: mine.filter(x => x.assigneeId).length, total: mine.length }) : t('services.noSlots')}{manage ? '' : ` · ${t('common.viewOnly')}`}</Text>
               </View>
-              <Icon name={openAssign === d.id ? 'chevron-up' : 'chevron-down'} size={20} />
+              <Icon name={open ? 'chevron-up' : 'chevron-down'} size={20} />
             </Pressable>
-            {openAssign === d.id && mine.flatMap(z => Array.from({ length: z.count }, (_, i) => {
-              const key = `${d.id}:${z.position}:${i}`; const who = picks[key] ? userById(picks[key]) : undefined;
-              const opts = eligible(d.id, z.position, key);
+            {open && mine.map(x => {
+              const same = mine.filter(y => y.role === x.role); const n = same.indexOf(x);
+              const who = x.assigneeId ? userById(x.assigneeId) : undefined;
+              const opts = eligibleFor(x.id);
               return (
-                <View key={key} style={{ borderTopWidth: 1, borderTopColor: colors.border, paddingVertical: 8 }}>
-                  <View style={[s.row, { justifyContent: 'space-between' }]}>
-                    <Text style={{ fontWeight: '600', color: colors.text }}>{roleName(d.id, z.position)}{z.count > 1 ? ` ${i + 1}` : ''}</Text>
-                    <Pressable testID={`fp-${d.id}-${z.position}-${i}`} onPress={() => setOpenPick(openPick === key ? null : key)}>
-                      <Text style={{ color: who ? colors.text : colors.primary, fontWeight: '600' }}>{who ? `${displayName(who)} ▾` : t('services.assign')}</Text>
+                <View key={x.id} testID={`row-${d.id}-${x.role}-${n}`} style={{ borderTopWidth: 1, borderTopColor: colors.border, paddingVertical: 6 }}>
+                  <View style={[s.row, { flexWrap: 'nowrap', alignItems: 'center' }]}>
+                    <Text style={[s.small, { flex: 1, color: colors.text }]}>{roleName(d.id, x.role)}{same.length > 1 ? ` ${n + 1}` : ''}</Text>
+                    <Pressable testID={`fp-${d.id}-${x.role}-${n}`} disabled={!manage} onPress={() => setOpenPick(openPick === x.id ? null : x.id)}
+                      style={{ borderWidth: 1, borderColor: colors.border, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 6, marginRight: 6 }}>
+                      <Text style={{ color: who ? colors.text : colors.muted, fontWeight: '600' }}>{who ? `${displayName(who)} ▾` : t('services.assign')}</Text>
                     </Pressable>
+                    {manage && <IconButton testID={`rm-${d.id}-${x.role}-${n}`} icon="close" label={t('services.removeSlot')} color={colors.red} onPress={() => removeSlot(x.id)} />}
                   </View>
-                  {openPick === key && <View style={[s.row, { marginTop: 8 }]}>
+                  {openPick === x.id && manage && <View style={[s.row, { marginTop: 8 }]}>
                     {opts.length === 0 && <Text style={s.small}>{t('services.noneAvailable')}</Text>}
                     {opts.map(u => <Chip key={u.id} testID={`fpick-${u.username}`} label={displayName(u)} color={d.color} active={who?.id === u.id}
-                      onPress={() => { setPicks({ ...picks, [key]: u.id }); setOpenPick(null); setNotice(null); }} />)}
-                    {who && <Chip label={t('services.leaveUnfilled')} color={colors.red} onPress={() => { const n = { ...picks }; delete n[key]; setPicks(n); setOpenPick(null); }} />}
+                      onPress={() => { assign(x.id, u.id); setOpenPick(null); setNotice(null); }} />)}
+                    {who && <Chip label={t('services.leaveUnfilled')} color={colors.red} onPress={() => { assign(x.id, null); setOpenPick(null); }} />}
                   </View>}
                 </View>
               );
-            }))}
+            })}
+            {open && manage && <>
+              <Button label={t('services.addRole')} outline onPress={() => setOpenAdd(openAdd === d.id ? null : d.id)} testID={`add-role-${d.id}`} />
+              {openAdd === d.id && <View style={s.row}>{d.positions.map(p => <Chip key={p} testID={`sl-add-${d.id}-${p}`} label={`+ ${roleName(d.id, p)}`} color={d.color} onPress={() => { addSlot(d.id, p); setOpenAdd(null); }} />)}</View>}
+            </>}
           </Card>
         );
       })}

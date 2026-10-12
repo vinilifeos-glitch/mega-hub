@@ -47,7 +47,7 @@ export const en = {
     createService: 'Create service', saveService: 'Save service', created: 'Service created.', updated: 'Service updated.', deleted: 'Service deleted.',
     emptyOwner: 'No upcoming services yet. Tap “New service” to add one.', empty: 'No upcoming services yet. Check back soon.',
     youreServing: "You're serving: {roles}", defaultName: 'Sunday Service', formSubtitle: "Set the date, time and who's needed.",
-    requiredSlots: 'Required slots', addSlot: 'Add a slot:', fewer: 'Fewer {role}', more: 'More {role}',
+    requiredSlots: 'Required slots', slotsAndPeople: 'Slots & people', addRole: '+ Add role', removeSlot: 'Remove slot', addSlot: 'Add a slot:', fewer: 'Fewer {role}', more: 'More {role}',
     assignPeople: 'Assign people (optional)', assignHint: "Only people who hold the role, aren't away on {date} and aren't already in another slot are listed. Leave slots empty for admins to fill later.",
     thatDate: 'that date', assign: 'Assign ▾', leaveUnfilled: 'Leave unfilled', noneEligible: 'No one eligible for {role}.', nobodyHolds: 'Nobody holds {role} yet.',
     removedPicks: 'Removed {names} — unavailable on the new date or slot removed.',
