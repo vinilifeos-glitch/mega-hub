@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
-import { colors, s } from './ui';
+import { Icon, colors, s } from './ui';
 
 /** Shared date input: type DD/MM/YYYY (slashes auto-inserted) or pick from the calendar. Value is always DD/MM/YYYY or ''. */
 const fmtTyped = (raw: string) => { const g = raw.replace(/\D/g, '').slice(0, 8); return [g.slice(0, 2), g.slice(2, 4), g.slice(4)].filter(Boolean).join('/'); };
@@ -35,7 +35,7 @@ export function DateField({ label, value, onChange, testID, placeholder, limit, 
           style={[s.input, { flex: 1 }]} testID={testID} />
         <Pressable onPress={() => { if (sel) setView({ y: sel.getFullYear(), m: sel.getMonth() }); setOpen(!open); }} testID={testID ? `${testID}-cal` : undefined}
           style={{ marginLeft: 8, borderWidth: 1, borderColor: colors.border, borderRadius: 12, width: 48, height: 48, alignItems: 'center', justifyContent: 'center', marginTop: 6, backgroundColor: open ? colors.primarySoft : colors.card }}>
-          <Text style={{ fontSize: 18 }}>📅</Text>
+          <Icon name={open ? 'calendar' : 'calendar-outline'} size={22} color={colors.primary} />
         </Pressable>
       </View>
       {open && (

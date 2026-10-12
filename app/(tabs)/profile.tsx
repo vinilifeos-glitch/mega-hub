@@ -29,7 +29,7 @@ export default function MyProfile() {
     </Screen>
   );
   return (
-    <Screen title="My Profile" subtitle="Your personal details.">
+    <Screen title="My profile" subtitle="Your personal details.">
       {msg && <Notice text={msg} />}
       <PersonalInfo user={me} title={me.name} />
       <Button label="Edit my details" onPress={() => { setMsg(null); setF(init()); setMode('edit'); }} testID="edit-me" />

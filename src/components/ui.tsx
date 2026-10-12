@@ -1,6 +1,24 @@
 import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View, ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+
+/* ── Icons (Ionicons only) ──────────────────────────────────── */
+export type IconName = React.ComponentProps<typeof Ionicons>['name'];
+export function Icon({ name, size = 18, color = colors.muted, style }: { name: IconName; size?: number; color?: string; style?: any }) {
+  return <Ionicons name={name} size={size} color={color} style={style} />;
+}
+const DEPT_ICONS: Record<string, IconName> = { 'd-music': 'musical-notes-outline', 'd-kids': 'happy-outline', 'd-obreiros': 'people-outline' };
+export const deptIcon = (id: string): IconName => DEPT_ICONS[id] ?? 'grid-outline';
+/** Department heading: icon in the department colour + name. */
+export function DeptTitle({ dep, suffix, style }: { dep: { id: string; name: string; color: string }; suffix?: string; style?: any }) {
+  return (
+    <View style={[{ flexDirection: 'row', alignItems: 'center', flexShrink: 1 }, style]}>
+      <Icon name={deptIcon(dep.id)} size={20} color={dep.color} style={{ marginRight: 8 }} />
+      <Text style={type.h2}>{dep.name}{suffix ?? ''}</Text>
+    </View>
+  );
+}
 
 /* ── Design tokens ─────────────────────────────────────────────
    One neutral palette + a single accent. Status colours are only
@@ -54,12 +72,15 @@ export function Card({ children, style }: { children: React.ReactNode; style?: V
 }
 
 /* ── Controls ───────────────────────────────────────────────── */
-export function Chip({ label, active, onPress, color, testID }: { label: string; active?: boolean; onPress?: () => void; color?: string; testID?: string }) {
+export function Chip({ label, active, onPress, color, testID, icon }: { label: string; active?: boolean; onPress?: () => void; color?: string; testID?: string; icon?: IconName }) {
   const c = color ?? colors.primary;
   return (
     <Pressable testID={testID} onPress={onPress} disabled={!onPress}
       style={({ pressed }) => [s.chip, active ? { backgroundColor: c, borderColor: c } : { borderColor: colors.border, backgroundColor: pressed ? colors.soft : colors.card }]}>
-      <Text style={{ color: active ? '#fff' : !onPress ? colors.subtle : colors.text, fontWeight: '500', fontSize: 14 }}>{label}</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        {icon ? <Icon name={icon} size={16} color={active ? '#fff' : !onPress ? colors.subtle : c} style={{ marginRight: 6 }} /> : null}
+        <Text style={{ color: active ? '#fff' : !onPress ? colors.subtle : colors.text, fontWeight: '500', fontSize: 14 }}>{label}</Text>
+      </View>
     </Pressable>
   );
 }
@@ -90,10 +111,10 @@ export function Field(props: React.ComponentProps<typeof TextInput> & { label: s
 }
 
 /* ── Feedback ───────────────────────────────────────────────── */
-export function Empty({ text, icon }: { text: string; icon?: string }) {
+export function Empty({ text, icon }: { text: string; icon?: IconName }) {
   return (
     <View style={s.empty}>
-      <Text style={{ fontSize: 32, marginBottom: space.sm }}>{icon ?? '🌿'}</Text>
+      <Icon name={icon ?? 'file-tray-outline'} size={36} color={colors.subtle} style={{ marginBottom: space.sm }} />
       <Text style={{ ...type.small, textAlign: 'center', maxWidth: 280 }}>{text}</Text>
     </View>
   );

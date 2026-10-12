@@ -2,7 +2,7 @@ import { DateField } from '../../src/components/DateField';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { formatDobInput, useMe } from '../../src/state/AppContext';
-import { Button, Card, Chip, Empty, Field, Screen, colors, s, Notice } from '../../src/components/ui';
+import { Button, DeptTitle, deptIcon, Card, Chip, Empty, Field, Screen, colors, s, Notice } from '../../src/components/ui';
 import { User } from '../../src/types';
 import { toIso, todayIso } from '../../src/data/dates';
 
@@ -26,19 +26,19 @@ export default function Team() {
     </Pressable>
   );
   return (
-    <Screen title="Team" subtitle="People in the departments you administer">
+    <Screen title="Team" subtitle="People in the departments you administer.">
       {msg && <Notice text={msg} />}
       {deps.map(d => {
         const members = data.users.filter(u => u.active && u.departmentIds.includes(d.id));
         return (
           <Card key={d.id} style={{ borderLeftWidth: 3, borderLeftColor: d.color }}>
-            <Text style={s.h2}>{d.emoji}  {d.name} · {members.length}</Text>
+            <DeptTitle dep={d} suffix={` · ${members.length}`} />
             {members.length ? members.map(u => row(u, d.id)) : <Text style={s.small}>No one yet. Add people from the list below.</Text>}
           </Card>
         );
       })}
       {unassigned.length > 0 && <Card>
-        <Text style={s.h2}>Not in a department yet</Text>
+        <Text style={s.h2}>Not in a department yet.</Text>
         {unassigned.map(u => row(u))}
       </Card>}
     </Screen>
@@ -55,7 +55,7 @@ function MemberEditor({ user, onClose }: { user: User; onClose: (m?: string) => 
   const dates = (live.unavailable ?? []).filter(x => x >= todayIso());
   const toggleRole = (dep: string, r: string) => setDm(p => ({ ...p, [dep]: (p[dep] ?? []).includes(r) ? p[dep]!.filter(x => x !== r) : [...(p[dep] ?? []), r] }));
   return (
-    <Screen title={`Edit ${user.name}`} subtitle="Username, password and access are managed by Vini">
+    <Screen title={`Edit ${user.name}`} subtitle="Username, password and access are managed by Vini.">
       <Card>
         <Field label="First name" value={f.firstName} onChangeText={v => setF({ ...f, firstName: v })} autoCapitalize="words" testID="m-first" />
         <Field label="Middle names (optional)" value={f.middleNames} onChangeText={v => setF({ ...f, middleNames: v })} autoCapitalize="words" />
@@ -68,7 +68,7 @@ function MemberEditor({ user, onClose }: { user: User; onClose: (m?: string) => 
         const inDep = dm[d.id] !== null;
         return (
           <Card key={d.id} style={{ borderLeftWidth: 3, borderLeftColor: inDep ? d.color : colors.border }}>
-            <Chip testID={`m-dep-${d.id}`} label={`${inDep ? '✓ ' : ''}${d.emoji} ${d.name}`} color={d.color} active={inDep} onPress={() => setDm({ ...dm, [d.id]: inDep ? null : [] })} />
+            <Chip testID={`m-dep-${d.id}`} icon={inDep ? 'checkmark' : deptIcon(d.id)} label={d.name} color={d.color} active={inDep} onPress={() => setDm({ ...dm, [d.id]: inDep ? null : [] })} />
             {inDep && <View style={s.row}>{d.positions.map(r => <Chip key={r} testID={`m-role-${d.id}-${r}`} label={r} color={d.color} active={dm[d.id]!.includes(r)} onPress={() => toggleRole(d.id, r)} />)}</View>}
           </Card>
         );
@@ -84,7 +84,7 @@ function MemberEditor({ user, onClose }: { user: User; onClose: (m?: string) => 
         }} />
         {dates.length === 0 ? <Text style={[s.small, { marginTop: 8 }]}>No unavailable dates.</Text> : dates.map(iso => (
           <View key={iso} style={[s.row, { justifyContent: 'space-between', marginTop: 8 }]}>
-            <Text style={{ color: colors.text }}>✕ {iso.split('-').reverse().join('/')}</Text>
+            <Text style={{ color: colors.text }}>{iso.split('-').reverse().join('/')}</Text>
             <Pressable onPress={() => removeUnavailable(iso, user.id)}><Text style={{ color: colors.red, fontWeight: '700' }}>Remove</Text></Pressable>
           </View>
         ))}

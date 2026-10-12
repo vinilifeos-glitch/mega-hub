@@ -2,7 +2,7 @@ import { DateField } from '../../src/components/DateField';
 import { useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { AccountInput, formatDobInput, useMe, validContact, validDob } from '../../src/state/AppContext';
-import { Button, Card, Chip, Empty, Field, Screen, colors, s, Notice } from '../../src/components/ui';
+import { Button, deptIcon, Card, Chip, Empty, Field, Screen, colors, s, Notice } from '../../src/components/ui';
 import { Role, User } from '../../src/types';
 import { toIso, todayIso } from '../../src/data/dates';
 
@@ -36,14 +36,14 @@ export default function Accounts() {
   const filtered = q !== '' || dep !== 'all' || !!pos || !!tier;
   return (
     <Screen title="Accounts" subtitle={`${data.users.filter(u => u.active).length} active accounts`}>
-      <Button label="+ New account" onPress={() => { setNotice(null); setMode({ kind: 'new' }); }} testID="newaccount" />
+      <Button label="New account" onPress={() => { setNotice(null); setMode({ kind: 'new' }); }} testID="newaccount" />
       {notice && <Card style={{ backgroundColor: '#ECFDF5', borderColor: '#A7F3D0', marginTop: 12 }}><Text selectable>{notice}</Text></Card>}
       <Card style={{ marginTop: 12 }}>
         <Field label="Search by name or username" value={q} onChangeText={setQ} placeholder="e.g. vitoria" testID="acc-search" />
         <Text style={s.section}>Department</Text>
         <View style={s.row}>
           <Chip label="All" active={dep === 'all'} onPress={() => { setDep('all'); setPos(null); }} testID="f-dep-all" />
-          {data.departments.map(d => <Chip key={d.id} testID={`f-dep-${d.id}`} label={`${d.emoji} ${d.name}`} color={d.color} active={dep === d.id} onPress={() => { setDep(d.id); setPos(null); }} />)}
+          {data.departments.map(d => <Chip key={d.id} testID={`f-dep-${d.id}`} icon={deptIcon(d.id)} label={d.name} color={d.color} active={dep === d.id} onPress={() => { setDep(d.id); setPos(null); }} />)}
           <Chip label="No department" active={dep === 'none'} onPress={() => { setDep('none'); setPos(null); }} testID="f-dep-none" />
         </View>
         {selDep && <>
@@ -130,7 +130,7 @@ function FullEditor({ user, onClose }: { user: User; onClose: (m?: string) => vo
         <View style={[s.row, { marginTop: 6 }]}>{allowedRoles.map(r => <Chip key={r} testID={`e-tier-${r}`} label={roleName[r]} active={role === r} onPress={() => !self && setRole(r)} />)}</View>
         {role === 'admin' && <>
           <Text style={s.small}>Administers departments</Text>
-          <View style={[s.row, { marginTop: 6 }]}>{data.departments.map(d => <Chip key={d.id} testID={`e-adminof-${d.id}`} label={`${d.emoji} ${d.name}`} color={d.color} active={adminOf.includes(d.id)} onPress={() => setAdminOf(toggle(adminOf, d.id))} />)}</View>
+          <View style={[s.row, { marginTop: 6 }]}>{data.departments.map(d => <Chip key={d.id} testID={`e-adminof-${d.id}`} icon={deptIcon(d.id)} label={d.name} color={d.color} active={adminOf.includes(d.id)} onPress={() => setAdminOf(toggle(adminOf, d.id))} />)}</View>
         </>}
         <Text style={s.small}>Status</Text>
         <View style={[s.row, { marginTop: 6 }]}>
@@ -144,7 +144,7 @@ function FullEditor({ user, onClose }: { user: User; onClose: (m?: string) => vo
         const inDep = depIds.includes(d.id);
         return (
           <Card key={d.id} style={{ borderLeftWidth: 3, borderLeftColor: inDep ? d.color : colors.border }}>
-            <Chip testID={`e-dep-${d.id}`} label={`${inDep ? '✓ ' : ''}${d.emoji} ${d.name}`} color={d.color} active={inDep}
+            <Chip testID={`e-dep-${d.id}`} icon={inDep ? 'checkmark' : deptIcon(d.id)} label={d.name} color={d.color} active={inDep}
               onPress={() => { setDepIds(toggle(depIds, d.id)); if (!positions[d.id]) setPositions({ ...positions, [d.id]: [] }); }} />
             {inDep && <View style={s.row}>{d.positions.map(r => <Chip key={r} testID={`e-role-${d.id}-${r}`} label={r} color={d.color} active={(positions[d.id] ?? []).includes(r)}
               onPress={() => setPositions({ ...positions, [d.id]: toggle(positions[d.id] ?? [], r) })} />)}</View>}
@@ -160,7 +160,7 @@ function FullEditor({ user, onClose }: { user: User; onClose: (m?: string) => vo
         }} />
         {dates.length === 0 ? <Text style={[s.small, { marginTop: 8 }]}>No unavailable dates.</Text> : dates.map(iso => (
           <View key={iso} style={[s.row, { justifyContent: 'space-between', marginTop: 8 }]}>
-            <Text style={{ color: colors.text }}>✕ {iso.split('-').reverse().join('/')}</Text>
+            <Text style={{ color: colors.text }}>{iso.split('-').reverse().join('/')}</Text>
             <Pressable onPress={() => setDates(dates.filter(x => x !== iso))}><Text style={{ color: colors.red, fontWeight: '700' }}>Remove</Text></Pressable>
           </View>
         ))}
@@ -210,7 +210,7 @@ function NewAccount({ onClose }: { onClose: (m?: string) => void }) {
         {taken && <Text style={{ color: colors.red, marginTop: -6, marginBottom: 8 }} testID="n-taken">@{username.trim()} is already taken — choose another.</Text>}
         <Field label="Password" value={pw} onChangeText={setPw} secureTextEntry testID="n-password" />
         <View style={s.row}>
-          <Chip label={mustChange ? '✓ Ask them to change it at first sign-in' : 'Ask them to change it at first sign-in'} active={mustChange} onPress={() => setMustChange(!mustChange)} testID="n-mustchange" />
+          <Chip icon={mustChange ? 'checkmark' : 'square-outline'} label="Ask them to change it at first sign-in" active={mustChange} onPress={() => setMustChange(!mustChange)} testID="n-mustchange" />
         </View>
       </Card>
       {sec('Access')}
@@ -219,7 +219,7 @@ function NewAccount({ onClose }: { onClose: (m?: string) => void }) {
         <View style={[s.row, { marginTop: 6 }]}>{allowedRoles.map(r => <Chip key={r} testID={`n-tier-${r}`} label={roleName[r]} active={role === r} onPress={() => setRole(r)} />)}</View>
         {role === 'admin' && <>
           <Text style={s.small}>Administers departments</Text>
-          <View style={[s.row, { marginTop: 6 }]}>{data.departments.map(d => <Chip key={d.id} testID={`n-adminof-${d.id}`} label={`${d.emoji} ${d.name}`} color={d.color} active={adminOf.includes(d.id)} onPress={() => setAdminOf(toggle(adminOf, d.id))} />)}</View>
+          <View style={[s.row, { marginTop: 6 }]}>{data.departments.map(d => <Chip key={d.id} testID={`n-adminof-${d.id}`} icon={deptIcon(d.id)} label={d.name} color={d.color} active={adminOf.includes(d.id)} onPress={() => setAdminOf(toggle(adminOf, d.id))} />)}</View>
         </>}
       </Card>
       {sec('Departments & roles')}
@@ -227,7 +227,7 @@ function NewAccount({ onClose }: { onClose: (m?: string) => void }) {
         const inDep = depIds.includes(d.id);
         return (
           <Card key={d.id} style={{ borderLeftWidth: 3, borderLeftColor: inDep ? d.color : colors.border }}>
-            <Chip testID={`n-dep-${d.id}`} label={`${inDep ? '✓ ' : ''}${d.emoji} ${d.name}`} color={d.color} active={inDep}
+            <Chip testID={`n-dep-${d.id}`} icon={inDep ? 'checkmark' : deptIcon(d.id)} label={d.name} color={d.color} active={inDep}
               onPress={() => { setDepIds(toggle(depIds, d.id)); if (!positions[d.id]) setPositions({ ...positions, [d.id]: [] }); }} />
             {inDep && <View style={s.row}>{d.positions.map(r => <Chip key={r} testID={`n-role-${d.id}-${r}`} label={r} color={d.color} active={(positions[d.id] ?? []).includes(r)}
               onPress={() => setPositions({ ...positions, [d.id]: toggle(positions[d.id] ?? [], r) })} />)}</View>}

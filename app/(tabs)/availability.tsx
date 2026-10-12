@@ -23,7 +23,7 @@ export default function AvailabilityScreen() {
         <Button label="Add unavailable date" onPress={add} testID="unavail-add" />
       </Card>
       <Text style={s.section}>My unavailable dates</Text>
-      {dates.length === 0 && <Empty icon="✅" text="No dates added. You're available for every service." />}
+      {dates.length === 0 && <Empty icon="checkmark-circle-outline" text="No dates added. You're available for every service." />}
       {dates.map(iso => {
         const svcs = data.services.filter(sv => sv.date === iso);
         return (
