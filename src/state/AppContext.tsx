@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { AppData, Department, Resource, Role, Service, SetlistItem, Song, Theme, Unavailability, User, Assignment } from '../types';
-import { planAssign, AssignMode, roleConflict, newConflict } from '../data/rota';
+import { planAssign, AssignMode, sameRoleSlot, newSameRoleDup } from '../data/rota';
 import { NOTE_MAX, awayOn, covers, getUnavailableFor, rangeError } from '../data/unavailability';
 import { todayIso as todayIsoFn } from '../data/dates';
 import { repository, newerFromOtherTab, DATA_STORAGE_KEY } from '../data/repository';
@@ -409,8 +409,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (!sv || !u || !u.active) return t('errors.notFound');
         if (!(u.positions?.[departmentId] ?? []).includes(position)) return t('errors.doesntHoldRole', { name: u.firstName, role: position });
         if (awayOn(u, sv.date)) return t('errors.unavailableThatDay', { name: u.firstName });
-        { const tgt = `${serviceId}:${departmentId}:${position}:${index}`; const c = roleConflict(d.assignments.filter(a => a.serviceId === serviceId), userId, departmentId, position, tgt);
-          if (c) return t('errors.roleConflict', { name: u.firstName, role: roleLabel(c.departmentId, c.position, language) }); }
+        { const tgt = `${serviceId}:${departmentId}:${position}:${index}`; const c = sameRoleSlot(d.assignments.filter(a => a.serviceId === serviceId), userId, departmentId, position, tgt);
+          if (c) return t('errors.sameRole', { name: u.firstName, role: roleLabel(c.departmentId, c.position, language) }); }
         if (mode === 'swap') { const from = d.assignments.find(a => a.serviceId === serviceId && a.userId === userId && a.id !== `${serviceId}:${departmentId}:${position}:${index}`); if (from && !canManage(from.departmentId)) return t('errors.slotScope'); }
         const r = planAssign(d.assignments, { serviceId, departmentId, position, index, userId }, mode);
         if ('error' in r) return t('errors.alreadyServing', { name: u.firstName });
@@ -432,8 +432,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const sid = id ?? `svc-${Date.now().toString(36)}`;
         if (picks) {
           const nx = picks.map(pk => ({ id: `${sid}:${pk.departmentId}:${pk.position}:${pk.index}`, departmentId: pk.departmentId, position: pk.position, userId: pk.userId }));
-          const nc = newConflict(nx, x0().assignments.filter(a => a.serviceId === sid));
-          if (nc) { const u = x0().users.find(z => z.id === nc[0].userId); return t('errors.roleConflict', { name: u?.firstName ?? '?', role: roleLabel(nc[1].departmentId, nc[1].position, language) }); }
+          const nc = newSameRoleDup(nx, x0().assignments.filter(a => a.serviceId === sid));
+          if (nc) { const u = x0().users.find(z => z.id === nc[0].userId); return t('errors.sameRole', { name: u?.firstName ?? '?', role: roleLabel(nc[1].departmentId, nc[1].position, language) }); }
         }
         update(x => ({
           ...x,
