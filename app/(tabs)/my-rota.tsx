@@ -1,9 +1,9 @@
 import { Text } from 'react-native';
-import { useApp } from '../../src/state/AppContext';
+import { useMe } from '../../src/state/AppContext';
 import { Card, Empty, Screen, formatDate, s } from '../../src/components/ui';
 
 export default function MyRota() {
-  const { data, currentUser } = useApp();
+  const { data, currentUser } = useMe();
   const mine = data.assignments
     .filter(a => a.userId === currentUser.id)
     .map(a => ({ a, sv: data.services.find(x => x.id === a.serviceId)!, dep: data.departments.find(d => d.id === a.departmentId)! }))

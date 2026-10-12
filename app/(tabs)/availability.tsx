@@ -1,9 +1,9 @@
 import { Text, View } from 'react-native';
-import { useApp } from '../../src/state/AppContext';
+import { useMe } from '../../src/state/AppContext';
 import { Card, Chip, Screen, colors, formatDate, s } from '../../src/components/ui';
 
 export default function AvailabilityScreen() {
-  const { data, currentUser, isAvailable, setAvailability } = useApp();
+  const { data, currentUser, isAvailable, setAvailability } = useMe();
   return (
     <Screen title="My Availability" subtitle="Let your leaders know when you can serve">
       {data.services.map(sv => {

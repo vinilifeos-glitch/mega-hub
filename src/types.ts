@@ -1,5 +1,8 @@
-export type Role = 'admin' | 'leader' | 'volunteer';
-export interface User { id: string; name: string; role: Role; departmentIds: string[]; }
+export type Role = 'owner' | 'admin' | 'leader' | 'volunteer';
+export interface User {
+  id: string; username: string; name: string; role: Role; departmentIds: string[];
+  salt: string; passwordHash: string; mustChangePassword: boolean; active: boolean;
+}
 export interface Department { id: string; name: string; emoji: string; color: string; leaderId: string | null; positions: string[]; }
 export interface Service { id: string; date: string; title: string; time: string; }
 export interface Availability { userId: string; serviceId: string; available: boolean; }
