@@ -4,7 +4,9 @@ import { SetlistCard } from './Setlist';
 import { displayName } from '../display';
 import { DateField } from '../components/DateField';
 import { useEffect, useState } from 'react';
-import { Alert, Platform, Pressable, Text, View } from 'react-native';
+import { Alert, Modal, Platform, Pressable, Text, View } from 'react-native';
+import { PickerRow, PickerSectionLabel, BusyChoiceSheet } from '../components/rota';
+import { pickStatus } from '../data/rota';
 import { formatDobInput, useMe } from '../state/AppContext';
 import { awayOn, noteOn } from '../data/unavailability';
 import { Badge, DeptBadge, StatusBadge, Button, DeptTitle, Icon, IconButton, deptIcon, Card, Chip, Empty, Field, Screen, Notice, useColors, useStyles } from '../components/ui';
@@ -72,6 +74,7 @@ function ServiceDetail({ service: sv, msg, onBack, onEdit, onDeleted }: { servic
   const { data, currentUser, canManage, assign, unassign, whyBlocked, deleteService, publishService, t, fmtDate, deptName, roleName } = useMe();
   const [open, setOpen] = useState<string | null>(null); // slot key being filled
   const [err, setErr] = useState<string | null>(null);
+  const [busyPick, setBusyPick] = useState<{ m: { firstName: string; username: string }; detail: string; run: (mode: 'double' | 'swap') => void } | null>(null);
   const isOwner = currentUser.role === 'owner';
   const draft = sv.status === 'draft';
   const del = () => confirmAsk(draft ? t('services.deleteDraft') : t('services.deleteConfirmTitle'), t(draft ? 'services.deleteDraftConfirm' : 'services.deleteConfirm', { title: sv.title, date: isoToDdmm(sv.date) }),
@@ -83,6 +86,12 @@ function ServiceDetail({ service: sv, msg, onBack, onEdit, onDeleted }: { servic
       {pubMsg && <Notice text={pubMsg} />}
       {draft && <View style={[s.row, { marginBottom: 8 }]}><StatusBadge status="draft" label={t('services.draft')} testID="draft-badge" /><Text style={[s.small, { marginLeft: 8, flex: 1 }]}>{t('services.draftHint')}</Text></View>}
       {err && <Notice tone="error" text={err} />}
+      <Modal visible={!!busyPick} transparent animationType="fade" onRequestClose={() => setBusyPick(null)}>
+        <View style={{ flex: 1, justifyContent: 'center', padding: 16, backgroundColor: 'rgba(0,0,0,0.4)' }}>
+          {busyPick && <BusyChoiceSheet name={busyPick.m.username} detail={busyPick.detail} onDouble={() => busyPick.run('double')} onSwap={() => busyPick.run('swap')} onCancel={() => setBusyPick(null)}
+            testIDs={{ root: 'busy-sheet', double: 'busy-double', swap: 'busy-swap', cancel: 'busy-cancel' }} />}
+        </View>
+      </Modal>
       {data.departments.map(d => {
         const slots = sv.slots.filter(z => z.departmentId === d.id);
         if (!slots.length) return null;
@@ -107,19 +116,27 @@ function ServiceDetail({ service: sv, msg, onBack, onEdit, onDeleted }: { servic
                       {manage && <Pressable testID={`slot-${d.id}-${sl.position}-${i}`} onPress={() => { setErr(null); setOpen(open === key ? null : key); }}><Text style={{ color: colors.primary, fontWeight: '700', marginLeft: 10 }}>{who ? t('common.change') : t('common.fill')}</Text></Pressable>}
                     </View>
                   </View>
-                  {open === key && (
-                    <View style={[s.row, { marginTop: 8 }]}>
-                      {holders.length === 0 && <Text style={s.small}>{t('services.nobodyHoldsDept', { dept: deptName(d.id), role: roleName(d.id, sl.position) })}</Text>}
-                      {holders.length > 0 && holders.every(m => m.id !== who?.id && !!whyBlocked(sv.id, m.id)) && <Text style={[s.small, { width: '100%', marginBottom: 8 }]}>{t('services.noneAvailable')}</Text>}
-                      {holders.map(m => {
-                        const why = m.id === who?.id ? null : whyBlocked(sv.id, m.id);
-                        return <Chip key={m.id} testID={`pick-${m.username}`} color={why ? colors.subtle : d.color} active={m.id === who?.id}
-                          icon={why === 'unavailable' ? 'close-circle-outline' : why === 'busy' ? 'time-outline' : 'checkmark-circle-outline'} label={`${displayName(m)}${why === 'busy' ? ` ${t('services.busy')}` : why === 'unavailable' ? ` ${noteOn(m, sv.date) ? `· ${t('services.awayNote', { note: noteOn(m, sv.date)! })}` : t('services.away')}` : ''}`}
-                          onPress={why ? undefined : () => { const e = assign(sv.id, d.id, sl.position, i, m.id); setErr(e); if (!e) setOpen(null); }} />;
-                      })}
-                      {a && <Chip label={t('common.clear')} color={colors.red} onPress={() => { unassign(a.id); setOpen(null); }} />}
-                    </View>
-                  )}
+                  {open === key && (() => {
+                    const rows = holders.filter(m => m.id !== who?.id).map(m => {
+                      const away = awayOn(m, sv.date); const st = pickStatus(data.assignments, sv.id, m.id, key, away);
+                      const other = data.assignments.find(z => z.serviceId === sv.id && z.userId === m.id && z.id !== key);
+                      const detail = st === 'away' ? (noteOn(m, sv.date) ?? t('rota.away')) : st === 'busy' && other ? `${deptName(other.departmentId)} · ${roleName(other.departmentId, other.position)}` : undefined;
+                      return { m, st, detail };
+                    });
+                    const pick = (m: typeof holders[number], mode?: 'double' | 'swap') => { const e = assign(sv.id, d.id, sl.position, i, m.id, mode); setErr(e); setBusyPick(null); if (!e) setOpen(null); };
+                    return (
+                      <View testID={`picker-${key}`} style={{ marginTop: 8 }}>
+                        {holders.length === 0 && <Text style={s.small}>{t('services.nobodyHoldsDept', { dept: deptName(d.id), role: roleName(d.id, sl.position) })}</Text>}
+                        {(['free', 'busy', 'away'] as const).map(k => { const g = rows.filter(r => r.st === k); if (!g.length) return null; return (
+                          <View key={k} testID={`pick-section-${k}`}>
+                            <PickerSectionLabel kind={k} count={g.length} />
+                            {g.map(r => <PickerRow key={r.m.id} name={displayName(r.m).replace(/^@/, '')} status={k} detail={r.detail} testID={`pick-${k}-${r.m.username}`}
+                              onPress={k === 'free' ? () => pick(r.m) : k === 'busy' ? () => setBusyPick({ m: r.m, detail: r.detail ?? '', run: (mode: 'double' | 'swap') => pick(r.m, mode) }) : undefined} />)}
+                          </View>); })}
+                        {a && <Chip label={t('common.clear')} color={colors.red} onPress={() => { unassign(a.id); setOpen(null); }} testID="pick-clear" />}
+                      </View>
+                    );
+                  })()}
                 </View>
               );
             }))}
@@ -169,7 +186,7 @@ function ServiceForm({ service, onClose, onDeleted }: { service?: Service; onClo
   const eligibleFor = (slotId: string) => {
     const row = rows.find(x => x.id === slotId); if (!row) return [];
     return data.users.filter(u => u.active && u.departmentIds.includes(row.dep) && (u.positions?.[row.dep] ?? []).includes(row.role)
-      && !awayOn(u, iso) && !rows.some(x => x.id !== slotId && x.assigneeId === u.id));
+      && !awayOn(u, iso));
   };
   // drop picks that became unavailable when the date changes
   useEffect(() => {

@@ -16,3 +16,33 @@ export function teamFor(d: AppData, serviceId: string): { departmentId: string; 
       .map(a => ({ assignmentId: a.id, userId: a.userId, position: a.position, name: d.users.find(u => u.id === a.userId)?.name ?? '?' })),
   })).filter(g => g.members.length > 0);
 }
+
+export type AssignMode = 'double' | 'swap';
+/**
+ * Apply an assignment to a slot. If the user already serves elsewhere in this service:
+ *  - no mode -> 'busy' error; 'double' -> keep both;
+ *  - 'swap' -> user moves from their other slot (`from`) into this one; the slot's previous occupant (if any)
+ *    moves into `from` when `canTake(occupant, from)`; otherwise `from` is left open.
+ * Returns the new assignments list or an error code.
+ */
+export function planAssign(as: Assignment[], target: Omit<Assignment, 'id'>, mode: AssignMode | undefined,
+  canTake: (userId: string, slot: Assignment) => boolean = () => true): { assignments: Assignment[] } | { error: 'busy' | 'noSwapSource' } {
+  const id = `${target.serviceId}:${target.departmentId}:${target.position}:${target.index}`;
+  const prev = as.find(a => a.id === id);
+  if (prev?.userId === target.userId) return { assignments: as };
+  const others = as.filter(a => a.serviceId === target.serviceId && a.userId === target.userId && a.id !== id);
+  const rest = as.filter(a => a.id !== id);
+  const mine: Assignment = { id, ...target };
+  if (!others.length) return { assignments: [...rest, mine] };
+  if (!mode) return { error: 'busy' };
+  if (mode === 'double') return { assignments: [...rest, mine] };
+  const from = others[0];
+  let out = rest.filter(a => a.id !== from.id);
+  if (prev && canTake(prev.userId, from)) out = [...out, { ...from, userId: prev.userId }];
+  return { assignments: [...out, mine] };
+}
+/** Picker status for a person on a service. */
+export function pickStatus(as: Assignment[], serviceId: string, userId: string, slotId: string, away: boolean): 'free' | 'busy' | 'away' {
+  if (away) return 'away';
+  return as.some(a => a.serviceId === serviceId && a.userId === userId && a.id !== slotId) ? 'busy' : 'free';
+}

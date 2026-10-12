@@ -15,3 +15,18 @@ ok(t.map(g => g.departmentId).join() === 'd-music,d-kids', 'team grouped in depa
 ok(t[0].members[0].name === 'Bo' && t[1].members[0].name === 'Ana', 'names resolved');
 ok(R.teamFor(d, 'nope').length === 0, 'empty team for unknown service');
 console.log(n, 'passed');
+{ const A = [{ id: 's:m:Keys:0', serviceId: 's', departmentId: 'm', position: 'Keys', index: 0, userId: 'u1' }, { id: 's:k:T:0', serviceId: 's', departmentId: 'k', position: 'T', index: 0, userId: 'u2' }];
+  const tgt = { serviceId: 's', departmentId: 'k', position: 'T', index: 0, userId: 'u1' };
+  ok(R.planAssign(A, tgt).error === 'busy', 'busy without mode rejected');
+  const dbl = R.planAssign(A, tgt, 'double').assignments;
+  ok(dbl.length === 2 && dbl.filter(a => a.userId === 'u1').length === 2 && !dbl.some(a => a.userId === 'u2'), 'double book keeps both, replaces occupant');
+  const sw = R.planAssign(A, tgt, 'swap').assignments;
+  ok(sw.find(a => a.id === 's:k:T:0').userId === 'u1' && sw.find(a => a.id === 's:m:Keys:0').userId === 'u2', 'swap exchanges people');
+  const sw2 = R.planAssign(A, tgt, 'swap', () => false).assignments;
+  ok(sw2.length === 1 && sw2[0].userId === 'u1' && sw2[0].id === 's:k:T:0', 'swap leaves old slot open when occupant cannot take it');
+  const sw3 = R.planAssign([A[0]], { ...tgt, departmentId: 'k' }, 'swap').assignments;
+  ok(sw3.length === 1 && sw3[0].id === 's:k:T:0', 'swap into empty slot = move');
+  ok(R.planAssign(A, { serviceId: 's', departmentId: 'm', position: 'Keys', index: 0, userId: 'u1' }).assignments === A, 'same person no-op');
+  ok(R.planAssign(A, { serviceId: 's2', departmentId: 'k', position: 'T', index: 0, userId: 'u1' }).assignments.length === 3, 'other service = free');
+  ok(R.pickStatus(A, 's', 'u1', 's:k:T:0', false) === 'busy' && R.pickStatus(A, 's', 'u1', 's:m:Keys:0', false) === 'free' && R.pickStatus(A, 's', 'u3', 'x', true) === 'away', 'pickStatus');
+  console.log(n, 'passed'); }
