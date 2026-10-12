@@ -18,7 +18,7 @@ export default function MyRota() {
         <Card key={a.id} style={{ borderLeftWidth: 3, borderLeftColor: dep.color }}>
           <Text style={s.h2}>{sv.title}</Text>
           <Text style={s.small}>{fmtDate(sv.date)} · {isoToDdmm(sv.date)} · {sv.start}–{sv.end}</Text>
-          {sv.location ? <Text style={s.small}>{sv.location}</Text> : null}
+          {sv.location ? <View style={[s.row, { flexWrap: 'nowrap', marginTop: 2 }]}><Icon name="location-outline" size={14} style={{ marginRight: 4 }} /><Text style={[s.small, { flexShrink: 1 }]}>{sv.location}</Text></View> : null}
           <Text style={[s.h2, { marginTop: 10, marginBottom: 6 }]}>{roleName(dep.id, a.position)}</Text>
           <View style={s.row}><DeptBadge dep={dep} /><StatusBadge status="assigned" /></View>
         </Card>

@@ -38,7 +38,8 @@ export function ServicesHome() {
           <Pressable key={sv.id} testID={`svc-${sv.date}`} onPress={() => { setMsg(null); setView({ kind: 'detail', id: sv.id }); }}>
             <Card style={mine.length ? { borderColor: colors.primary, borderWidth: 1.5 } : undefined}>
               <Text style={s.h2}>{sv.title}</Text>
-              <Text style={s.small}>{fmtDate(sv.date)} · {isoToDdmm(sv.date)} · {sv.start}–{sv.end}{sv.location ? ` · ${sv.location}` : ''}</Text>
+              <Text style={s.small}>{fmtDate(sv.date)} · {isoToDdmm(sv.date)} · {sv.start}–{sv.end}</Text>
+              {sv.location ? <View style={[s.row, { flexWrap: 'nowrap', marginTop: 2 }]}><Icon name="location-outline" size={14} style={{ marginRight: 4 }} /><Text style={[s.small, { flexShrink: 1 }]}>{sv.location}</Text></View> : null}
               {mine.length > 0 && <View style={{ marginTop: 8 }}><StatusBadge status="assigned" label={t('services.youreServing', { roles: mine.map(a => roleName(a.departmentId, a.position)).join(', ') })} /></View>}
               <View style={[s.row, { marginTop: 8 }]}>
                 {data.departments.map(d => {
@@ -91,7 +92,7 @@ function ServiceDetail({ service: sv, msg, onBack, onEdit, onDeleted }: { servic
                   <View style={[s.row, { justifyContent: 'space-between' }]}>
                     <Text style={{ fontWeight: '600', color: colors.text }}>{roleName(d.id, sl.position)}{sl.count > 1 ? ` ${i + 1}` : ''}</Text>
                     <View style={s.row}>
-                      <Text style={{ color: who ? (me ? colors.primary : colors.text) : colors.muted, fontWeight: me ? '800' : '400' }}>{who ? `${displayName(who)}${me ? ` ${t('common.you')}` : ''}` : t('common.unfilled')}</Text>
+                      {who ? <View style={[s.row, { flexWrap: 'nowrap', flexShrink: 1 }]}><Icon name="checkmark-circle" size={16} color={me ? colors.primary : colors.green} style={{ marginRight: 4 }} /><Text style={{ color: me ? colors.primary : colors.text, fontWeight: me ? '800' : '600', flexShrink: 1 }}>{`${displayName(who)}${me ? ` ${t('common.you')}` : ''}`}</Text></View> : <View style={{ marginTop: 4 }}><StatusBadge status="open" label={t('common.unfilled')} /></View>}
                       {manage && <Pressable testID={`slot-${d.id}-${sl.position}-${i}`} onPress={() => { setErr(null); setOpen(open === key ? null : key); }}><Text style={{ color: colors.primary, fontWeight: '700', marginLeft: 10 }}>{who ? t('common.change') : t('common.fill')}</Text></Pressable>}
                     </View>
                   </View>
