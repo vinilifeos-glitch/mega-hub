@@ -117,8 +117,7 @@ function ServiceDetail({ service: sv, msg, onBack, onEdit, onDeleted }: { servic
                     const rows = holders.filter(m => m.id !== who?.id).map(m => {
                       const away = awayOn(m, sv.date); const same = sameRoleSlot(data.assignments.filter(z => z.serviceId === sv.id), m.id, d.id, sl.position, key);
                       const st = away ? 'away' as const : same ? 'same' as const : pickStatus(data.assignments, sv.id, m.id, key, away);
-                      const other = data.assignments.find(z => z.serviceId === sv.id && z.userId === m.id && z.id !== key);
-                      const detail = st === 'same' ? t('services.alreadyInRole') : st === 'away' ? (noteOn(m, sv.date) ?? t('rota.away')) : st === 'busy' && other ? t('services.alsoServingAs', { role: data.assignments.filter(z => z.serviceId === sv.id && z.userId === m.id && z.id !== key).map(z => `${deptName(z.departmentId)} · ${roleName(z.departmentId, z.position)}`).join(', ') }) : undefined;
+                      const detail = st === 'same' ? t('services.alreadyInRole') : st === 'away' ? (noteOn(m, sv.date) ?? t('rota.away')) : undefined;
                       return { m, st, detail };
                     });
                     const pick = (m: typeof holders[number], mode?: 'double' | 'swap') => { const e = assign(sv.id, d.id, sl.position, i, m.id, mode); setErr(e); setBusyPick(null); if (!e) setOpen(null); };
@@ -271,7 +270,7 @@ function ServiceForm({ service, onClose, onDeleted }: { service?: Service; onClo
                       const sameR = others.find(r => r.dep === x.dep && r.role === x.role);
                       if (sameR) return <Chip key={u.id} testID={`fpick-same-${u.username}`} label={`${displayName(u)} · ${t('services.alreadyInRole')}`} color={colors.subtle} icon="remove-circle-outline" />;
                       if (others.length) { const detail = others.map(r => `${deptName(r.dep)} · ${roleName(r.dep, r.role)}`).join(', ');
-                        return <Chip key={u.id} testID={`fpick-busy-${u.username}`} label={`${displayName(u)} · ${t('services.alsoServingAs', { role: detail })}`} color={colors.amber} icon="time-outline"
+                        return <Chip key={u.id} testID={`fpick-busy-${u.username}`} label={displayName(u)} color={colors.amber} icon="time-outline"
                           onPress={() => setFormBusy({ u, detail: others.map(r => roleName(r.dep, r.role)).join(', '), run: mode => { setRows(r => r.map(z => z.id === x.id && canManage(z.dep) ? { ...z, assigneeId: u.id } : mode === 'swap' && z.assigneeId === u.id && z.id !== x.id ? { ...z, assigneeId: undefined } : z)); setFormBusy(null); setOpenPick(null); setNotice(null); } })} />; }
                       return <Chip key={u.id} testID={`fpick-${u.username}`} label={displayName(u)} color={d.color} active={who?.id === u.id}
                         onPress={() => { assign(x.id, u.id); setOpenPick(null); setNotice(null); }} />; })}
