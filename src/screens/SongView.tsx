@@ -117,7 +117,7 @@ export function SongView({ id, keyParam }: { id: string; keyParam?: string }) {
       </Card>
       {sg.link ? <Pressable onPress={() => openUrl(sg.link!)} testID="song-link" accessibilityRole="link" style={[s.row, { flexWrap: 'nowrap', minHeight: 44, marginBottom: 4 }]}><Icon name="open-outline" size={16} color={colors.primaryText} style={{ marginRight: 6 }} /><Text style={{ color: colors.primaryText, fontWeight: '600', flexShrink: 1 }} numberOfLines={1}>{sg.link}</Text></Pressable> : null}
       {canEditSongs && <Button label={t('song.edit')} outline onPress={() => setForm(toForm(sg))} testID="song-edit" />}
-      {canEditSongs && <Button label={t('song.del')} danger outline onPress={del} testID="song-delete" />}
+      {canEditSongs && <Button label={t('song.del')} danger onPress={del} testID="song-delete" />}
     </Screen>
   );
 }
