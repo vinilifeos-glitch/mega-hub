@@ -1,8 +1,9 @@
 import { useState } from 'react';
+import { confirmAsk } from '../components/confirm';
 import { Alert, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { useMe } from '../state/AppContext';
-import { Badge, Button, Card, Chip, Field, IconButton, Notice, Screen, useColors, useStyles } from '../components/ui';
+import { Badge, CardHeader, GhostButton, Icon, SizeControl, Button, Card, Chip, Field, IconButton, Notice, Screen, useColors, useStyles } from '../components/ui';
 import { goBack, openUrl } from './DeptPage';
 import { KeyPicker, MONO, SongSheet } from './SongSheet';
 import { barsToText, convertLegacy, keyLabel, parseBars, parseKey } from '../data/music';
@@ -38,7 +39,7 @@ export function SongView({ id, keyParam }: { id: string; keyParam?: string }) {
   const del = () => {
     const go = () => { removeLibSong(song!.id); goBack('/departments'); };
     const msg = t('song.delConfirm', { title: song!.title });
-    if (Platform.OS === 'web') { if (globalThis.confirm?.(msg)) go(); } else Alert.alert(t('song.del'), msg, [{ text: t('song.cancel'), style: 'cancel' }, { text: t('song.del'), style: 'destructive', onPress: go }]);
+    confirmAsk(t('song.del'), msg, t('song.del'), t('song.cancel'), go);
   };
 
   if (form) {
@@ -50,7 +51,7 @@ export function SongView({ id, keyParam }: { id: string; keyParam?: string }) {
         <Card>
           <Field label={t('song.title')} value={form.title} onChangeText={v => setForm({ ...form, title: v })} testID="song-f-title" />
           <Field label={t('song.composer')} value={form.composer} onChangeText={v => setForm({ ...form, composer: v })} testID="song-f-composer" />
-          <Text style={s.small}>{t('song.key')}</Text>
+          <Text style={[s.label, { marginBottom: 6 }]}>{t('song.key')}</Text>
           <KeyPicker value={form.key} onChange={k => setForm({ ...form, key: k })} prefix="song-f-key" majorLabel={t('song.major')} minorLabel={t('song.minor')} allowClear />
           <View style={[s.row, { flexWrap: 'nowrap', marginTop: 8 }]}>
             <View style={{ flex: 1, marginRight: 8 }}><Field label={t('song.timeSignature')} value={form.timeSignature} placeholder="4/4" maxLength={10} onChangeText={v => setForm({ ...form, timeSignature: v })} testID="song-f-time" /></View>
@@ -62,25 +63,28 @@ export function SongView({ id, keyParam }: { id: string; keyParam?: string }) {
         <Text style={[s.small, { marginBottom: 8 }]}>{t('song.barsHint')}</Text>
         {form.sections.map((x, i) => (
           <Card key={x.id}>
-            <View testID={`section-form-${i}`} style={[s.row, { justifyContent: 'space-between' }]}>
-              <Text style={s.h2}>{x.name || t('song.sectionName')}</Text>
+            <View testID={`section-form-${i}`} style={[s.row, { justifyContent: 'space-between', flexWrap: 'nowrap' }]}>
+              <View style={[s.row, { flexWrap: 'nowrap', flex: 1 }]}>
+                <View style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: colors.soft, alignItems: 'center', justifyContent: 'center', marginRight: 10 }}><Text style={{ color: colors.muted, fontWeight: '700', fontSize: 13 }}>{i + 1}</Text></View>
+                <Text style={[s.h2, { flexShrink: 1 }]}>{x.name || t('song.sectionName')}</Text>
+              </View>
               <View style={[s.row, { flexWrap: 'nowrap' }]}>
-                <IconButton testID={`section-up-${i}`} icon="chevron-up" label={t('dept.up', { title: x.name })} onPress={() => move(i, -1)} />
-                <IconButton testID={`section-down-${i}`} icon="chevron-down" label={t('dept.down', { title: x.name })} onPress={() => move(i, 1)} />
-                <IconButton testID={`section-rm-${i}`} icon="close" color={colors.red} label={t('dept.remove', { title: x.name })} onPress={() => setForm({ ...form, sections: form.sections.filter((_, j) => j !== i) })} />
+                <IconButton testID={`section-up-${i}`} icon="chevron-up" color={colors.muted} label={t('dept.up', { title: x.name })} onPress={() => move(i, -1)} />
+                <IconButton testID={`section-down-${i}`} icon="chevron-down" color={colors.muted} label={t('dept.down', { title: x.name })} onPress={() => move(i, 1)} />
+                <IconButton testID={`section-rm-${i}`} icon="remove-circle-outline" color={colors.red} label={t('dept.remove', { title: x.name })} onPress={() => setForm({ ...form, sections: form.sections.filter((_, j) => j !== i) })} />
               </View>
             </View>
             <View style={s.row}>{PRESETS.map(p => <Chip key={p} label={t(`song.preset.${p}` as any)} active={x.name === t(`song.preset.${p}` as any)} testID={`section-preset-${i}-${p}`} onPress={() => setSec(i, { name: t(`song.preset.${p}` as any) })} />)}</View>
             <Field label={t('song.sectionName')} value={x.name} maxLength={40} onChangeText={v => setSec(i, { name: v })} testID={`section-name-${i}`} />
             <Field label={t('song.cue')} value={x.cue} maxLength={120} onChangeText={v => setSec(i, { cue: v })} testID={`section-cue-${i}`} />
             <Field label={t('song.bars')} value={x.barsText} autoCapitalize="none" placeholder="| FM7 | | CM7 | |" onChangeText={v => setSec(i, { barsText: v })} testID={`section-bars-${i}`} style={{ fontFamily: MONO }} />
-            <Text style={s.small} testID={`section-barcount-${i}`}>{t('song.barCount', { n: parseBars(x.barsText).length })}</Text>
+            <Text style={[s.small, { marginTop: -8, marginBottom: 12 }]} testID={`section-barcount-${i}`}>{t('song.barCount', { n: parseBars(x.barsText).length })}</Text>
             <Field label={t('song.notes')} value={x.notes} multiline maxLength={500} onChangeText={v => setSec(i, { notes: v })} testID={`section-notes-${i}`} />
           </Card>
         ))}
-        <Button label={t('song.addSection')} outline testID="section-add" onPress={() => setForm({ ...form, sections: [...form.sections, { id: sid(), name: form.sections.length ? t('song.preset.Verse') : t('song.preset.Intro'), cue: '', barsText: '', notes: '' }] })} />
+        <GhostButton label={t('song.addSection')} testID="section-add" onPress={() => setForm({ ...form, sections: [...form.sections, { id: sid(), name: form.sections.length ? t('song.preset.Verse') : t('song.preset.Intro'), cue: '', barsText: '', notes: '' }] })} />
         {form.chords ? <Card>
-          <Text style={s.h2}>{t('song.legacy')}</Text>
+          <CardHeader icon="document-text-outline" title={t('song.legacy')} />
           <Field label={t('song.chords')} value={form.chords} multiline autoCapitalize="none" onChangeText={v => setForm({ ...form, chords: v })} testID="song-f-chords" style={{ fontFamily: MONO, minHeight: 120, textAlignVertical: 'top' }} />
           {conv && <Button label={t('song.convert')} outline testID="song-convert" onPress={() => setForm({ ...form, chords: '', sections: conv.map(c => ({ id: sid(), name: c.name, cue: '', barsText: barsToText(c.bars), notes: '' })) })} />}
         </Card> : null}
@@ -94,19 +98,16 @@ export function SongView({ id, keyParam }: { id: string; keyParam?: string }) {
   const meta = [sg.timeSignature, sg.bpm ? `${sg.bpm} BPM` : ''].filter(Boolean).join(' · ');
   return (
     <Screen title={sg.title} subtitle={sg.composer ?? sg.artist} backTo={back}>
-      <View style={[s.row, { marginBottom: 8 }]}>
-        {sg.key ? <Badge label={`${t('song.originalKey')}: ${sg.key}`} tone="accent" testID="song-key" /> : null}
-        {meta ? <Text style={[s.small, { marginLeft: 8 }]} testID="song-meta">{meta}</Text> : null}
+      <View style={[s.row, { marginBottom: 12 }]}>
+        {sg.key ? <Badge label={`${t('song.originalKey')}: ${sg.key}`} tone="accent" icon="key-outline" testID="song-key" /> : null}
+        {meta ? <View testID="song-meta"><Badge label={meta} icon="speedometer-outline" /></View> : null}
       </View>
       {sg.key && sg.sections?.length ? <Card>
-        <Text style={s.small}>{t('song.transpose')}: <Text style={{ fontWeight: '800', color: colors.text }} testID="transpose-current">{toKey || sg.key}</Text></Text>
+        <CardHeader icon="swap-vertical" title={t('song.transpose')} right={<Text style={{ fontWeight: '800', fontSize: 17, color: colors.primaryText }} testID="transpose-current">{toKey || sg.key}</Text>} />
         <KeyPicker value={toKey || sg.key} onChange={setToKey} prefix="transpose" majorLabel={t('song.major')} minorLabel={t('song.minor')} />
         {toKey && toKey !== sg.key ? <Chip label={t('song.resetKey', { key: sg.key })} testID="transpose-reset" onPress={() => setToKey(sg.key!)} /> : null}
       </Card> : null}
-      <View style={[s.row, { justifyContent: 'flex-end', marginBottom: 4 }]}>
-        <Chip label="A−" testID="song-smaller" onPress={() => setSize(z => Math.max(12, z - 2))} />
-        <Chip label="A+" testID="song-bigger" onPress={() => setSize(z => Math.min(36, z + 2))} />
-      </View>
+      <SizeControl smallerID="song-smaller" biggerID="song-bigger" smallerLabel={t('ui.textSmaller')} biggerLabel={t('ui.textBigger')} onSmaller={() => setSize(z => Math.max(12, z - 2))} onBigger={() => setSize(z => Math.min(36, z + 2))} />
       <Card>
         <ScrollView horizontal={!sg.sections?.length} testID="chord-view">
           <View style={{ minWidth: '100%' }}>
@@ -115,9 +116,9 @@ export function SongView({ id, keyParam }: { id: string; keyParam?: string }) {
           </View>
         </ScrollView>
       </Card>
-      {sg.link ? <Pressable onPress={() => openUrl(sg.link!)} testID="song-link"><Text style={{ color: colors.primary, fontWeight: '600', marginBottom: 8 }}>{sg.link}</Text></Pressable> : null}
+      {sg.link ? <Pressable onPress={() => openUrl(sg.link!)} testID="song-link" accessibilityRole="link" style={[s.row, { flexWrap: 'nowrap', minHeight: 44, marginBottom: 4 }]}><Icon name="open-outline" size={16} color={colors.primaryText} style={{ marginRight: 6 }} /><Text style={{ color: colors.primaryText, fontWeight: '600', flexShrink: 1 }} numberOfLines={1}>{sg.link}</Text></Pressable> : null}
       {canEditSongs && <Button label={t('song.edit')} outline onPress={() => setForm(toForm(sg))} testID="song-edit" />}
-      {canEditSongs && <Button label={t('song.del')} danger outline onPress={del} testID="song-delete" />}
+      {canEditSongs && <Button label={t('song.del')} danger onPress={del} testID="song-delete" />}
     </Screen>
   );
 }

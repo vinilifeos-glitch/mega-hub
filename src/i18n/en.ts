@@ -12,7 +12,7 @@ export const en = {
   language: { title: 'Language', hint: 'Choose the language for your account.', pt: 'Português', en: 'English' },
   departments: { 'd-music': 'Music', 'd-kids': 'Kids', 'd-obreiros': 'Ushers' },
   roles: {
-    'd-music': { Keys: 'Keys', Bass: 'Bass', Drums: 'Drums', Guitar: 'Guitar', Desk: 'Sound Desk', 'Lead Singer': 'Lead Singer', 'Backing Vocals': 'Backing Vocals' },
+    'd-music': { Keys: 'Keys', Bass: 'Bass', Drums: 'Drums', Guitar: 'Guitar', Desk: 'Sound Desk', 'Lead Singer': 'Lead Singer', 'Backing Vocals': 'Backing Vocals', Assembly: 'Assembly' },
     'd-kids': { Teacher: 'Teacher', Assistant: 'Assistant' },
     'd-obreiros': { Atalaia: 'Watchman (door security)', 'Dízimo': 'Tithes & Offerings', Abertura: 'Opening', 'Projeção': 'Projection', 'Mídia': 'Media' },
   },
@@ -65,7 +65,7 @@ draft: 'Draft', saveDraft: 'Save draft', publish: 'Publish', published: 'Service
     noteLabel: 'Note (optional)', notePlaceholder: 'e.g. travelling', noteA11y: 'Note: {note}',
     misses: 'Misses: {services}', noServices: 'No services scheduled that day', unavailableDates: 'Unavailable dates', noDates: 'No unavailable dates.',
   },
-  myRota: { title: 'My Rota', subtitle: "Services you're scheduled to serve.", empty: "You're not on any rota yet. Keep your unavailable dates up to date so admins can plan." },
+  myRota: { view: 'View details', yourRoles: 'Your roles', team: 'Team on this service', you: 'you', notFound: 'This service is not on your rota.', title: 'My Rota', subtitle: "Services you're scheduled to serve.", empty: "You're not on any rota yet. Keep your unavailable dates up to date so admins can plan." },
   departmentsScreen: {
     title: 'Departments', subtitle: 'Where you serve and the roles you hold.', mine: 'My departments & roles', all: 'All departments',
     assignedBy: 'Departments and roles are assigned by {owner} (the owner).', admins: 'Admins: {names}', noAdmins: 'No admins yet. The owner ({owner}) manages this department.',
@@ -125,5 +125,6 @@ draft: 'Draft', saveDraft: 'Save draft', publish: 'Publish', published: 'Service
     profile: 'My profile', profileHint: 'Personal details, language and appearance', team: 'My team', teamHint: 'People in the departments you administer',
     accounts: 'Accounts', ownerOnlyField: 'Only the owner can change name and contact details.', accountsHint: "Create and manage everyone's sign-in", settings: 'Settings', admin: 'Admin tools',
   },
-  ui: { noDeptSection: 'Not in a department yet', rolesLabel: 'Roles', assignPlaceholder: 'Assign', addRole: 'Add role', addSong: 'Add song' },
+  ui: { noDeptSection: 'Not in a department yet', rolesLabel: 'Roles', assignPlaceholder: 'Assign', addRole: 'Add role', addSong: 'Add song', textSmaller: 'Smaller text', textBigger: 'Bigger text' },
+  rota: { available: 'Available', servingElsewhere: 'Serving elsewhere', unavailable: 'Unavailable', alreadyServing: '@{name} is already serving as {detail}.', swap: 'Swap', doubleBook: 'Double book', cancel: 'Cancel', yourRole: 'Your role', yourTeam: 'Your team', unfilled: 'Unfilled', live: 'Start Live mode', free: 'Free', away: 'Away' },
 };

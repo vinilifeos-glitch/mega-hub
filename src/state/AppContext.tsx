@@ -1,8 +1,9 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { AppData, Department, Resource, Role, Service, SetlistItem, Song, Theme, Unavailability, User } from '../types';
+import { AppData, Department, Resource, Role, Service, SetlistItem, Song, Theme, Unavailability, User, Assignment } from '../types';
+import { planAssign, AssignMode } from '../data/rota';
 import { NOTE_MAX, awayOn, covers, getUnavailableFor, rangeError } from '../data/unavailability';
 import { todayIso as todayIsoFn } from '../data/dates';
-import { repository } from '../data/repository';
+import { repository, newerFromOtherTab, DATA_STORAGE_KEY } from '../data/repository';
 import { hashPassword, newSalt } from '../data/auth';
 import { canEditMemberRule, canEditPersonal, changedProtected, pickPref, visibleServiceData, visibleSetlists, canEditSetlistRule, canEditDeptRule, visibleSongs, cleanUrl, canLiveRule, canViewDeptRule, visibleDeptPages } from './permissions';
 import { keyLabel, parseKey } from '../data/music';
@@ -65,7 +66,7 @@ interface Ctx {
   adminSaveMember: (id: string, p: { firstName: string; middleNames: string; lastName: string; dob: string; contact: string; email?: string; departments: Record<string, string[] | null> }) => string | null;
   saveMyProfile: (p: { firstName: string; middleNames: string; lastName: string; dob: string; contact: string; email?: string }) => string | null;
   ownerUpdateAccount: (id: string, a: { username: string; role: Role; active: boolean; newPassword: string; adminOf: string[] }) => Promise<string | null>;
-  assign: (serviceId: string, departmentId: string, position: string, index: number, userId: string) => string | null;
+  assign: (serviceId: string, departmentId: string, position: string, index: number, userId: string, mode?: AssignMode) => string | null;
   whyBlocked: (serviceId: string, userId: string) => string | null;
   saveService: (id: string | null, s: Omit<Service, 'id'>, picks?: { departmentId: string; position: string; index: number; userId: string }[]) => string | null;
   deleteService: (id: string) => void;
@@ -115,11 +116,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const update = (fn: (d: AppData) => AppData) =>
-    setData(prev => { if (!prev) return prev; const next = fn(prev);
+    setData(prev => { if (!prev) return prev; const base = (repository.auth ? null : newerFromOtherTab()) ?? prev; const next = fn(base);
       const saving = repository.save(next);
       // Supabase mode: if the server (RLS) rejects a write, resync to the server's truth
       if (repository.auth) saving.catch(async () => setData(await repository.load()));
       return next; });
+  // keep this tab in sync when another tab/window changes the data (and when returning to a backgrounded tab)
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.addEventListener) return;
+    const sync = () => { if (repository.auth) return; const d = newerFromOtherTab(); if (d) setData(d); };
+    const onStorage = (e: StorageEvent) => { if (!e.key || e.key === DATA_STORAGE_KEY) sync(); };
+    const onVis = () => { if (typeof document === 'undefined' || document.visibilityState === 'visible') sync(); };
+    window.addEventListener('storage', onStorage); window.addEventListener('focus', onVis); window.addEventListener('pageshow', onVis);
+    if (typeof document !== 'undefined') document.addEventListener('visibilitychange', onVis);
+    return () => { window.removeEventListener('storage', onStorage); window.removeEventListener('focus', onVis); window.removeEventListener('pageshow', onVis); if (typeof document !== 'undefined') document.removeEventListener('visibilitychange', onVis); };
+  }, []);
 
   const setSession = (id: string | null) => { setSessionId(id); repository.setSession(id); };
 
@@ -392,15 +403,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (d.assignments.some(a => a.serviceId === serviceId && a.userId === userId)) return 'busy';
         return null;
       },
-      assign: (serviceId, departmentId, position, index, userId) => {
+      assign: (serviceId, departmentId, position, index, userId, mode) => {
         if (!canManage(departmentId)) return t('errors.slotScope');
         const sv = d.services.find(x => x.id === serviceId); const u = d.users.find(x => x.id === userId);
         if (!sv || !u || !u.active) return t('errors.notFound');
         if (!(u.positions?.[departmentId] ?? []).includes(position)) return t('errors.doesntHoldRole', { name: u.firstName, role: position });
         if (awayOn(u, sv.date)) return t('errors.unavailableThatDay', { name: u.firstName });
-        if (d.assignments.some(a => a.serviceId === serviceId && a.userId === userId)) return t('errors.alreadyServing', { name: u.firstName });
-        const id = `${serviceId}:${departmentId}:${position}:${index}`;
-        update(x => ({ ...x, assignments: [...x.assignments.filter(a => a.id !== id), { id, serviceId, departmentId, position, index, userId }] }));
+        if (mode === 'swap') { const from = d.assignments.find(a => a.serviceId === serviceId && a.userId === userId && a.id !== `${serviceId}:${departmentId}:${position}:${index}`); if (from && !canManage(from.departmentId)) return t('errors.slotScope'); }
+        const r = planAssign(d.assignments, { serviceId, departmentId, position, index, userId }, mode);
+        if ('error' in r) return t('errors.alreadyServing', { name: u.firstName });
+        update(x => { const q = planAssign(x.assignments, { serviceId, departmentId, position, index, userId }, mode); return 'error' in q ? x : { ...x, assignments: q.assignments }; });
         return null;
       },
       saveService: (id, sv, picks) => {
@@ -476,7 +488,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       removeLibSong: id => { if (canEditSetlistRule(currentUser)) update(x => ({ ...x, songs: (x.songs ?? []).filter(z => z.id !== id),
         services: x.services.map(s => s.setlist?.some(i => i.songId === id) ? { ...s, setlist: s.setlist.map(i => i.songId === id ? (({ songId, ...r }) => r)(i) : i) } : s) })); },
       publishService: id => isOwner && update(x => ({ ...x, services: x.services.map(s => s.id === id ? { ...s, status: 'published' } : s) })),
-      deleteService: id => isOwner && update(x => ({ ...x, services: x.services.filter(s => s.id !== id), assignments: x.assignments.filter(a => a.serviceId !== id) })),
+      deleteService: id => isOwner && update(x => ({ ...x, services: x.services.filter(s => s.id !== id), assignments: x.assignments.filter(a => a.serviceId !== id), availability: x.availability.filter(a => a.serviceId !== id) })),
       unassign: id => { const a0 = d.assignments.find(a => a.id === id); if (!a0 || !canManage(a0.departmentId)) return; update(x => ({ ...x, assignments: x.assignments.filter(a => a.id !== id) })); },
     };
   }, [data, sessionId, deviceLang, deviceTheme]);

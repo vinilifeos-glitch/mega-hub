@@ -24,7 +24,7 @@ export const mockData: AppData = {
     { id: "u-elisa", username: "Elisa", name: "Elisa", role: "volunteer", departmentIds: [], firstName: "Elisa", middleNames: "", lastName: "", dob: "", positions: {}, salt: "f70558d2eb58fd3fc617cdee89159463", passwordHash: "169375dca18a6bac030248a07f8a6bda91f2e364acb88c9501d83517bdca5dd2", mustChangePassword: false, active: true },
   ],
   departments: [
-    { id: 'd-music', name: 'Music', emoji: '🎵', color: '#7C3AED', leaderId: null, positions: ['Keys', 'Bass', 'Drums', 'Guitar', 'Desk', 'Lead Singer', 'Backing Vocals'] },
+    { id: 'd-music', name: 'Music', emoji: '🎵', color: '#7C3AED', leaderId: null, positions: ['Keys', 'Bass', 'Drums', 'Guitar', 'Desk', 'Lead Singer', 'Backing Vocals', 'Assembly'] },
     { id: 'd-kids', name: 'Kids', emoji: '🧸', color: '#10B981', leaderId: null, positions: ['Teacher', 'Assistant'] },
     { id: 'd-obreiros', name: 'Obreiros', emoji: '🤝', color: '#F59E0B', leaderId: null, positions: ['Atalaia', 'Dízimo', 'Abertura', 'Projeção', 'Mídia'] },
   ],

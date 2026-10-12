@@ -104,3 +104,9 @@ Run tests: `npm run test:supabase` (no account or Docker needed).
 - `department_pages(department_id pk, description)`: data copied from `departments.description`, column dropped. Read `views_dept`, write `administers`. Adapter maps `Department.description` <-> `department_pages`.
 - Double booking: no per-user uniqueness on `assignments`; `can_fill` checks role/active/unavailability only, so it's already allowed.
 - `assign_swap(service, dep, role, idx, user)` (security invoker, so RLS applies to every write): moves the user into the target and clears their other slot in that service (left unfilled); any previous occupant of the target is replaced, never traded. It raises (and changes nothing) when the caller can't change the other slot's department.
+
+## Assembly role + default location (migration 20261012070000_assembly_location.sql)
+- Music role `Assembly` (app labels: en Assembly / pt Montagem) appended to `department_roles`. Additive: no existing services, assignments or profiles are touched.
+- `department_roles.default_count` holds the default slots for new services: Assembly 3; Backing Vocals and Kids Assistant 2; others 1. The adapter writes it from `DEFAULT_SLOT_COUNTS`.
+- `services.location` defaults to '1 Main St, Farcet, Peterborough PE7 3AN' for new rows. Existing locations are unchanged.
+- Merged main (delete/confirm fix, multi-tab sync). Multi-tab rebase is disabled in Supabase mode, where the server is the source of truth.

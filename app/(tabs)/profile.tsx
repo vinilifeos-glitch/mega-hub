@@ -49,7 +49,7 @@ export default function MyProfile() {
       <Text style={s.section}>{t('profile.accountSection')}</Text>
       <Button label={t('profile.editDetails')} onPress={() => { setMsg(null); setF(init()); setMode('edit'); }} testID="edit-me" />
       <Button label={t('auth.changePassword')} outline onPress={() => { setMsg(null); setMode('password'); }} testID="change-password" />
-      <Button label={t('auth.signOut')} color={colors.red} outline onPress={signOut} testID="signout" />
+      <Button label={t('auth.signOut')} danger onPress={signOut} testID="signout" />
     </Screen>
   );
 }

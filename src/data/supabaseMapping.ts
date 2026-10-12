@@ -15,9 +15,14 @@ export type Rows = {
   department_pages: { department_id: string; description: string | null }[];
   department_resources: { id: string; department_id: string; position: number; title: string; url: string | null; kind: 'link' | 'file'; file_ref: string | null }[];
   songs: { id: string; department_id: string; title: string; composer: string | null; key: string | null; chords: string | null; link: string | null; time_signature: string | null; bpm: number | null; sections: SongSection[] }[];
-  department_roles: { department_id: string; role: string; sort: number }[];
+  department_roles: { department_id: string; role: string; sort: number; default_count?: number }[];
   setlist_items: { id: string; service_id: string; position: number; title: string; key: string | null; notes: string | null; song_id: string | null }[];
 };
+
+/** Default slot counts for new services (mirrors Services.tsx DOUBLE; DB column department_roles.default_count). */
+export const DEFAULT_SLOT_COUNTS: Record<string, number> = { 'd-kids:Assistant': 2, 'd-music:Backing Vocals': 2, 'd-music:Assembly': 3 };
+/** Default location for new services (mirrors Services.tsx DEFAULT_LOCATION; DB default on services.location). */
+export const DEFAULT_LOCATION = '1 Main St, Farcet, Peterborough PE7 3AN';
 
 /** Primary/unique key columns per table (used for upsert onConflict and diffing). */
 export const KEYS: Record<keyof Rows, string[]> = {
@@ -42,7 +47,7 @@ export function toRows(d: AppData, idMap: (id: string) => string = x => x): Rows
   d.departments.forEach((x, i) => {
     r.departments.push({ id: x.id, name: x.name, emoji: x.emoji, color: x.color, sort: i }); if (blank(x.description)) r.department_pages.push({ department_id: x.id, description: blank(x.description) });
     (x.resources ?? []).forEach((z, j) => r.department_resources.push({ id: z.id, department_id: x.id, position: j, title: z.title, url: z.url || null, kind: z.kind ?? 'link', file_ref: z.fileRef ?? null }));
-    x.positions.forEach((p, j) => r.department_roles.push({ department_id: x.id, role: p, sort: j }));
+    x.positions.forEach((p, j) => r.department_roles.push({ department_id: x.id, role: p, sort: j, default_count: DEFAULT_SLOT_COUNTS[`${x.id}:${p}`] ?? 1 }));
   });
   for (const u of d.users) {
     const id = idMap(u.id);

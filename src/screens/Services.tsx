@@ -4,20 +4,19 @@ import { SetlistCard } from './Setlist';
 import { displayName } from '../display';
 import { DateField } from '../components/DateField';
 import { useEffect, useState } from 'react';
-import { Alert, Platform, Pressable, Text, View } from 'react-native';
+import { Alert, Modal, Platform, Pressable, Text, View } from 'react-native';
+import { confirmAsk } from '../components/confirm';
+import { PickerRow, PickerSectionLabel, BusyChoiceSheet } from '../components/rota';
+import { pickStatus } from '../data/rota';
 import { formatDobInput, useMe } from '../state/AppContext';
 import { awayOn, noteOn } from '../data/unavailability';
 import { Badge, DeptBadge, StatusBadge, Button, DeptTitle, Icon, IconButton, deptIcon, Card, Chip, Empty, Field, Screen, Notice, useColors, useStyles } from '../components/ui';
 import { Service, Slot } from '../types';
 import { formatTimeInput, isoToDdmm, toIso, todayIso, upcomingSundayIso } from '../data/dates';
 
-/** Cross-platform confirm: window.confirm on web, Alert on native. */
-function confirmAsk(title: string, msg: string, okLabel: string, cancelLabel: string, go: () => void) {
-  if (Platform.OS === 'web') { if (globalThis.confirm?.(msg)) go(); }
-  else Alert.alert(title, msg, [{ text: cancelLabel, style: 'cancel' }, { text: okLabel, style: 'destructive', onPress: go }]);
-}
 
-const DOUBLE: Record<string, number> = { 'd-kids:Assistant': 2, 'd-music:Backing Vocals': 2 };
+export const DEFAULT_LOCATION = '1 Main St, Farcet, Peterborough PE7 3AN';
+const DOUBLE: Record<string, number> = { 'd-kids:Assistant': 2, 'd-music:Backing Vocals': 2, 'd-music:Assembly': 3 };
 
 export function ServicesHome() {
   const colors = useColors(); const s = useStyles();
@@ -72,17 +71,24 @@ function ServiceDetail({ service: sv, msg, onBack, onEdit, onDeleted }: { servic
   const { data, currentUser, canManage, assign, unassign, whyBlocked, deleteService, publishService, t, fmtDate, deptName, roleName } = useMe();
   const [open, setOpen] = useState<string | null>(null); // slot key being filled
   const [err, setErr] = useState<string | null>(null);
+  const [busyPick, setBusyPick] = useState<{ m: { firstName: string; username: string }; detail: string; run: (mode: 'double' | 'swap') => void } | null>(null);
   const isOwner = currentUser.role === 'owner';
   const draft = sv.status === 'draft';
   const del = () => confirmAsk(draft ? t('services.deleteDraft') : t('services.deleteConfirmTitle'), t(draft ? 'services.deleteDraftConfirm' : 'services.deleteConfirm', { title: sv.title, date: isoToDdmm(sv.date) }),
     t('common.delete'), t('common.cancel'), () => { deleteService(sv.id); onDeleted(draft ? t('services.draftDeleted') : t('services.deleted')); });
   const [pubMsg, setPubMsg] = useState<string | null>(null);
   return (
-    <Screen title={sv.title} subtitle={`${fmtDate(sv.date)} · ${isoToDdmm(sv.date)} · ${sv.start}–${sv.end}${sv.location ? ` · ${sv.location}` : ''}`}>
+    <Screen title={sv.title} subtitle={`${fmtDate(sv.date)} · ${isoToDdmm(sv.date)} · ${sv.start}–${sv.end}${sv.location ? ` · ${sv.location}` : ''}`} backTo={{ label: t('services.title'), onPress: onBack }}>
       {msg && <Notice text={msg} />}
       {pubMsg && <Notice text={pubMsg} />}
       {draft && <View style={[s.row, { marginBottom: 8 }]}><StatusBadge status="draft" label={t('services.draft')} testID="draft-badge" /><Text style={[s.small, { marginLeft: 8, flex: 1 }]}>{t('services.draftHint')}</Text></View>}
       {err && <Notice tone="error" text={err} />}
+      <Modal visible={!!busyPick} transparent animationType="fade" onRequestClose={() => setBusyPick(null)}>
+        <View style={{ flex: 1, justifyContent: 'center', padding: 16, backgroundColor: 'rgba(0,0,0,0.4)' }}>
+          {busyPick && <BusyChoiceSheet name={busyPick.m.username} detail={busyPick.detail} onDouble={() => busyPick.run('double')} onSwap={() => busyPick.run('swap')} onCancel={() => setBusyPick(null)}
+            testIDs={{ root: 'busy-sheet', double: 'busy-double', swap: 'busy-swap', cancel: 'busy-cancel' }} />}
+        </View>
+      </Modal>
       {data.departments.map(d => {
         const slots = sv.slots.filter(z => z.departmentId === d.id);
         if (!slots.length) return null;
@@ -107,19 +113,27 @@ function ServiceDetail({ service: sv, msg, onBack, onEdit, onDeleted }: { servic
                       {manage && <Pressable testID={`slot-${d.id}-${sl.position}-${i}`} onPress={() => { setErr(null); setOpen(open === key ? null : key); }}><Text style={{ color: colors.primary, fontWeight: '700', marginLeft: 10 }}>{who ? t('common.change') : t('common.fill')}</Text></Pressable>}
                     </View>
                   </View>
-                  {open === key && (
-                    <View style={[s.row, { marginTop: 8 }]}>
-                      {holders.length === 0 && <Text style={s.small}>{t('services.nobodyHoldsDept', { dept: deptName(d.id), role: roleName(d.id, sl.position) })}</Text>}
-                      {holders.length > 0 && holders.every(m => m.id !== who?.id && !!whyBlocked(sv.id, m.id)) && <Text style={[s.small, { width: '100%', marginBottom: 8 }]}>{t('services.noneAvailable')}</Text>}
-                      {holders.map(m => {
-                        const why = m.id === who?.id ? null : whyBlocked(sv.id, m.id);
-                        return <Chip key={m.id} testID={`pick-${m.username}`} color={why ? colors.subtle : d.color} active={m.id === who?.id}
-                          icon={why === 'unavailable' ? 'close-circle-outline' : why === 'busy' ? 'time-outline' : 'checkmark-circle-outline'} label={`${displayName(m)}${why === 'busy' ? ` ${t('services.busy')}` : why === 'unavailable' ? ` ${noteOn(m, sv.date) ? `· ${t('services.awayNote', { note: noteOn(m, sv.date)! })}` : t('services.away')}` : ''}`}
-                          onPress={why ? undefined : () => { const e = assign(sv.id, d.id, sl.position, i, m.id); setErr(e); if (!e) setOpen(null); }} />;
-                      })}
-                      {a && <Chip label={t('common.clear')} color={colors.red} onPress={() => { unassign(a.id); setOpen(null); }} />}
-                    </View>
-                  )}
+                  {open === key && (() => {
+                    const rows = holders.filter(m => m.id !== who?.id).map(m => {
+                      const away = awayOn(m, sv.date); const st = pickStatus(data.assignments, sv.id, m.id, key, away);
+                      const other = data.assignments.find(z => z.serviceId === sv.id && z.userId === m.id && z.id !== key);
+                      const detail = st === 'away' ? (noteOn(m, sv.date) ?? t('rota.away')) : st === 'busy' && other ? `${deptName(other.departmentId)} · ${roleName(other.departmentId, other.position)}` : undefined;
+                      return { m, st, detail };
+                    });
+                    const pick = (m: typeof holders[number], mode?: 'double' | 'swap') => { const e = assign(sv.id, d.id, sl.position, i, m.id, mode); setErr(e); setBusyPick(null); if (!e) setOpen(null); };
+                    return (
+                      <View testID={`picker-${key}`} style={{ marginTop: 8 }}>
+                        {holders.length === 0 && <Text style={s.small}>{t('services.nobodyHoldsDept', { dept: deptName(d.id), role: roleName(d.id, sl.position) })}</Text>}
+                        {(['free', 'busy', 'away'] as const).map(k => { const g = rows.filter(r => r.st === k); if (!g.length) return null; return (
+                          <View key={k} testID={`pick-section-${k}`}>
+                            <PickerSectionLabel kind={k} count={g.length} />
+                            {g.map(r => <PickerRow key={r.m.id} name={displayName(r.m).replace(/^@/, '')} status={k} detail={r.detail} testID={`pick-${k}-${r.m.username}`}
+                              onPress={k === 'free' ? () => pick(r.m) : k === 'busy' ? () => setBusyPick({ m: r.m, detail: r.detail ?? '', run: (mode: 'double' | 'swap') => pick(r.m, mode) }) : undefined} />)}
+                          </View>); })}
+                        {a && <Chip label={t('common.clear')} color={colors.red} onPress={() => { unassign(a.id); setOpen(null); }} testID="pick-clear" />}
+                      </View>
+                    );
+                  })()}
                 </View>
               );
             }))}
@@ -131,8 +145,7 @@ function ServiceDetail({ service: sv, msg, onBack, onEdit, onDeleted }: { servic
       <Text style={s.small}>{t('services.onlyHolders')}</Text>
       {isOwner && draft && <Button label={t('services.publish')} onPress={() => { publishService(sv.id); setPubMsg(t('services.published')); }} testID="publish-service" />}
       {isOwner && <Button label={t('services.editService')} outline onPress={onEdit} testID="edit-service" />}
-      {isOwner && <Button label={draft ? t('services.deleteDraft') : t('services.deleteService')} color={colors.red} outline onPress={del} testID={draft ? 'delete-draft' : 'delete-service'} />}
-      <Button label={t('services.backToServices')} outline onPress={onBack} testID="back-services" />
+      {isOwner && <Button label={draft ? t('services.deleteDraft') : t('services.deleteService')} danger onPress={del} testID={draft ? 'delete-draft' : 'delete-service'} />}
     </Screen>
   );
 }
@@ -145,7 +158,7 @@ function ServiceForm({ service, onClose, onDeleted }: { service?: Service; onClo
   const colors = useColors(); const s = useStyles();
   const { data, saveService, deleteService, canManage, t, deptName, roleName } = useMe();
   const [title, setTitle] = useState(service?.title ?? t('services.defaultName'));
-  const [location, setLocation] = useState(service?.location ?? data.settings?.lastLocation ?? '');
+  const [location, setLocation] = useState(service?.location ?? DEFAULT_LOCATION);
   const [date, setDate] = useState(isoToDdmm(service?.date ?? upcomingSundayIso()));
   const [start, setStart] = useState(service?.start ?? '16:00');
   const [end, setEnd] = useState(service?.end ?? '21:00');
@@ -169,7 +182,7 @@ function ServiceForm({ service, onClose, onDeleted }: { service?: Service; onClo
   const eligibleFor = (slotId: string) => {
     const row = rows.find(x => x.id === slotId); if (!row) return [];
     return data.users.filter(u => u.active && u.departmentIds.includes(row.dep) && (u.positions?.[row.dep] ?? []).includes(row.role)
-      && !awayOn(u, iso) && !rows.some(x => x.id !== slotId && x.assigneeId === u.id));
+      && !awayOn(u, iso));
   };
   // drop picks that became unavailable when the date changes
   useEffect(() => {
@@ -238,7 +251,7 @@ function ServiceForm({ service, onClose, onDeleted }: { service?: Service; onClo
                       <Text numberOfLines={1} style={{ flexShrink: 1, color: who ? colors.primaryText : colors.muted, fontWeight: who ? '700' : '500', fontSize: 14 }}>{who ? displayName(who) : t('ui.assignPlaceholder')}</Text>
                       <Icon name={openPick === x.id ? 'chevron-up' : 'chevron-down'} size={14} color={who ? colors.primaryText : colors.muted} style={{ marginLeft: 6 }} />
                     </Pressable>
-                    {manage && <IconButton testID={`rm-${d.id}-${x.role}-${n}`} icon="remove-circle-outline" label={t('services.removeSlot')} color={colors.subtle} onPress={() => removeSlot(x.id)} style={{ marginLeft: 4 }} />}
+                    {manage && <IconButton testID={`rm-${d.id}-${x.role}-${n}`} icon="remove-circle-outline" label={t('services.removeSlot')} color={colors.red} onPress={() => removeSlot(x.id)} style={{ marginLeft: 4 }} />}
                   </View>
                   {openPick === x.id && manage && <View style={[s.row, { marginTop: 8 }]}>
                     {opts.length === 0 && <Text style={s.small}>{t('services.noneAvailable')}</Text>}
@@ -265,7 +278,7 @@ function ServiceForm({ service, onClose, onDeleted }: { service?: Service; onClo
       {err && <Notice tone="error" text={err} />}
       <Button label={!service ? t('services.createService') : isDraftSv ? t('services.publish') : t('services.saveService')} onPress={() => save('published')} testID="sv-save" />
       {(!service || isDraftSv) && <Button label={t('services.saveDraft')} outline onPress={() => save('draft')} testID="sv-save-draft" />}
-      {isDraftSv && <Button label={t('services.deleteDraft')} color={colors.red} outline testID="sv-delete-draft" onPress={() => confirmAsk(t('services.deleteDraft'), t('services.deleteDraftConfirm', { title: service!.title, date: isoToDdmm(service!.date) }), t('common.delete'), t('common.cancel'), () => { deleteService(service!.id); onDeleted?.(t('services.draftDeleted')); })} />}
+      {isDraftSv && <Button label={t('services.deleteDraft')} danger testID="sv-delete-draft" onPress={() => confirmAsk(t('services.deleteDraft'), t('services.deleteDraftConfirm', { title: service!.title, date: isoToDdmm(service!.date) }), t('common.delete'), t('common.cancel'), () => { deleteService(service!.id); onDeleted?.(t('services.draftDeleted')); })} />}
       <Button label={t('common.cancel')} outline onPress={() => onClose()} />
     </Screen>
   );

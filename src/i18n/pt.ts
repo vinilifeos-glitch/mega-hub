@@ -14,7 +14,7 @@ export const pt: Dict = {
   language: { title: 'Idioma', hint: 'Escolha o idioma da sua conta.', pt: 'Português', en: 'English' },
   departments: { 'd-music': 'Música', 'd-kids': 'Infantil', 'd-obreiros': 'Obreiros' },
   roles: {
-    'd-music': { Keys: 'Teclado', Bass: 'Baixo', Drums: 'Bateria', Guitar: 'Guitarra', Desk: 'Mesa de Som', 'Lead Singer': 'Ministro(a) de Louvor', 'Backing Vocals': 'Backing Vocal' },
+    'd-music': { Keys: 'Teclado', Bass: 'Baixo', Drums: 'Bateria', Guitar: 'Guitarra', Desk: 'Mesa de Som', 'Lead Singer': 'Ministro(a) de Louvor', 'Backing Vocals': 'Backing Vocal', Assembly: 'Montagem' },
     'd-kids': { Teacher: 'Professor(a)', Assistant: 'Auxiliar' },
     'd-obreiros': { Atalaia: 'Atalaia', 'Dízimo': 'Dízimo', Abertura: 'Abertura', 'Projeção': 'Projeção', 'Mídia': 'Mídia' },
   },
@@ -67,7 +67,7 @@ draft: 'Rascunho', saveDraft: 'Salvar rascunho', publish: 'Publicar', published:
     noteLabel: 'Observação (opcional)', notePlaceholder: 'ex.: viagem', noteA11y: 'Observação: {note}',
     misses: 'Vai perder: {services}', noServices: 'Nenhum culto agendado nesse dia', unavailableDates: 'Datas indisponíveis', noDates: 'Nenhuma data indisponível.',
   },
-  myRota: { title: 'Minha Escala', subtitle: 'Cultos em que você está escalado.', empty: 'Você ainda não está em nenhuma escala. Mantenha suas datas indisponíveis atualizadas para os administradores planejarem.' },
+  myRota: { view: 'Ver detalhes', yourRoles: 'Suas funções', team: 'Equipe neste culto', you: 'você', notFound: 'Este culto não está na sua escala.', title: 'Minha Escala', subtitle: 'Cultos em que você está escalado.', empty: 'Você ainda não está em nenhuma escala. Mantenha suas datas indisponíveis atualizadas para os administradores planejarem.' },
   departmentsScreen: {
     title: 'Departamentos', subtitle: 'Onde você serve e suas funções.', mine: 'Meus departamentos e funções', all: 'Todos os departamentos',
     assignedBy: 'Departamentos e funções são definidos por {owner} (proprietário).', admins: 'Administradores: {names}', noAdmins: 'Nenhum administrador ainda. O proprietário ({owner}) cuida deste departamento.',
@@ -127,5 +127,6 @@ draft: 'Rascunho', saveDraft: 'Salvar rascunho', publish: 'Publicar', published:
     profile: 'Meu perfil', profileHint: 'Dados pessoais, idioma e aparência', team: 'Minha equipe', teamHint: 'Pessoas dos departamentos que você administra',
     accounts: 'Contas', ownerOnlyField: 'Somente o proprietário pode alterar nome e telefone.', accountsHint: 'Crie e gerencie o acesso de todos', settings: 'Configurações', admin: 'Administração',
   },
-  ui: { noDeptSection: 'Ainda sem departamento', rolesLabel: 'Funções', assignPlaceholder: 'Atribuir', addRole: 'Adicionar função', addSong: 'Adicionar música' },
+  ui: { noDeptSection: 'Ainda sem departamento', rolesLabel: 'Funções', assignPlaceholder: 'Atribuir', addRole: 'Adicionar função', addSong: 'Adicionar música', textSmaller: 'Texto menor', textBigger: 'Texto maior' },
+  rota: { available: 'Disponíveis', servingElsewhere: 'Servindo em outra função', unavailable: 'Indisponíveis', alreadyServing: '@{name} já está servindo como {detail}.', swap: 'Trocar', doubleBook: 'Escalar mesmo assim', cancel: 'Cancelar', yourRole: 'Sua função', yourTeam: 'Sua equipe', unfilled: 'Em aberto', live: 'Iniciar modo ao vivo', free: 'Livre', away: 'Ausente' },
 };

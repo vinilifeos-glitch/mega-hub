@@ -49,7 +49,9 @@ export const lightColors = {
   tabBar: '#FFFFFF',
   green: '#15803D', greenSoft: '#DCFCE7',
   amber: '#B45309', amberSoft: '#FEF3C7',
-  red: '#DC2626', redSoft: '#FEE2E2',
+  red: '#DC2626', redSoft: '#FEE2E2', dangerBorder: '#FCA5A5',
+  statusTintAmber: '#FFFBEB', statusTextAmber: '#92400E',
+  statusTintRed: '#FEF2F2', statusTextRed: '#991B1B',
   shadow: '#0F172A',
 };
 export type Palette = typeof lightColors;
@@ -71,7 +73,9 @@ export const darkColors: Palette = {
   tabBar: '#0F1829',
   green: '#4ADE80', greenSoft: '#12301F',
   amber: '#FBBF24', amberSoft: '#3A2A0A',
-  red: '#F87171', redSoft: '#3B1414',
+  red: '#F87171', redSoft: '#3B1414', dangerBorder: '#7F1D1D',
+  statusTintAmber: '#2A2110', statusTextAmber: '#FCD34D',
+  statusTintRed: '#2A1416', statusTextRed: '#FCA5A5',
   shadow: '#000000',
 };
 export type ThemeMode = 'light' | 'dark';
@@ -184,18 +188,20 @@ export function Chip({ label, active, onPress, color, testID, icon }: { label: s
   );
 }
 
-/** Primary = filled accent. `outline` = secondary. `danger` (or legacy red `color`) + outline = destructive text button. */
+/** Primary = filled accent. `outline` = secondary. `danger` = destructive secondary: same shape as outline, red text + red-tinted border (implies outline). */
 export function Button({ label, onPress, color, outline, danger: dangerProp, testID }: { label: string; onPress?: () => void; color?: string; outline?: boolean; danger?: boolean; testID?: string }) {
   const colors = useColors(); const s = useStyles();
   const danger = dangerProp || color === lightColors.red || color === darkColors.red;
   const fill = (danger ? colors.red : color) ?? colors.primary;
   return (
-    <Pressable testID={testID} onPress={onPress} accessibilityRole="button"
+    <Pressable testID={testID} onPress={onPress} accessibilityRole="button" accessibilityLabel={label}
       style={({ pressed }) => [s.btn,
-        outline
-          ? { backgroundColor: pressed ? colors.soft : danger ? 'transparent' : colors.card, borderColor: danger ? 'transparent' : colors.border }
+        danger
+          ? { backgroundColor: pressed ? colors.redSoft : colors.card, borderColor: colors.dangerBorder }
+          : outline
+          ? { backgroundColor: pressed ? colors.soft : colors.card, borderColor: colors.border }
           : { backgroundColor: fill, borderColor: fill, opacity: pressed ? 0.85 : 1 }]}>
-      <Text style={{ color: outline ? (danger ? colors.red : colors.text) : colors.onPrimary, fontWeight: '700', fontSize: 16, textAlign: 'center' }}>{label}</Text>
+      <Text style={{ color: danger ? colors.red : outline ? colors.text : colors.onPrimary, fontWeight: '700', fontSize: 16, textAlign: 'center' }}>{label}</Text>
     </Pressable>
   );
 }
@@ -254,6 +260,55 @@ export function LanguagePicker({ value, onChange }: { value: Lang; onChange: (v:
 export function ThemeToggle({ value, onChange }: { value: ThemeMode; onChange: (v: ThemeMode) => void }) {
   const { t } = useApp();
   return <Segmented testIDPrefix="theme" value={value} onChange={onChange} options={[{ v: 'light', label: t('appearance.light'), icon: 'sunny-outline' }, { v: 'dark', label: t('appearance.dark'), icon: 'moon-outline' }]} />;
+}
+
+/** Search input with a leading icon (themed). */
+export function SearchField(props: React.ComponentProps<typeof TextInput>) {
+  const colors = useColors(); const s = useStyles(); const { style, ...rest } = props;
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, backgroundColor: colors.card, paddingLeft: 12, marginVertical: space.sm }}>
+      <Icon name="search" size={18} color={colors.subtle} />
+      <TextInput autoCapitalize="none" autoCorrect={false} placeholderTextColor={colors.subtle} style={[s.input, { flex: 1, borderWidth: 0, marginTop: 0, backgroundColor: 'transparent' }, style]} {...rest} />
+    </View>
+  );
+}
+
+/** Low-emphasis text button with a leading icon (e.g. "+ Add song"). */
+export function GhostButton({ label, icon = 'add', onPress, testID, color }: { label: string; icon?: IconName; onPress?: () => void; testID?: string; color?: string }) {
+  const colors = useColors(); const c = color ?? colors.primaryText;
+  return (
+    <Pressable testID={testID} onPress={onPress} accessibilityRole="button"
+      style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', minHeight: 44, paddingHorizontal: 12, marginTop: space.xs, borderRadius: radius.md, backgroundColor: pressed ? colors.soft : 'transparent' })}>
+      <Icon name={icon} size={18} color={c} style={{ marginRight: 6 }} />
+      <Text style={{ color: c, fontWeight: '700', fontSize: 15 }}>{label.replace(/^\+\s*/, '')}</Text>
+    </Pressable>
+  );
+}
+
+/** Card heading: accent icon tile + title + optional right-hand content. */
+export function CardHeader({ icon, title, right }: { icon: IconName; title: string; right?: React.ReactNode }) {
+  const colors = useColors(); const s = useStyles();
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: space.sm }}>
+      <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center', marginRight: 10 }}>
+        <Icon name={icon} size={18} color={colors.primaryText} />
+      </View>
+      <Text style={[s.h2, { flex: 1 }]}>{title}</Text>
+      {right}
+    </View>
+  );
+}
+
+/** Compact A−/A+ text size control. */
+export function SizeControl({ onSmaller, onBigger, smallerID, biggerID, smallerLabel, biggerLabel }: { onSmaller: () => void; onBigger: () => void; smallerID: string; biggerID: string; smallerLabel: string; biggerLabel: string }) {
+  const colors = useColors();
+  const btn = (label: string, a11y: string, id: string, on: () => void, first?: boolean) => (
+    <Pressable testID={id} onPress={on} accessibilityRole="button" accessibilityLabel={a11y}
+      style={({ pressed }) => ({ minWidth: 48, minHeight: 40, alignItems: 'center', justifyContent: 'center', backgroundColor: pressed ? colors.border : 'transparent', borderRightWidth: first ? 1 : 0, borderRightColor: colors.border })}>
+      <Text style={{ color: colors.text, fontWeight: '800', fontSize: first ? 14 : 17 }}>{label}</Text>
+    </Pressable>
+  );
+  return <View style={{ flexDirection: 'row', alignSelf: 'flex-end', borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.soft, overflow: 'hidden', marginBottom: space.sm }}>{btn('A−', smallerLabel, smallerID, onSmaller, true)}{btn('A+', biggerLabel, biggerID, onBigger)}</View>;
 }
 
 /* ── Feedback ───────────────────────────────────────────────── */

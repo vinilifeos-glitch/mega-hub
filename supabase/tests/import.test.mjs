@@ -44,7 +44,9 @@ const norm = d => ({
   assignments: d.assignments.map(a => ({ ...a, userId: inv.get(a.userId) ?? a.userId })).sort((a, b) => a.id.localeCompare(b.id)),
   departments: d.departments.map(x => ({ ...x, leaderId: null })),
 });
-const A = norm(data), B = norm(back);
+// app migrate() adds the Assembly role to Music on load; the DB migration does the same
+const withAsm = d => ({ ...d, departments: d.departments.map(x => x.id === "d-music" && !x.positions.includes("Assembly") ? { ...x, positions: [...x.positions, "Assembly"] } : x) });
+const A = norm(withAsm(data)), B = norm(back);
 for (const k of Object.keys(A)) { if (JSON.stringify(A[k]) !== JSON.stringify(B[k])) { for (let i = 0; i < A[k].length; i++) if (JSON.stringify(A[k][i]) !== JSON.stringify(B[k][i])) { console.log('DIFF', k, JSON.stringify(A[k][i]), '\n    ', JSON.stringify(B[k][i])); break; } } ok(JSON.stringify(A[k]) === JSON.stringify(B[k]), `round trip: ${k} identical`); }
 ok(back.users.every(u => u.mustChangePassword), 'all imported users must change password on first sign-in');
 // diff writer: unchanged data -> no writes; one change -> one upsert
