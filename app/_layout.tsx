@@ -1,18 +1,19 @@
-import { useState } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { AppProvider } from '../src/state/AppContext';
-import { ThemeMode, ThemeProvider } from '../src/components/ui';
+import { AppProvider, useApp } from '../src/state/AppContext';
+import { ThemeProvider } from '../src/components/ui';
+
+/** Palette follows the per-user theme from AppContext (device last theme on the sign-in screen). */
+function Themed() {
+  const { theme, setTheme } = useApp();
+  return (
+    <ThemeProvider mode={theme} setMode={setTheme}>
+      <StatusBar style="light" />
+      <Stack screenOptions={{ headerShown: false }} />
+    </ThemeProvider>
+  );
+}
 
 export default function RootLayout() {
-  // TODO(Tom): drive from AppContext `theme` / `setTheme(t)` once the notes branch lands (per-user, plus device-level last theme for sign-in).
-  const [mode, setMode] = useState<ThemeMode>('light');
-  return (
-    <AppProvider>
-      <ThemeProvider mode={mode} setMode={setMode}>
-        <StatusBar style="light" />
-        <Stack screenOptions={{ headerShown: false }} />
-      </ThemeProvider>
-    </AppProvider>
-  );
+  return <AppProvider><Themed /></AppProvider>;
 }

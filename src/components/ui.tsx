@@ -204,8 +204,12 @@ export function Field(props: React.ComponentProps<typeof TextInput> & { label: s
   const { label, style, ...rest } = props; const colors = useColors(); const s = useStyles();
   return (
     <View style={{ marginBottom: space.lg }}>
-      <Text style={s.label}>{label}</Text>
-      <TextInput autoCapitalize="none" autoCorrect={false} placeholderTextColor={colors.subtle} style={[s.input, style]} {...rest} />
+      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <Text style={s.label}>{label}</Text>
+        {rest.editable === false ? <Icon name="lock-closed" size={12} color={colors.subtle} style={{ marginLeft: 6 }} /> : null}
+      </View>
+      <TextInput autoCapitalize="none" autoCorrect={false} placeholderTextColor={colors.subtle} accessibilityState={{ disabled: rest.editable === false }}
+        style={[s.input, rest.editable === false ? { backgroundColor: colors.soft, color: colors.muted, borderColor: colors.soft } : null, style]} {...rest} />
     </View>
   );
 }

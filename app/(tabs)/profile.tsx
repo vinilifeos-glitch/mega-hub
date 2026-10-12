@@ -2,14 +2,13 @@ import { DateField } from '../../src/components/DateField';
 import { useState } from 'react';
 import { Text } from 'react-native';
 import { formatDobInput, useMe } from '../../src/state/AppContext';
-import { Button, Card, Field, LanguagePicker, ThemeToggle, useThemeMode, Screen, Notice, useColors, useStyles } from '../../src/components/ui';
+import { Button, Card, Field, LanguagePicker, ThemeToggle, Screen, Notice, useColors, useStyles } from '../../src/components/ui';
 import { PersonalInfo } from '../../src/screens/Profile';
 import { ChangePasswordScreen } from '../../src/screens/Auth';
 
 export default function MyProfile() {
   const colors = useColors(); const s = useStyles();
-  const { mode: themeMode, setMode: setThemeMode } = useThemeMode();
-  const { currentUser: me, saveMyProfile, signOut, t, language, setLanguage } = useMe();
+  const { currentUser: me, saveMyProfile, signOut, t, language, setLanguage, theme, setTheme } = useMe();
   const [mode, setMode] = useState<'view' | 'edit' | 'password'>('view');
   const init = () => ({ firstName: me.firstName, middleNames: me.middleNames, lastName: me.lastName, dob: me.dob, contact: me.contact ?? '' });
   const [f, setF] = useState(init);
@@ -42,8 +41,7 @@ export default function MyProfile() {
       <Text style={s.section}>{t('appearance.title')}</Text>
       <Card>
         <Text style={[s.small, { marginBottom: 12 }]}>{t('appearance.hint')}</Text>
-        {/* TODO(Tom): bind to useApp().theme / setTheme(t) (per-user) instead of the local ThemeProvider state. */}
-        <ThemeToggle value={themeMode} onChange={setThemeMode} />
+        <ThemeToggle value={theme} onChange={setTheme} />
       </Card>
       <Text style={s.section}>{t('profile.accountSection')}</Text>
       <Button label={t('profile.editDetails')} onPress={() => { setMsg(null); setF(init()); setMode('edit'); }} testID="edit-me" />

@@ -1,8 +1,10 @@
+import { canEditPersonal } from '../../src/state/permissions';
 import { DateField } from '../../src/components/DateField';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { formatDobInput, useMe } from '../../src/state/AppContext';
-import { Button, DeptTitle, deptIcon, Card, Chip, Empty, Field, Screen, Notice, useColors, useStyles } from '../../src/components/ui';
+import { NOTE_MAX } from '../../src/data/unavailability';
+import { Icon, Button, DeptTitle, deptIcon, Card, Chip, Empty, Field, Screen, Notice, useColors, useStyles } from '../../src/components/ui';
 import { User } from '../../src/types';
 import { toIso, todayIso } from '../../src/data/dates';
 
@@ -48,22 +50,24 @@ export default function Team() {
 
 function MemberEditor({ user, onClose }: { user: User; onClose: (m?: string) => void }) {
   const colors = useColors(); const s = useStyles();
-  const { data, myAdminDeps, adminSaveMember, addUnavailable, removeUnavailable, t, ownerName, deptName, roleName } = useMe();
+  const { data, currentUser, myAdminDeps, adminSaveMember, addUnavailable, removeUnavailable, t, ownerName, deptName, roleName } = useMe();
   const deps = data.departments.filter(d => myAdminDeps.includes(d.id));
   const [f, setF] = useState({ firstName: user.firstName, middleNames: user.middleNames, lastName: user.lastName, dob: user.dob, contact: user.contact ?? '' });
   const [dm, setDm] = useState<Record<string, string[] | null>>(Object.fromEntries(deps.map(d => [d.id, user.departmentIds.includes(d.id) ? [...(user.positions?.[d.id] ?? [])] : null])));
-  const [date, setDate] = useState(''); const [err, setErr] = useState<string | null>(null);
+  const [date, setDate] = useState(''); const [note, setNote] = useState(''); const [err, setErr] = useState<string | null>(null);
   const live = data.users.find(u => u.id === user.id) ?? user;
-  const dates = (live.unavailable ?? []).filter(x => x >= todayIso());
+  const dates = (live.unavailable ?? []).filter(x => x.date >= todayIso());
   const toggleRole = (dep: string, r: string) => setDm(p => ({ ...p, [dep]: (p[dep] ?? []).includes(r) ? p[dep]!.filter(x => x !== r) : [...(p[dep] ?? []), r] }));
+  const lock = !canEditPersonal(currentUser, user.id);
   return (
     <Screen title={t('team.editTitle', { name: user.name })} subtitle={t('team.editSubtitle', { owner: ownerName })}>
       <Card>
-        <Field label={t('fields.firstName')} value={f.firstName} onChangeText={v => setF({ ...f, firstName: v })} autoCapitalize="words" testID="m-first" />
-        <Field label={t('fields.middleNames')} value={f.middleNames} onChangeText={v => setF({ ...f, middleNames: v })} autoCapitalize="words" />
-        <Field label={t('fields.surname')} value={f.lastName} onChangeText={v => setF({ ...f, lastName: v })} autoCapitalize="words" testID="m-last" />
+        <Field label={t('fields.firstName')} value={f.firstName} onChangeText={v => setF({ ...f, firstName: v })} editable={!lock} autoCapitalize="words" testID="m-first" />
+        <Field label={t('fields.middleNames')} value={f.middleNames} onChangeText={v => setF({ ...f, middleNames: v })} editable={!lock} autoCapitalize="words" />
+        <Field label={t('fields.surname')} value={f.lastName} onChangeText={v => setF({ ...f, lastName: v })} editable={!lock} autoCapitalize="words" testID="m-last" />
         <DateField label={t('fields.dob')} limit="past" value={f.dob} onChange={v => setF({ ...f, dob: v })} testID="m-dob" />
-        <Field label={t('fields.contact')} value={f.contact} keyboardType="phone-pad" onChangeText={v => setF({ ...f, contact: v })} />
+        <Field label={t('fields.contact')} value={f.contact} keyboardType="phone-pad" onChangeText={v => setF({ ...f, contact: v })} editable={!lock} />
+        {lock && <View style={[s.row, { flexWrap: 'nowrap' }]}><Icon name="lock-closed" size={14} style={{ marginRight: 6 }} /><Text style={[s.small, { flexShrink: 1 }]}>{t('more.ownerOnlyField')}</Text></View>}
       </Card>
       <Text style={s.section}>{t('team.yourDepts')}</Text>
       {deps.map(d => {
@@ -80,13 +84,14 @@ function MemberEditor({ user, onClose }: { user: User; onClose: (m?: string) => 
       <Text style={s.section}>{t('availability.unavailableDates')}</Text>
       <Card>
         <DateField label={t('availability.add')} limit="future" value={date} onChange={setDate} testID="m-unavail" />
+        <Field label={t('availability.noteLabel')} value={note} onChangeText={setNote} maxLength={NOTE_MAX} placeholder={t('availability.notePlaceholder')} testID="m-unavail-note" />
         <Button label={t('availability.add')} outline testID="m-unavail-add" onPress={() => {
           const iso = toIso(date); if (!iso || iso < todayIso()) return setErr(t('errors.futureDateInvalid'));
-          addUnavailable(iso, user.id); setDate(''); setErr(null);
+          addUnavailable(iso, user.id, note); setDate(''); setNote(''); setErr(null);
         }} />
-        {dates.length === 0 ? <Text style={[s.small, { marginTop: 8 }]}>{t('availability.noDates')}</Text> : dates.map(iso => (
+        {dates.length === 0 ? <Text style={[s.small, { marginTop: 8 }]}>{t('availability.noDates')}</Text> : dates.map(({ date: iso, note: n }) => (
           <View key={iso} style={[s.row, { justifyContent: 'space-between', marginTop: 8 }]}>
-            <Text style={{ color: colors.text }}>{iso.split('-').reverse().join('/')}</Text>
+            <View style={{ flex: 1 }}><Text style={{ color: colors.text }}>{iso.split('-').reverse().join('/')}</Text>{n ? <Text style={s.small}>{n}</Text> : null}</View>
             <Pressable onPress={() => removeUnavailable(iso, user.id)}><Text style={{ color: colors.red, fontWeight: '700' }}>{t('common.remove')}</Text></Pressable>
           </View>
         ))}

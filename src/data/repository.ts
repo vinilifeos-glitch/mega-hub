@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { AppData } from '../types';
+import { AppData, Theme } from '../types';
+import { normalizeUnavailable } from './unavailability';
 import { mockData } from './mockData';
 
 /** Upgrade data saved by older app versions in place (keeps accounts & passwords). */
@@ -20,7 +21,10 @@ export function migrate(d: AppData): AppData {
     }
     if (!u.unavailable) {
       u.unavailable = [...new Set(d.availability.filter(a => a.userId === u.id && !a.available)
-        .map(a => d.services.find(s => s.id === a.serviceId)?.date).filter((x): x is string => !!x))].sort();
+        .map(a => d.services.find(s => s.id === a.serviceId)?.date).filter((x): x is string => !!x))].sort().map(date => ({ date }));
+    } else {
+      // additive, idempotent: legacy string[] -> {date, note?}[]; object entries pass through unchanged
+      u.unavailable = normalizeUnavailable(u.unavailable);
     }
     if (u.firstName !== undefined && u.positions) return u;
     const seed = mockData.users.find(s => s.id === u.id);
@@ -52,11 +56,14 @@ export interface Repository {
   /** Last language used on this device, so the sign-in screen matches before anyone signs in. */
   getDeviceLanguage(): Promise<'pt' | 'en' | null>;
   setDeviceLanguage(lang: 'pt' | 'en'): Promise<void>;
+  getDeviceTheme(): Promise<Theme | null>;
+  setDeviceTheme(theme: Theme): Promise<void>;
 }
 
 const DATA_KEY = 'megahub:data:v4';
 const SESSION_KEY = 'megahub:session:v4';
 const LANG_KEY = 'megahub:lang';
+const THEME_KEY = 'megahub:theme';
 
 class DeviceRepository implements Repository {
   async load() {
@@ -75,6 +82,8 @@ class DeviceRepository implements Repository {
   }
   async getDeviceLanguage() { const v = await AsyncStorage.getItem(LANG_KEY); return v === 'pt' || v === 'en' ? v : null; }
   async setDeviceLanguage(lang: 'pt' | 'en') { await AsyncStorage.setItem(LANG_KEY, lang); }
+  async getDeviceTheme() { const v = await AsyncStorage.getItem(THEME_KEY); return v === 'light' || v === 'dark' ? v : null; }
+  async setDeviceTheme(theme: Theme) { await AsyncStorage.setItem(THEME_KEY, theme); }
 }
 
 export const repository: Repository = new DeviceRepository();
