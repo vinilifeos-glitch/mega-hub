@@ -8,7 +8,7 @@ export type Rows = {
   user_positions: { user_id: string; department_id: string; role: string }[];
   admin_of: { user_id: string; department_id: string }[];
   unavailability: { user_id: string; date: string; note: string | null }[];
-  services: { id: string; title: string; location: string; date: string; start_time: string; end_time: string }[];
+  services: { id: string; title: string; location: string; date: string; start_time: string; end_time: string; status?: 'draft' | 'published' }[];
   service_slots: { service_id: string; department_id: string; role: string; count: number }[];
   assignments: { service_id: string; department_id: string; role: string; idx: number; user_id: string }[];
   departments: { id: string; name: string; emoji: string; color: string; sort: number }[];
@@ -52,7 +52,7 @@ export function toRows(d: AppData, idMap: (id: string) => string = x => x): Rows
     for (const x of u.unavailable ?? []) r.unavailability.push({ user_id: id, date: x.date, note: blank(x.note) });
   }
   for (const s of d.services) {
-    r.services.push({ id: s.id, title: s.title, location: s.location ?? '', date: s.date, start_time: s.start, end_time: s.end });
+    r.services.push({ id: s.id, title: s.title, location: s.location ?? '', date: s.date, start_time: s.start, end_time: s.end, status: s.status ?? 'published' });
     for (const sl of s.slots) r.service_slots.push({ service_id: s.id, department_id: sl.departmentId, role: sl.position, count: sl.count });
   }
   for (const a of d.assignments) r.assignments.push({ service_id: a.serviceId, department_id: a.departmentId, role: a.position, idx: a.index, user_id: idMap(a.userId) });
@@ -79,7 +79,7 @@ export function fromRows(r: Rows): AppData {
   });
   const departments = [...r.departments].sort((a, b) => a.sort - b.sort).map(x => ({ id: x.id, name: x.name, emoji: x.emoji, color: x.color, leaderId: null,
     positions: r.department_roles.filter(p => p.department_id === x.id).sort((a, b) => a.sort - b.sort).map(p => p.role) }));
-  const services = r.services.map(s => ({ id: s.id, title: s.title, location: s.location, date: s.date.slice(0, 10), start: hhmm(s.start_time), end: hhmm(s.end_time),
+  const services = r.services.map(s => ({ id: s.id, title: s.title, location: s.location, date: s.date.slice(0, 10), start: hhmm(s.start_time), end: hhmm(s.end_time), ...(s.status === 'draft' ? { status: 'draft' as const } : {}),
     slots: r.service_slots.filter(x => x.service_id === s.id).map(x => ({ departmentId: x.department_id, position: x.role, count: x.count })) }));
   const assignments: Assignment[] = r.assignments.map(a => ({ id: `${a.service_id}:${a.department_id}:${a.role}:${a.idx}`, serviceId: a.service_id, departmentId: a.department_id, position: a.role, index: a.idx, userId: a.user_id }));
   return { users, departments, services, availability: [], assignments };

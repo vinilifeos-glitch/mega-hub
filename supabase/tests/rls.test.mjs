@@ -78,5 +78,14 @@ await ok('owner edits anyone\'s names/contact/email', () => allowed('owner', `up
 await ok('owner changes tiers + admin_of', async () => (await allowed('owner', `update profiles set tier='admin' where id=$1`, [U.tiago])) && allowed('owner', `insert into admin_of values ($1,'d-obreiros')`, [U.tiago]));
 await ok('owner cannot demote self', () => denied('owner', `update profiles set tier='admin' where id=$1`, [U.owner]));
 await ok('owner creates/edits/deletes services', async () => (await allowed('owner', `insert into services (id,title,date,start_time,end_time) values ('${id(101)}','x','2099-01-01','16:00','21:00')`)) && (await allowed('owner', `update services set title='y' where id='${id(101)}'`)) && allowed('owner', `delete from services where id='${id(101)}'`));
+// Drafts
+await db.exec(`insert into services (id,title,date,start_time,end_time,status) values ('${id(102)}','Rascunho','2099-11-01','16:00','21:00','draft');
+  insert into service_slots values ('${id(102)}','d-music','Keys',1); insert into assignments (service_id, department_id, role, idx, user_id) values ('${id(102)}','d-music','Keys',0,'${U.miguel}');`);
+await ok('existing services default to published', async () => (await db.query(`select status from services where id=$1`, [id(100)])).rows[0].status === 'published');
+await ok('volunteer cannot select draft service/slots/assignments', async () => (await as('miguel', `select * from services where id=$1`, [id(102)])).rows.length === 0 && (await as('miguel', `select * from service_slots where service_id=$1`, [id(102)])).rows.length === 0 && (await as('miguel', `select * from assignments where service_id=$1`, [id(102)])).rows.length === 0);
+await ok('volunteer still sees published services', async () => (await as('miguel', `select * from services where id=$1`, [id(100)])).rows.length === 1);
+await ok('owner and admin see draft + its assignment', async () => (await as('owner', `select * from assignments where service_id=$1`, [id(102)])).rows.length === 1 && (await as('lucas', `select * from services where id=$1`, [id(102)])).rows.length === 1);
+await ok('admin cannot publish', async () => { await as('lucas', `update services set status='published' where id=$1`, [id(102)]); return (await db.query(`select status from services where id=$1`, [id(102)])).rows[0].status === 'draft'; });
+await ok('owner publishes -> volunteer sees it', async () => (await allowed('owner', `update services set status='published' where id='${id(102)}'`)) && (await as('miguel', `select * from assignments where service_id=$1`, [id(102)])).rows.length === 1);
 await ok('anon sees nothing', async () => { await db.exec(`select set_config('request.jwt.claim.sub','',false); set role anon`); try { await db.query('select * from profiles'); return false; } catch { return true; } finally { await db.exec('reset role'); } });
 console.log(`${n} passed, ${fails} failed`); process.exit(fails ? 1 : 0);

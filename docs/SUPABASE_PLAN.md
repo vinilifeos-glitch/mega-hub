@@ -73,3 +73,8 @@ Run tests: `npm run test:supabase` (no account or Docker needed).
 ## Rollback
 - The local-mode build is untouched. To roll back, redeploy the previous `main` build (`./deploy.sh` from main), and the app uses on-device data again. Each device still has its pre-switch local data, because Supabase mode uses different storage and never deletes the old `megahub:data:v4`.
 - Supabase data stays in the project for a later retry. A full reset is possible with `npx supabase db reset --linked` (destructive; only if starting over).
+
+## Service drafts (migration 20261012010000_service_drafts.sql)
+- `services.status text not null default 'published'` (`draft|published`); existing rows become published.
+- RLS: volunteers can't select draft services, their slots or their assignments (`service_visible()`); owner/admins can. Only the owner can publish (services write policy is owner-only).
+- Adapter: `status` mapped both ways; app `status` missing = published, so a published service comes back without the field (same meaning).
