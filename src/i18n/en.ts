@@ -123,4 +123,5 @@ draft: 'Draft', saveDraft: 'Save draft', publish: 'Publish', published: 'Service
     accounts: 'Accounts', ownerOnlyField: 'Only the owner can change name and contact details.', accountsHint: "Create and manage everyone's sign-in", settings: 'Settings', admin: 'Admin tools',
   },
   ui: { noDeptSection: 'Not in a department yet', rolesLabel: 'Roles', assignPlaceholder: 'Assign', addRole: 'Add role', addSong: 'Add song', textSmaller: 'Smaller text', textBigger: 'Bigger text' },
+  rota: { available: 'Available', servingElsewhere: 'Serving elsewhere', unavailable: 'Unavailable', alreadyServing: '@{name} is already serving as {detail}.', swap: 'Swap', doubleBook: 'Double book', cancel: 'Cancel', yourRole: 'Your role', yourTeam: 'Your team', unfilled: 'Unfilled', live: 'Start Live mode', free: 'Free', away: 'Away' },
 };

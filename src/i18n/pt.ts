@@ -125,4 +125,5 @@ draft: 'Rascunho', saveDraft: 'Salvar rascunho', publish: 'Publicar', published:
     accounts: 'Contas', ownerOnlyField: 'Somente o proprietário pode alterar nome e telefone.', accountsHint: 'Crie e gerencie o acesso de todos', settings: 'Configurações', admin: 'Administração',
   },
   ui: { noDeptSection: 'Ainda sem departamento', rolesLabel: 'Funções', assignPlaceholder: 'Atribuir', addRole: 'Adicionar função', addSong: 'Adicionar música', textSmaller: 'Texto menor', textBigger: 'Texto maior' },
+  rota: { available: 'Disponíveis', servingElsewhere: 'Servindo em outra função', unavailable: 'Indisponíveis', alreadyServing: '@{name} já está servindo como {detail}.', swap: 'Trocar', doubleBook: 'Escalar mesmo assim', cancel: 'Cancelar', yourRole: 'Sua função', yourTeam: 'Sua equipe', unfilled: 'Em aberto', live: 'Iniciar modo ao vivo', free: 'Livre', away: 'Ausente' },
 };
