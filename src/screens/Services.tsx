@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Alert, Platform, Pressable, Text, View } from 'react-native';
 import { formatDobInput, useMe } from '../state/AppContext';
 import { Button, Card, Chip, Empty, Field, Screen, colors, formatDate, s } from '../components/ui';
@@ -124,17 +124,39 @@ function ServiceForm({ service, onClose }: { service?: Service; onClose: (msg?: 
   const [end, setEnd] = useState(service?.end ?? '21:00');
   const [slots, setSlots] = useState<Slot[]>(service?.slots ?? defaults());
   const [err, setErr] = useState<string | null>(null);
+  const [picks, setPicks] = useState<Record<string, string>>(() => Object.fromEntries(
+    data.assignments.filter(a => a.serviceId === service?.id).map(a => [`${a.departmentId}:${a.position}:${a.index}`, a.userId])));
+  const [notice, setNotice] = useState<string | null>(null);
+  const [openPick, setOpenPick] = useState<string | null>(null);
+  const iso = toIso(date);
+  const userById = (id: string) => data.users.find(u => u.id === id);
+  const eligible = (dep: string, pos: string, key: string) => data.users.filter(u => u.active && u.departmentIds.includes(dep)
+    && (u.positions?.[dep] ?? []).includes(pos) && !(iso && (u.unavailable ?? []).includes(iso))
+    && !Object.entries(picks).some(([k, v]) => v === u.id && k !== key));
+  // re-check picks whenever the date or slots change
+  useEffect(() => {
+    const bad: string[] = [];
+    const next = Object.fromEntries(Object.entries(picks).filter(([k, uid]) => {
+      const [dep, pos, idx] = k.split(':'); const sl = slots.find(z => z.departmentId === dep && z.position === pos);
+      const u = userById(uid);
+      const ok = !!sl && +idx < sl.count && !!u && !(iso && (u.unavailable ?? []).includes(iso));
+      if (!ok && u) bad.push(`${u.name} (${pos})`);
+      return ok;
+    }));
+    if (bad.length) { setPicks(next); setNotice(`Removed ${bad.join(', ')} — ${iso ? 'unavailable on the new date or slot removed' : 'slot removed'}.`); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [iso, slots]);
   const setCount = (dep: string, pos: string, c: number) => setSlots(prev => {
     const has = prev.some(z => z.departmentId === dep && z.position === pos);
     if (c <= 0) return prev.filter(z => !(z.departmentId === dep && z.position === pos));
     return has ? prev.map(z => z.departmentId === dep && z.position === pos ? { ...z, count: Math.min(c, 10) } : z) : [...prev, { departmentId: dep, position: pos, count: c }];
   });
   const save = () => {
-    const iso = toIso(date);
     if (!iso) return setErr('Enter a real date as DD/MM/YYYY.');
     if (!service && iso < todayIso()) return setErr('That date is in the past.');
     const sid = service?.id ?? null;
-    const e = saveService(sid, { title, location, date: iso, start, end, slots });
+    const pk = Object.entries(picks).map(([k, userId]) => { const [departmentId, position, index] = k.split(':'); return { departmentId, position, index: +index, userId }; });
+    const e = saveService(sid, { title, location, date: iso, start, end, slots }, pk);
     if (e) return setErr(e);
     onClose(service ? 'Service updated.' : 'Service created.');
   };
@@ -171,6 +193,38 @@ function ServiceForm({ service, onClose }: { service?: Service; onClose: (msg?: 
               <Text style={[s.small, { marginTop: 6, marginBottom: 6 }]}>Add a slot:</Text>
               <View style={s.row}>{missing.map(p => <Chip key={p} testID={`sl-add-${d.id}-${p}`} label={`+ ${p}`} color={d.color} onPress={() => setCount(d.id, p, 1)} />)}</View>
             </>}
+          </Card>
+        );
+      })}
+      <Text style={s.section}>Assign people (optional)</Text>
+      <Text style={[s.small, { marginBottom: 8 }]}>Only people who hold the role, aren't away on {iso ? isoToDdmm(iso) : 'that date'} and aren't already in another slot are listed. Leave slots empty for admins to fill later.</Text>
+      {notice && <Card style={{ backgroundColor: '#FFF7ED', borderColor: '#FED7AA' }}><Text testID="sv-notice">{notice}</Text></Card>}
+      {data.departments.map(d => {
+        const mine = slots.filter(z => z.departmentId === d.id);
+        if (!mine.length) return null;
+        return (
+          <Card key={d.id} style={{ borderLeftWidth: 5, borderLeftColor: d.color }}>
+            <Text style={s.h2}>{d.emoji}  {d.name}</Text>
+            {mine.flatMap(z => Array.from({ length: z.count }, (_, i) => {
+              const key = `${d.id}:${z.position}:${i}`; const who = picks[key] ? userById(picks[key]) : undefined;
+              const opts = eligible(d.id, z.position, key);
+              return (
+                <View key={key} style={{ borderTopWidth: 1, borderTopColor: colors.border, paddingVertical: 8 }}>
+                  <View style={[s.row, { justifyContent: 'space-between' }]}>
+                    <Text style={{ fontWeight: '600', color: colors.text }}>{z.position}{z.count > 1 ? ` ${i + 1}` : ''}</Text>
+                    <Pressable testID={`fp-${d.id}-${z.position}-${i}`} onPress={() => setOpenPick(openPick === key ? null : key)}>
+                      <Text style={{ color: who ? colors.text : colors.primary, fontWeight: '600' }}>{who ? `${who.name} ▾` : 'Assign ▾'}</Text>
+                    </Pressable>
+                  </View>
+                  {openPick === key && <View style={[s.row, { marginTop: 8 }]}>
+                    {opts.length === 0 && <Text style={s.small}>No one eligible for {z.position}.</Text>}
+                    {opts.map(u => <Chip key={u.id} testID={`fpick-${u.username}`} label={u.name} color={d.color} active={who?.id === u.id}
+                      onPress={() => { setPicks({ ...picks, [key]: u.id }); setOpenPick(null); setNotice(null); }} />)}
+                    {who && <Chip label="Leave unfilled" color={colors.red} onPress={() => { const n = { ...picks }; delete n[key]; setPicks(n); setOpenPick(null); }} />}
+                  </View>}
+                </View>
+              );
+            }))}
           </Card>
         );
       })}

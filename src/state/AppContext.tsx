@@ -40,7 +40,7 @@ interface Ctx {
   ownerUpdateAccount: (id: string, a: { username: string; role: Role; active: boolean; newPassword: string; adminOf: string[] }) => Promise<string | null>;
   assign: (serviceId: string, departmentId: string, position: string, index: number, userId: string) => string | null;
   whyBlocked: (serviceId: string, userId: string) => string | null;
-  saveService: (id: string | null, s: Omit<Service, 'id'>) => string | null;
+  saveService: (id: string | null, s: Omit<Service, 'id'>, picks?: { departmentId: string; position: string; index: number; userId: string }[]) => string | null;
   deleteService: (id: string) => void;
   unassign: (assignmentId: string) => void;
   canManage: (departmentId: string) => boolean;
@@ -261,7 +261,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         update(x => ({ ...x, assignments: [...x.assignments.filter(a => a.id !== id), { id, serviceId, departmentId, position, index, userId }] }));
         return null;
       },
-      saveService: (id, sv) => {
+      saveService: (id, sv, picks) => {
         if (!isOwner) return 'Only the owner can create or edit services.';
         if (!sv.title.trim()) return 'Name is required.';
         if (!/^\d{4}-\d{2}-\d{2}$/.test(sv.date)) return 'Enter a real date as DD/MM/YYYY.';
@@ -275,7 +275,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           ...x,
           services: id ? x.services.map(s => s.id === id ? { id, ...clean } : s) : [...x.services, { id: sid, ...clean }],
           // drop assignments for removed / shrunk slots, or people now unavailable on a moved date
-          assignments: x.assignments.filter(a => {
+          assignments: picks ? [
+            ...x.assignments.filter(a => a.serviceId !== sid),
+            ...picks.filter((pk, i, arr) => {
+              const sl = slots.find(z => z.departmentId === pk.departmentId && z.position === pk.position);
+              const u = x.users.find(z => z.id === pk.userId);
+              return !!sl && pk.index < sl.count && !!u?.active && (u.positions?.[pk.departmentId] ?? []).includes(pk.position)
+                && !(u.unavailable ?? []).includes(clean.date) && arr.findIndex(o => o.userId === pk.userId) === i;
+            }).map(pk => ({ ...pk, serviceId: sid, id: `${sid}:${pk.departmentId}:${pk.position}:${pk.index}` })),
+          ] : x.assignments.filter(a => {
             if (a.serviceId !== sid) return true;
             const sl = slots.find(z => z.departmentId === a.departmentId && z.position === a.position);
             const u = x.users.find(z => z.id === a.userId);
