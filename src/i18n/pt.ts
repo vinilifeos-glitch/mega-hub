@@ -46,7 +46,7 @@ export const pt: Dict = {
   services: {
     title: 'Cultos', greeting: 'Olá, {name}. Próximos cultos e quem vai servir.', newService: 'Novo culto', editService: 'Editar culto',
 draft: 'Rascunho', saveDraft: 'Salvar rascunho', publish: 'Publicar', published: 'Culto publicado.', draftSaved: 'Rascunho salvo.', deleteDraft: 'Excluir rascunho', deleteDraftConfirm: 'Excluir o rascunho {title} em {date}? As escalas também serão removidas.', draftDeleted: 'Rascunho excluído.', draftHint: 'Rascunho — só o dono e os admins podem ver.',
-    deleteService: 'Excluir culto', deleteConfirmTitle: 'Excluir culto?', deleteConfirm: 'Excluir {title} em {date}?', backToServices: 'Voltar aos cultos',
+    alreadyServingAs: 'Já está servindo como {role}', conflictAlso: 'Conflito: também servindo como {role}', deleteService: 'Excluir culto', deleteConfirmTitle: 'Excluir culto?', deleteConfirm: 'Excluir {title} em {date}?', backToServices: 'Voltar aos cultos',
     createService: 'Criar culto', saveService: 'Salvar culto', created: 'Culto criado.', updated: 'Culto atualizado.', deleted: 'Culto excluído.',
     emptyOwner: 'Nenhum culto agendado. Toque em “Novo culto” para adicionar.', empty: 'Nenhum culto agendado ainda. Volte em breve.',
     youreServing: 'Você vai servir: {roles}', defaultName: 'Culto de Domingo', formSubtitle: 'Defina data, horário e quem é necessário.',
@@ -100,7 +100,7 @@ draft: 'Rascunho', saveDraft: 'Salvar rascunho', publish: 'Publicar', published:
   song: { composer: 'Compositor', timeSignature: 'Compasso', bpm: 'BPM', originalKey: 'Tom', major: 'Maior', minor: 'Menor', transpose: 'Transpor para', resetKey: 'Voltar para {key}', sections: 'Cifra', addSection: '+ Adicionar seção', sectionName: 'Nome da seção', cue: 'Deixa da letra (opcional)', bars: 'Compassos', barsHint: 'Um acorde por compasso entre barras: | FM7 | | CM7 | |  — compasso vazio mantém o acorde anterior.', barCount: '{n} compassos', notes: 'Observações', legacy: 'Cifra antiga (texto)', convert: 'Converter em seções', preset: { Intro: 'Intro', Verse: 'Verso', 'Pre-chorus': 'Pré-refrão', Chorus: 'Refrão', Bridge: 'Ponte', Outro: 'Final' },
     title: 'Título', artist: 'Artista', key: 'Tom', chords: 'Cifra / letra', link: 'Link (opcional)', edit: 'Editar música', save: 'Salvar música', cancel: 'Cancelar', del: 'Excluir música', delConfirm: 'Excluir {title} da biblioteca?', notFound: 'Música não encontrada.', noChords: 'Sem cifra ainda.', smaller: 'Texto menor', bigger: 'Texto maior', pick: 'Escolher da biblioteca', back: 'Voltar' },
   setlist: { title: 'Repertório', count: '{n} músicas', key: 'Tom', notes: 'Observações', songTitle: 'Título da música', addSong: '+ Adicionar música', edit: 'Editar', done: 'Concluir', empty: 'Nenhuma música ainda.', more: '+{n} mais', up: 'Subir {title}', down: 'Descer {title}', remove: 'Remover {title}', save: 'Salvar música', cancel: 'Cancelar', customKey: 'Outro tom' },
-  errors: {
+  errors: { roleConflict: '{name} já está servindo como {role} neste culto. Mesa de Som e Montagem podem ser somadas a uma função.', 
     rangeOrder: 'A data "Até" deve ser igual ou depois de "De".', rangeTooLong: 'Um período pode ter no máximo um ano.',
     deptScope: 'Só o dono e os admins deste departamento podem editar esta página.', resTitle: 'O título é obrigatório.', urlInvalid: 'Digite um link válido (https://…).',
     setlistScope: 'Só o dono e os admins do Louvor podem editar o repertório.', songTitle: 'O título da música é obrigatório.',

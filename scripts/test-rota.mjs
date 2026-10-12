@@ -28,3 +28,16 @@ console.log(n, 'passed');
   ok(R.planAssign(A, { serviceId: 's2', departmentId: 'k', position: 'T', index: 0, userId: 'u1' }).assignments.length === 3, 'other service = free');
   ok(R.pickStatus(A, 's', 'u1', 's:k:T:0', false) === 'busy' && R.pickStatus(A, 's', 'u1', 's:m:Keys:0', false) === 'free' && R.pickStatus(A, 's', 'u3', 'x', true) === 'away', 'pickStatus');
   console.log(n, 'passed'); }
+{ const S = (id, dep, pos, u) => ({ id, departmentId: dep, position: pos, userId: u });
+  const L = [S('k', 'd-music', 'Keys', 'm'), S('a1', 'd-music', 'Assembly', 'm')];
+  ok(!!R.roleConflict(L, 'm', 'd-kids', 'Teacher'), 'second non-exempt role blocked');
+  ok(!R.roleConflict(L, 'm', 'd-music', 'Desk'), 'Desk exempt alongside main role');
+  ok(!!R.roleConflict(L, 'm', 'd-music', 'Assembly', 'a2'), 'two Assembly slots blocked');
+  ok(!R.roleConflict([S('d', 'd-music', 'Desk', 'm'), S('a', 'd-music', 'Assembly', 'm')], 'm', 'd-kids', 'Teacher'), 'Desk+Assembly + one main role ok');
+  ok(!R.roleConflict(L, 'm', 'd-music', 'Keys', 'k'), 'own slot ignored');
+  const legacy = [S('k', 'd-music', 'Keys', 'm'), S('t', 'd-kids', 'Teacher', 'm')];
+  ok(Object.keys(R.conflictsIn(legacy)).length === 2, 'legacy conflict detected');
+  ok(R.newConflict(legacy, legacy) === null, 'unchanged legacy conflict tolerated');
+  ok(R.newConflict([...legacy.slice(0, 1), S('b', 'd-music', 'Bass', 'm')], legacy.slice(0, 1)) !== null, 'new conflict blocked');
+  ok(R.newConflict([...legacy, S('z', 'd-music', 'Desk', 'x')], legacy) === null, 'other edits alongside legacy conflict allowed');
+  console.log(n, 'passed'); }
