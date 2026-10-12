@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { AppData, Department, Resource, Role, Service, SetlistItem, Song, Theme, Unavailability, User, Assignment } from '../types';
-import { planAssign, AssignMode, sameRoleSlot, newSameRoleDup } from '../data/rota';
+import { planAssign, AssignMode, sameRoleSlot, newSameRoleDup, sortRoles } from '../data/rota';
 import { NOTE_MAX, awayOn, covers, getUnavailableFor, rangeError } from '../data/unavailability';
 import { todayIso as todayIsoFn } from '../data/dates';
 import { repository, newerFromOtherTab, DATA_STORAGE_KEY } from '../data/repository';
@@ -229,7 +229,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           if (input.dob && !validDob(input.dob)) return t('errors.dobInvalid');
           if (input.contact && !validContact(input.contact.trim())) return t('errors.contactInvalid');
           if (!validEmail(input.email)) return t('errors.emailInvalid');
-          const positions = Object.fromEntries(departmentIds.map(dp => [dp, input.positions?.[dp] ?? []]));
+          const positions = Object.fromEntries(departmentIds.map(dp => [dp, sortRoles(d, dp, input.positions?.[dp] ?? [])]));
           const user: User = {
             id: `u-${Date.now().toString(36)}`, name,
             firstName: input.firstName?.trim() ?? parts[0], middleNames: input.middleNames?.trim() ?? parts.slice(1, -1).join(' '),
@@ -273,7 +273,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (p.dob && !validDob(p.dob)) return t('errors.dobInvalid');
         const departmentIds = p.departmentIds;
         const positions: Record<string, string[]> = {};
-        departmentIds.forEach(dep => { positions[dep] = p.positions[dep] ?? []; });
+        departmentIds.forEach(dep => { positions[dep] = sortRoles(d, dep, p.positions[dep] ?? []); });
         update(x => ({
           ...x,
           users: x.users.map(u => u.id === id ? { ...u, firstName: p.firstName.trim(), middleNames: p.middleNames.trim(), lastName: p.lastName.trim(), name: fullName(p), dob: p.dob, contact: p.contact.trim(), ...(p.email !== undefined ? { email: normEmail(p.email) } : {}), departmentIds, positions } : u),
@@ -340,7 +340,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         for (const [dep, roles] of Object.entries(p.departments)) {
           if (!canManage(dep)) continue; // admins only touch their own departments
           if (roles === null) { departmentIds = departmentIds.filter(x => x !== dep); delete positions[dep]; }
-          else { if (!departmentIds.includes(dep)) departmentIds.push(dep); positions[dep] = roles; }
+          else { if (!departmentIds.includes(dep)) departmentIds.push(dep); positions[dep] = sortRoles(d, dep, roles); }
         }
         update(x => ({
           ...x,

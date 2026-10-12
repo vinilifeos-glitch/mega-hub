@@ -49,8 +49,8 @@ draft: 'Draft', saveDraft: 'Save draft', publish: 'Publish', published: 'Service
     emptyOwner: 'No upcoming services yet. Tap “New service” to add one.', empty: 'No upcoming services yet. Check back soon.',
     youreServing: "You're serving: {roles}", defaultName: 'Sunday Service', formSubtitle: "Set the date, time and who's needed.",
     requiredSlots: 'Required slots', slotsAndPeople: 'Slots & people', addRole: '+ Add role', removeSlot: 'Remove slot', addSlot: 'Add a slot:', fewer: 'Fewer {role}', more: 'More {role}',
-    assignPeople: 'Assign people (optional)', assignHint: "Only people who hold the role, aren't away on {date} and aren't already in another slot are listed. Leave slots empty for admins to fill later.",
-    thatDate: 'that date', assign: 'Assign ▾', tapToRemove: 'Tap to remove', noneEligible: 'No one eligible for {role}.', nobodyHolds: 'Nobody holds {role} yet.',
+    assignPeople: 'Assign people (optional)',
+    thatDate: 'that date', assign: 'Assign ▾', noneEligible: 'No one eligible for {role}.', nobodyHolds: 'Nobody holds {role} yet.',
     removedPicks: 'Removed {names} — unavailable on the new date or slot removed.',
     legendAvailable: 'Available', legendAway: 'Away that day', legendBusy: 'Already serving', onlyHolders: 'Only people who hold the role are listed.',
     busy: '(busy)', away: '(away)', awayNote: 'Away: {note}',
@@ -125,5 +125,5 @@ draft: 'Draft', saveDraft: 'Save draft', publish: 'Publish', published: 'Service
     accounts: 'Accounts', ownerOnlyField: 'Only the owner can change name and contact details.', accountsHint: "Create and manage everyone's sign-in", settings: 'Settings', admin: 'Admin tools',
   },
   ui: { noDeptSection: 'Not in a department yet', rolesLabel: 'Roles', assignPlaceholder: 'Assign', addRole: 'Add role', addSong: 'Add song', textSmaller: 'Smaller text', textBigger: 'Bigger text' },
-  rota: { available: 'Available', servingElsewhere: 'Serving elsewhere', unavailable: 'Unavailable', alreadyServing: '@{name} is already serving as {detail}. Double book keeps all their roles; Reassign clears their other slots in this service.', swap: 'Reassign', doubleBook: 'Double book', cancel: 'Cancel', yourRole: 'Your role', yourTeam: 'Your team', unfilled: 'Unfilled', live: 'Start Live mode', free: 'Free', away: 'Away' },
+  rota: { available: 'Available', servingElsewhere: 'Serving elsewhere', unavailable: 'Unavailable', rolesAssigned: 'Roles already assigned: {roles}', swap: 'Reassign', doubleBook: 'Double book', cancel: 'Cancel', yourRole: 'Your role', yourTeam: 'Your team', unfilled: 'Unfilled', live: 'Start Live mode', free: 'Free', away: 'Away' },
 };

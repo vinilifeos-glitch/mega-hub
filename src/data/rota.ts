@@ -5,14 +5,23 @@ export function myAssignments(d: AppData, userId: string, today: string): Assign
   return d.assignments
     .filter(a => a.userId === userId)
     .filter(a => { const s = sv(a.serviceId); return !!s && s.status !== 'draft' && s.date >= today && d.departments.some(x => x.id === a.departmentId); })
-    .sort((a, b) => { const x = sv(a.serviceId)!, y = sv(b.serviceId)!; return (x.date + x.start).localeCompare(y.date + y.start) || a.departmentId.localeCompare(b.departmentId) || a.position.localeCompare(b.position); });
+    .sort((a, b) => { const x = sv(a.serviceId)!, y = sv(b.serviceId)!; return (x.date + x.start).localeCompare(y.date + y.start) || byCanon(d, (z: Assignment) => z.departmentId, z => z.position)(a, b) || a.index - b.index; });
+}
+/** Canonical role order: index of the role in its department's positions (unknown roles last). */
+export function roleIdx(d: Pick<AppData, 'departments'>, dep: string, role: string): number { const i = d.departments.find(x => x.id === dep)?.positions.indexOf(role) ?? -1; return i < 0 ? 999 : i; }
+/** Roles of one department in canonical order (stable). */
+export function sortRoles(d: Pick<AppData, 'departments'>, dep: string, roles: string[]): string[] { return [...roles].sort((a, b) => roleIdx(d, dep, a) - roleIdx(d, dep, b)); }
+/** Sort anything with department + role by department order, then canonical role order (stable, so slot numbers follow). */
+export function byCanon<T>(d: Pick<AppData, 'departments'>, dep: (x: T) => string, role: (x: T) => string, extra?: (a: T, b: T) => number) {
+  const di = (id: string) => { const i = d.departments.findIndex(x => x.id === id); return i < 0 ? 999 : i; };
+  return (a: T, b: T) => di(dep(a)) - di(dep(b)) || roleIdx(d, dep(a), role(a)) - roleIdx(d, dep(b), role(b)) || (extra ? extra(a, b) : 0);
 }
 /** Team serving a service, grouped by department (departments order), each sorted by position/index. */
 export function teamFor(d: AppData, serviceId: string): { departmentId: string; members: { assignmentId: string; userId: string; name: string; username: string; position: string }[] }[] {
   const as = d.assignments.filter(a => a.serviceId === serviceId);
   return d.departments.map(dep => ({
     departmentId: dep.id,
-    members: as.filter(a => a.departmentId === dep.id).sort((a, b) => a.position.localeCompare(b.position) || a.index - b.index)
+    members: as.filter(a => a.departmentId === dep.id).sort((a, b) => roleIdx(d, dep.id, a.position) - roleIdx(d, dep.id, b.position) || a.index - b.index)
       .map(a => ({ assignmentId: a.id, userId: a.userId, position: a.position, name: d.users.find(u => u.id === a.userId)?.name ?? '?', username: d.users.find(u => u.id === a.userId)?.username ?? '?' })),
   })).filter(g => g.members.length > 0);
 }

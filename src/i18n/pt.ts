@@ -51,8 +51,8 @@ draft: 'Rascunho', saveDraft: 'Salvar rascunho', publish: 'Publicar', published:
     emptyOwner: 'Nenhum culto agendado. Toque em “Novo culto” para adicionar.', empty: 'Nenhum culto agendado ainda. Volte em breve.',
     youreServing: 'Você vai servir: {roles}', defaultName: 'Culto de Domingo', formSubtitle: 'Defina data, horário e quem é necessário.',
     requiredSlots: 'Vagas necessárias', slotsAndPeople: 'Vagas e pessoas', addRole: '+ Adicionar função', removeSlot: 'Remover vaga', addSlot: 'Adicionar vaga:', fewer: 'Menos {role}', more: 'Mais {role}',
-    assignPeople: 'Atribuir pessoas (opcional)', assignHint: 'Só aparecem pessoas que têm a função, não estão indisponíveis em {date} e não estão em outra vaga. Deixe vagas em aberto para os administradores preencherem depois.',
-    thatDate: 'essa data', assign: 'Atribuir ▾', tapToRemove: 'Toque para remover', noneEligible: 'Ninguém disponível para {role}.', nobodyHolds: 'Ninguém tem a função {role} ainda.',
+    assignPeople: 'Atribuir pessoas (opcional)',
+    thatDate: 'essa data', assign: 'Atribuir ▾', noneEligible: 'Ninguém disponível para {role}.', nobodyHolds: 'Ninguém tem a função {role} ainda.',
     removedPicks: 'Removido(s): {names} — indisponível na nova data ou vaga removida.',
     legendAvailable: 'Disponível', legendAway: 'Indisponível no dia', legendBusy: 'Já escalado', onlyHolders: 'Só aparecem pessoas que têm a função.',
     busy: '(ocupado)', away: '(indisponível)', awayNote: 'Ausente: {note}',
@@ -127,5 +127,5 @@ draft: 'Rascunho', saveDraft: 'Salvar rascunho', publish: 'Publicar', published:
     accounts: 'Contas', ownerOnlyField: 'Somente o proprietário pode alterar nome e telefone.', accountsHint: 'Crie e gerencie o acesso de todos', settings: 'Configurações', admin: 'Administração',
   },
   ui: { noDeptSection: 'Ainda sem departamento', rolesLabel: 'Funções', assignPlaceholder: 'Atribuir', addRole: 'Adicionar função', addSong: 'Adicionar música', textSmaller: 'Texto menor', textBigger: 'Texto maior' },
-  rota: { available: 'Disponíveis', servingElsewhere: 'Servindo em outra função', unavailable: 'Indisponíveis', alreadyServing: '@{name} já está servindo como {detail}. Escalar mesmo assim mantém todas as funções; Reatribuir libera as outras vagas neste culto.', swap: 'Reatribuir', doubleBook: 'Escalar mesmo assim', cancel: 'Cancelar', yourRole: 'Sua função', yourTeam: 'Sua equipe', unfilled: 'Em aberto', live: 'Iniciar modo ao vivo', free: 'Livre', away: 'Ausente' },
+  rota: { available: 'Disponíveis', servingElsewhere: 'Servindo em outra função', unavailable: 'Indisponíveis', rolesAssigned: 'Funções já atribuídas: {roles}', swap: 'Reatribuir', doubleBook: 'Escalar mesmo assim', cancel: 'Cancelar', yourRole: 'Sua função', yourTeam: 'Sua equipe', unfilled: 'Em aberto', live: 'Iniciar modo ao vivo', free: 'Livre', away: 'Ausente' },
 };
