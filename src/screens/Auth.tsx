@@ -32,7 +32,7 @@ export function ChangePasswordScreen({ firstTime, onDone }: { firstTime?: boolea
     <Screen title="Choose a new password" subtitle={firstTime ? 'Your password is temporary. Please set your own before continuing.' : 'Change your password'}>
       <Card>
         <Field label={firstTime ? 'Temporary password' : 'Current password'} value={o} onChangeText={setO} secureTextEntry testID="oldpw" />
-        <Field label="New password (min 8 characters)" value={n} onChangeText={setN} secureTextEntry testID="newpw" />
+        <Field label="New password (min 4 characters)" value={n} onChangeText={setN} secureTextEntry testID="newpw" />
         <Field label="Confirm new password" value={c} onChangeText={setC} secureTextEntry testID="confirmpw" />
         {err && <Text style={{ color: colors.red, marginBottom: 6 }}>{err}</Text>}
         <Button label="Save password" onPress={go} testID="savepw" />

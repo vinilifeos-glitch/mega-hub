@@ -27,7 +27,7 @@ interface Ctx {
 }
 
 const AppContext = createContext<Ctx | null>(null);
-const norm = (u: string) => u.trim().toLowerCase();
+const norm = (u: string) => u.trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [data, setData] = useState<AppData | null>(null);
@@ -77,7 +77,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       changePassword: async (oldPw, newPw) => {
         if (!currentUser) return 'Not signed in.';
         if ((await hashPassword(currentUser.salt, oldPw)) !== currentUser.passwordHash) return 'Current password is incorrect.';
-        if (newPw.length < 8) return 'New password must be at least 8 characters.';
+        if (newPw.length < 4) return 'New password must be at least 4 characters.';
         if (newPw === oldPw) return 'Choose a different password from the temporary one.';
         const salt = newSalt(); const passwordHash = await hashPassword(salt, newPw);
         update(x => ({ ...x, users: x.users.map(u => u.id === currentUser.id ? { ...u, salt, passwordHash, mustChangePassword: false } : u) }));
@@ -96,7 +96,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const departmentIds = input.departmentIds;
         if (!existing) {
           const pw = input.tempPassword ?? '';
-          if (pw.length < 8) return 'Temporary password must be at least 8 characters.';
+          if (pw.length < 4) return 'Temporary password must be at least 4 characters.';
           const salt = newSalt(); const passwordHash = await hashPassword(salt, pw);
           const user: User = { id: `u-${Date.now().toString(36)}`, name, username, role: input.role, departmentIds, salt, passwordHash, mustChangePassword: true, active: true };
           update(x => ({ ...x, users: [...x.users, user], departments: x.departments.map(dep => user.role === 'leader' && departmentIds.includes(dep.id) ? { ...dep, leaderId: user.id } : dep) }));
@@ -116,7 +116,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       resetPassword: async (id, pw) => {
         const t = d.users.find(u => u.id === id);
         if (!t || !canEditAccount(t)) return 'Not allowed.';
-        if (pw.length < 8) return 'Temporary password must be at least 8 characters.';
+        if (pw.length < 4) return 'Temporary password must be at least 4 characters.';
         const salt = newSalt(); const passwordHash = await hashPassword(salt, pw);
         update(x => ({ ...x, users: x.users.map(u => u.id === id ? { ...u, salt, passwordHash, mustChangePassword: true } : u) }));
         return null;
