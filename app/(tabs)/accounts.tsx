@@ -115,7 +115,7 @@ function FullEditor({ user, onClose }: { user: User; onClose: (m?: string) => vo
       <Card>
         <Field label="First name" value={f.firstName} onChangeText={v => setF({ ...f, firstName: v })} autoCapitalize="words" testID="e-first" />
         <Field label="Middle names (optional)" value={f.middleNames} onChangeText={v => setF({ ...f, middleNames: v })} autoCapitalize="words" testID="e-middle" />
-        <Field label="Last name" value={f.lastName} onChangeText={v => setF({ ...f, lastName: v })} autoCapitalize="words" testID="e-last" />
+        <Field label="Surname" value={f.lastName} onChangeText={v => setF({ ...f, lastName: v })} autoCapitalize="words" testID="e-last" />
         <DateField label="Date of birth" limit="past" value={f.dob} onChange={v => setF({ ...f, dob: v })} testID="e-dob" />
         <Field label="Contact number (optional)" value={f.contact} keyboardType="phone-pad" onChangeText={v => setF({ ...f, contact: v })} testID="e-contact" />
       </Card>
@@ -174,24 +174,69 @@ function FullEditor({ user, onClose }: { user: User; onClose: (m?: string) => vo
 
 function NewAccount({ onClose }: { onClose: (m?: string) => void }) {
   const { data, allowedRoles, saveAccount } = useMe();
-  const [f, setF] = useState<AccountInput>({ name: '', username: '', role: 'volunteer', departmentIds: [], tempPassword: '' });
+  const [f, setF] = useState({ firstName: '', middleNames: '', lastName: '', dob: '', contact: '' });
+  const [username, setUsername] = useState(''); const [userEdited, setUserEdited] = useState(false);
+  const [pw, setPw] = useState(''); const [mustChange, setMustChange] = useState(true);
+  const [role, setRole] = useState<Role>('volunteer');
+  const [adminOf, setAdminOf] = useState<string[]>([]);
+  const [depIds, setDepIds] = useState<string[]>([]);
+  const [positions, setPositions] = useState<Record<string, string[]>>({});
   const [err, setErr] = useState<string | null>(null);
-  const toggle = (id: string) => setF({ ...f, departmentIds: f.departmentIds.includes(id) ? f.departmentIds.filter(x => x !== id) : [...f.departmentIds, id] });
-  const save = async () => { const e = await saveAccount(null, f); if (e) setErr(e); else onClose(`Created @${f.username}. They'll be asked to choose their own password at first sign-in.`); };
+  const toggle = <T,>(arr: T[], v: T) => arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v];
+  const autoUser = (first: string) => first.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Za-z0-9._-]/g, '');
+  const taken = username.trim() !== '' && data.users.some(u => fold(u.username) === fold(username.trim()));
+  const name = [f.firstName, f.middleNames, f.lastName].map(x => x.trim()).filter(Boolean).join(' ');
+  const save = async () => {
+    if (!f.firstName.trim()) return setErr('First name is required.');
+    if (taken) return setErr('That username is already taken.');
+    const e = await saveAccount(null, { name, username, role, departmentIds: depIds, tempPassword: pw, ...f, positions, adminOf, mustChange });
+    if (e) setErr(e); else onClose(`Created @${username.trim()}.${mustChange ? " They'll be asked to choose their own password at first sign-in." : ''}`);
+  };
+  const sec = (t: string) => <Text style={[s.section, { marginTop: 18 }]}>{t}</Text>;
   return (
     <Screen title="New account">
+      {sec('Personal details')}
       <Card>
-        <Field label="Full name" value={f.name} onChangeText={name => setF({ ...f, name })} autoCapitalize="words" testID="fullname" />
-        <Field label="Username" value={f.username} onChangeText={username => setF({ ...f, username })} testID="newusername" />
-        <Field label="Temporary password" value={f.tempPassword} onChangeText={tempPassword => setF({ ...f, tempPassword })} secureTextEntry testID="temppw" />
-        <Text style={s.section}>Access tier</Text>
-        <View style={s.row}>{allowedRoles.map(r => <Chip key={r} label={roleName[r]} active={f.role === r} onPress={() => setF({ ...f, role: r })} />)}</View>
-        <Text style={s.section}>Departments (set roles after creating, under “Profile & roles”)</Text>
-        <View style={s.row}>{data.departments.map(d => <Chip key={d.id} label={`${d.emoji} ${d.name}`} color={d.color} active={f.departmentIds.includes(d.id)} onPress={() => toggle(d.id)} />)}</View>
-        {err && <Text style={{ color: colors.red, marginVertical: 6 }}>{err}</Text>}
-        <Button label="Create account" onPress={save} testID="saveaccount" />
-        <Button label="Cancel" outline onPress={() => onClose()} />
+        <Field label="First name" value={f.firstName} autoCapitalize="words" testID="n-first"
+          onChangeText={v => { setF({ ...f, firstName: v }); if (!userEdited) setUsername(autoUser(v)); }} />
+        <Field label="Middle names (optional)" value={f.middleNames} onChangeText={v => setF({ ...f, middleNames: v })} autoCapitalize="words" testID="n-middle" />
+        <Field label="Surname" value={f.lastName} onChangeText={v => setF({ ...f, lastName: v })} autoCapitalize="words" testID="n-last" />
+        <DateField label="Date of birth (optional)" limit="past" value={f.dob} onChange={v => setF({ ...f, dob: v })} testID="n-dob" />
+        <Field label="Contact number (optional)" value={f.contact} keyboardType="phone-pad" onChangeText={v => setF({ ...f, contact: v })} testID="n-contact" />
       </Card>
+      {sec('Sign-in')}
+      <Card>
+        <Field label="Username" value={username} onChangeText={v => { setUsername(v); setUserEdited(true); }} testID="n-username" />
+        {taken && <Text style={{ color: colors.red, marginTop: -6, marginBottom: 8 }} testID="n-taken">@{username.trim()} is already taken — choose another.</Text>}
+        <Field label="Password" value={pw} onChangeText={setPw} secureTextEntry testID="n-password" />
+        <View style={s.row}>
+          <Chip label={mustChange ? '✓ Ask them to change it at first sign-in' : 'Ask them to change it at first sign-in'} active={mustChange} onPress={() => setMustChange(!mustChange)} testID="n-mustchange" />
+        </View>
+      </Card>
+      {sec('Access')}
+      <Card>
+        <Text style={s.small}>Access tier</Text>
+        <View style={[s.row, { marginTop: 6 }]}>{allowedRoles.map(r => <Chip key={r} testID={`n-tier-${r}`} label={roleName[r]} active={role === r} onPress={() => setRole(r)} />)}</View>
+        {role === 'admin' && <>
+          <Text style={s.small}>Administers departments</Text>
+          <View style={[s.row, { marginTop: 6 }]}>{data.departments.map(d => <Chip key={d.id} testID={`n-adminof-${d.id}`} label={`${d.emoji} ${d.name}`} color={d.color} active={adminOf.includes(d.id)} onPress={() => setAdminOf(toggle(adminOf, d.id))} />)}</View>
+        </>}
+      </Card>
+      {sec('Departments & roles')}
+      {data.departments.map(d => {
+        const inDep = depIds.includes(d.id);
+        return (
+          <Card key={d.id} style={{ borderLeftWidth: 5, borderLeftColor: inDep ? d.color : colors.border }}>
+            <Chip testID={`n-dep-${d.id}`} label={`${inDep ? '✓ ' : ''}${d.emoji} ${d.name}`} color={d.color} active={inDep}
+              onPress={() => { setDepIds(toggle(depIds, d.id)); if (!positions[d.id]) setPositions({ ...positions, [d.id]: [] }); }} />
+            {inDep && <View style={s.row}>{d.positions.map(r => <Chip key={r} testID={`n-role-${d.id}-${r}`} label={r} color={d.color} active={(positions[d.id] ?? []).includes(r)}
+              onPress={() => setPositions({ ...positions, [d.id]: toggle(positions[d.id] ?? [], r) })} />)}</View>}
+          </Card>
+        );
+      })}
+      {err && <Text style={{ color: colors.red, marginVertical: 8 }} testID="n-error">{err}</Text>}
+      <Button label="Create account" onPress={save} testID="saveaccount" />
+      <Button label="Cancel" outline onPress={() => onClose()} />
     </Screen>
   );
 }

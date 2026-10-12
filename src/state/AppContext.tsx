@@ -3,7 +3,8 @@ import { AppData, Department, Role, Service, User } from '../types';
 import { repository } from '../data/repository';
 import { hashPassword, newSalt } from '../data/auth';
 
-export interface AccountInput { name: string; username: string; role: Role; departmentIds: string[]; tempPassword?: string; }
+export interface AccountInput { name: string; username: string; role: Role; departmentIds: string[]; tempPassword?: string;
+  firstName?: string; middleNames?: string; lastName?: string; dob?: string; contact?: string; positions?: Record<string, string[]>; adminOf?: string[]; mustChange?: boolean; }
 
 export interface ProfileInput { contact: string; firstName: string; middleNames: string; lastName: string; dob: string; departmentIds: string[]; positions: Record<string, string[]>; }
 export function validDob(s: string) {
@@ -124,7 +125,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           if (pw.length < 4) return 'Temporary password must be at least 4 characters.';
           const salt = newSalt(); const passwordHash = await hashPassword(salt, pw);
           const parts = name.split(' ');
-          const user: User = { id: `u-${Date.now().toString(36)}`, name, firstName: parts[0], middleNames: parts.slice(1, -1).join(' '), lastName: parts.length > 1 ? parts[parts.length - 1] : '', dob: '', positions: {}, username, role: input.role, departmentIds, salt, passwordHash, mustChangePassword: true, active: true };
+          if (input.dob && !validDob(input.dob)) return 'Date of birth must be a real date as DD/MM/YYYY.';
+          if (input.contact && !validContact(input.contact.trim())) return 'Contact number looks invalid.';
+          const positions = Object.fromEntries(departmentIds.map(dp => [dp, input.positions?.[dp] ?? []]));
+          const user: User = {
+            id: `u-${Date.now().toString(36)}`, name,
+            firstName: input.firstName?.trim() ?? parts[0], middleNames: input.middleNames?.trim() ?? parts.slice(1, -1).join(' '),
+            lastName: input.lastName?.trim() ?? (parts.length > 1 ? parts[parts.length - 1] : ''),
+            dob: input.dob ?? '', contact: input.contact?.trim() ?? '', positions, adminOf: input.role === 'admin' ? (input.adminOf ?? []) : [],
+            username, role: input.role, departmentIds, salt, passwordHash, mustChangePassword: input.mustChange ?? true, active: true, unavailable: [],
+          };
           update(x => ({ ...x, users: [...x.users, user] }));
         } else {
           update(x => ({

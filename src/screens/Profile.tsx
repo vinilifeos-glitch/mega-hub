@@ -18,7 +18,7 @@ export function PersonalInfo({ user, title }: { user: User; title?: string }) {
       <Text style={[s.h2, { marginBottom: 10 }]}>{title ?? user.name}</Text>
       <Row k="First name" v={user.firstName} />
       <Row k="Middle names" v={user.middleNames} />
-      <Row k="Last name" v={user.lastName} />
+      <Row k="Surname" v={user.lastName} />
       <Row k="Date of birth" v={fmtDob(user.dob)} />
       <Row k="Username" v={`@${user.username}`} />
       <Row k="Contact number" v={user.contact ?? ''} />
@@ -72,7 +72,7 @@ export function ProfileEditor({ user, onClose }: { user: User; onClose: (msg?: s
       <Card>
         <Field label="First name" value={f.firstName} onChangeText={v => setF({ ...f, firstName: v })} autoCapitalize="words" testID="pf-first" />
         <Field label="Middle names (optional)" value={f.middleNames} onChangeText={v => setF({ ...f, middleNames: v })} autoCapitalize="words" testID="pf-middle" />
-        <Field label="Last name" value={f.lastName} onChangeText={v => setF({ ...f, lastName: v })} autoCapitalize="words" testID="pf-last" />
+        <Field label="Surname" value={f.lastName} onChangeText={v => setF({ ...f, lastName: v })} autoCapitalize="words" testID="pf-last" />
         <Field label="Contact number (optional)" value={f.contact} placeholder="+44 7700 900123" keyboardType="phone-pad" onChangeText={v => setF({ ...f, contact: v })} testID="pf-contact" />
         <DateField label="Date of birth" limit="past" value={f.dob} onChange={v => setF({ ...f, dob: v })} testID="pf-dob" />
       </Card>
