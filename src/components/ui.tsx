@@ -107,20 +107,20 @@ export const touch = 48; // minimum touch target
 /* ── Layout ─────────────────────────────────────────────────── */
 const BACK_TO_MORE = ['/profile', '/team', '/accounts'];
 /** Screen = dark header band (title + subtitle) over a tinted content area. */
-export function Screen({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
+export function Screen({ title, subtitle, children, backTo }: { title: string; subtitle?: string; children: React.ReactNode; backTo?: { label: string; onPress: () => void } }) {
   const insets = useSafeAreaInsets(); const c = useColors(); const s = useStyles(); const { t } = useApp();
   const path = usePathname(); const router = useRouter();
-  const back = BACK_TO_MORE.includes(path);
+  const back = !!backTo || BACK_TO_MORE.includes(path);
   const inner = { width: '100%' as const, maxWidth: contentMax, alignSelf: 'center' as const, paddingHorizontal: space.lg + 4 };
   return (
     <ScrollView style={{ flex: 1, backgroundColor: c.bg }} contentContainerStyle={{ paddingBottom: space.xxl + 8 }}>
       <View style={[s.header, { paddingTop: insets.top + (back ? space.md : space.xl) }]}>
         <View style={inner}>
           {back && (
-            <Pressable onPress={() => router.navigate('/more')} accessibilityRole="button" accessibilityLabel={t('more.back')} hitSlop={8}
+            <Pressable testID="screen-back" onPress={backTo?.onPress ?? (() => router.navigate('/more'))} accessibilityRole="button" accessibilityLabel={backTo?.label ?? t('more.back')} hitSlop={8}
               style={{ flexDirection: 'row', alignItems: 'center', minHeight: 44, alignSelf: 'flex-start' }}>
               <Icon name="chevron-back" size={20} color={c.onHeaderMuted} />
-              <Text style={{ color: c.onHeaderMuted, fontSize: 15, fontWeight: '600' }}>{t('more.title')}</Text>
+              <Text style={{ color: c.onHeaderMuted, fontSize: 15, fontWeight: '600' }}>{backTo?.label ?? t('more.title')}</Text>
             </Pressable>
           )}
           <Text style={s.title} accessibilityRole="header">{title}</Text>

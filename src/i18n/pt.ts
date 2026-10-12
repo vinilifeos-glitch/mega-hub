@@ -94,8 +94,11 @@ draft: 'Rascunho', saveDraft: 'Salvar rascunho', publish: 'Publicar', published:
     created: 'Conta de {name} criada (usuário @{username}).', createdMustChange: 'Conta de {name} criada (usuário @{username}). A pessoa vai escolher a própria senha no primeiro acesso.',
     saved: '{name} salvo(a).', savedPw: '{name} salvo(a) (senha alterada).',
   },
+  dept: { members: '{n} membros', edit: 'Editar', done: 'Concluir', about: 'Sobre', noAbout: 'Sem descrição ainda.', leaders: 'Líderes: {names}', noLeaders: 'Sem admins ainda', resources: 'Recursos', noResources: 'Nenhum recurso ainda.', addResource: '+ Adicionar recurso', resTitle: 'Título', resUrl: 'Link (URL)', save: 'Salvar', cancel: 'Cancelar', library: 'Biblioteca de músicas', search: 'Buscar músicas', noSongs: 'Nenhuma música ainda.', addSong: '+ Adicionar música', open: 'Abrir página', back: 'Voltar', up: 'Subir {title}', down: 'Descer {title}', remove: 'Remover {title}', description: 'Descrição' },
+  song: { title: 'Título', artist: 'Artista', key: 'Tom', chords: 'Cifra / letra', link: 'Link (opcional)', edit: 'Editar música', save: 'Salvar música', cancel: 'Cancelar', del: 'Excluir música', delConfirm: 'Excluir {title} da biblioteca?', notFound: 'Música não encontrada.', noChords: 'Sem cifra ainda.', smaller: 'Texto menor', bigger: 'Texto maior', pick: 'Escolher da biblioteca', back: 'Voltar' },
   setlist: { title: 'Repertório', count: '{n} músicas', key: 'Tom', notes: 'Observações', songTitle: 'Título da música', addSong: '+ Adicionar música', edit: 'Editar', done: 'Concluir', empty: 'Nenhuma música ainda.', more: '+{n} mais', up: 'Subir {title}', down: 'Descer {title}', remove: 'Remover {title}', save: 'Salvar música', cancel: 'Cancelar', customKey: 'Outro tom' },
   errors: {
+    deptScope: 'Só o dono e os admins deste departamento podem editar esta página.', resTitle: 'O título é obrigatório.', urlInvalid: 'Digite um link válido (https://…).',
     setlistScope: 'Só o dono e os admins do Louvor podem editar o repertório.', songTitle: 'O título da música é obrigatório.',
     wrongCredentials: 'Usuário ou senha incorretos.', deactivated: 'Esta conta foi desativada. Fale com um administrador.', notSignedIn: 'Você não está conectado.',
     currentPasswordWrong: 'A senha atual está incorreta.', passwordTooShort: 'A senha deve ter pelo menos 4 caracteres.',

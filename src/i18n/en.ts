@@ -92,8 +92,11 @@ draft: 'Draft', saveDraft: 'Save draft', publish: 'Publish', published: 'Service
     created: 'Created account for {name} (username @{username}).', createdMustChange: "Created account for {name} (username @{username}). They'll be asked to choose their own password at first sign-in.",
     saved: 'Saved {name}.', savedPw: 'Saved {name} (password changed).',
   },
+  dept: { members: '{n} members', edit: 'Edit', done: 'Done', about: 'About', noAbout: 'No description yet.', leaders: 'Leaders: {names}', noLeaders: 'No admins yet', resources: 'Resources', noResources: 'No resources yet.', addResource: '+ Add resource', resTitle: 'Title', resUrl: 'Link (URL)', save: 'Save', cancel: 'Cancel', library: 'Song library', search: 'Search songs', noSongs: 'No songs yet.', addSong: '+ Add song', open: 'Open page', back: 'Back', up: 'Move {title} up', down: 'Move {title} down', remove: 'Remove {title}', description: 'Description' },
+  song: { title: 'Title', artist: 'Artist', key: 'Key', chords: 'Chords / lyrics', link: 'Link (optional)', edit: 'Edit song', save: 'Save song', cancel: 'Cancel', del: 'Delete song', delConfirm: 'Delete {title} from the library?', notFound: 'Song not found.', noChords: 'No chords yet.', smaller: 'Smaller text', bigger: 'Bigger text', pick: 'Pick from library', back: 'Back' },
   setlist: { title: 'Setlist', count: '{n} songs', key: 'Key', notes: 'Notes', songTitle: 'Song title', addSong: '+ Add song', edit: 'Edit', done: 'Done', empty: 'No songs yet.', more: '+{n} more', up: 'Move {title} up', down: 'Move {title} down', remove: 'Remove {title}', save: 'Save song', cancel: 'Cancel', customKey: 'Other key' },
   errors: {
+    deptScope: 'Only the owner and this department\'s admins can edit this page.', resTitle: 'Title is required.', urlInvalid: 'Enter a valid web link (https://…).',
     setlistScope: 'Only the owner and Music admins can edit the setlist.', songTitle: 'Song title is required.',
     wrongCredentials: 'Wrong username or password.', deactivated: 'This account has been deactivated. Ask an admin.', notSignedIn: 'Not signed in.',
     currentPasswordWrong: 'Current password is incorrect.', passwordTooShort: 'Password must be at least 4 characters.',

@@ -50,3 +50,19 @@ export function visibleSetlists<D extends { services: { id: string; setlist?: un
   if (!d.services.some(s => s.setlist && !canSeeSetlistRule(actor, s.id, d.assignments))) return d;
   return { ...d, services: d.services.map(s => s.setlist && !canSeeSetlistRule(actor, s.id, d.assignments) ? (({ setlist, ...r }) => r)(s) as typeof s : s) };
 }
+
+/** Owner, or an admin of that department, may edit its page (About, Resources). */
+export const canEditDeptRule = (actor: { role: Tier; adminOf?: string[] } | null | undefined, deptId: string) =>
+  !!actor && (actor.role === 'owner' || (actor.role === 'admin' && (actor.adminOf ?? []).includes(deptId)));
+/** Song library: staff + Music members see all; others only songs used in setlists they can see. */
+export function visibleSongs<D extends { songs?: { id: string }[]; services: { setlist?: { songId?: string | null }[] }[] }>(actor: { role: Tier; departmentIds?: string[] } | null | undefined, d: D): D {
+  if (!d.songs) return d;
+  if (actor && (actor.role === 'owner' || actor.role === 'admin' || (actor.departmentIds ?? []).includes(MUSIC_DEPT))) return d;
+  const used = new Set(d.services.flatMap(s => (s.setlist ?? []).map(x => x.songId)).filter(Boolean));
+  return { ...d, songs: actor ? d.songs.filter(x => used.has(x.id)) : [] };
+}
+/** http(s) URL with a host; returns normalised string or null. */
+export function cleanUrl(v: string): string | null {
+  let u = (v ?? '').trim(); if (!u) return null; if (!/^[a-z]+:\/\//i.test(u)) u = 'https://' + u;
+  try { const p = new URL(u); return (p.protocol === 'http:' || p.protocol === 'https:') && /\./.test(p.hostname) ? p.toString() : null; } catch { return null; }
+}
