@@ -30,7 +30,8 @@ export interface Song { id: string; deptId: string; title: string;
 export interface SongSection { id: string; name: string; cue?: string; bars: string[]; notes?: string; }
 export interface Slot { departmentId: string; position: string; count: number; }
 export interface Service { id: string; title: string; location: string; date: string /* ISO YYYY-MM-DD */; start: string; end: string; slots: Slot[]; /** missing = published */ status?: 'draft' | 'published';
-  /** Ordered (array index = position). Missing = empty. */ setlist?: SetlistItem[]; }
+  /** Ordered (array index = position). Missing = empty. */ setlist?: SetlistItem[];
+  /** Kids lessons for this service: ordered ids from the Kids lesson catalog (megahub:files:v1 / Supabase lessons). Missing = none. */ lessons?: string[]; }
 /** songId reserved for the phase-2 song library (null/absent = free-text song). */
 export interface SetlistItem { id: string; title: string; key?: string; notes?: string; songId?: string | null; }
 export interface Availability { userId: string; serviceId: string; available: boolean; }

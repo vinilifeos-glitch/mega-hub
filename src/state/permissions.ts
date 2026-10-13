@@ -42,6 +42,16 @@ export const KIDS_DEPT = 'd-kids';
 /** Kids lessons: upload/rename/delete by the owner and Kids admins; viewing follows canViewDeptRule. */
 export const canEditLessonsRule = (actor: { role: Tier; adminOf?: string[] } | null | undefined) =>
   !!actor && (actor.role === 'owner' || (actor.role === 'admin' && (actor.adminOf ?? []).includes(KIDS_DEPT)));
+export const TEACHER = 'Teacher';
+/** A service's Kids lessons: owner, Kids admins, or the person assigned as Kids Teacher in THAT service (no serviceId = create form). */
+export const canEditServiceLessonsRule = (actor: { id: string; role: Tier; adminOf?: string[] } | null | undefined, serviceId: string | undefined, assignments: { serviceId: string; userId: string; departmentId: string; position: string }[]) =>
+  canEditLessonsRule(actor) || (!!actor && !!serviceId && assignments.some(a => a.serviceId === serviceId && a.userId === actor.id && a.departmentId === KIDS_DEPT && a.position === TEACHER));
+/** Service lessons are visible to whoever can see the Kids department. */
+export const canSeeServiceLessonsRule = (actor: Parameters<typeof canViewDeptRule>[0]) => canViewDeptRule(actor, KIDS_DEPT);
+export function visibleServiceLessons<D extends { services: { lessons?: unknown }[] }>(actor: Parameters<typeof canViewDeptRule>[0], d: D): D {
+  if (canSeeServiceLessonsRule(actor) || !d.services.some(s => s.lessons)) return d;
+  return { ...d, services: d.services.map(s => s.lessons ? (({ lessons, ...r }) => r)(s) as typeof s : s) };
+}
 /** Owner, or an admin of Music, may edit setlists. */
 /** Song library create/edit/delete: owner + Music admins (by role, not name). Also the base for setlist editing. */
 export const canEditSongsRule = (actor: { role: Tier; adminOf?: string[] } | null | undefined) =>

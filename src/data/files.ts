@@ -37,6 +37,8 @@ export function useLessons(deptId: string): Lesson[] {
     if (typeof window !== 'undefined') window.addEventListener('storage', on); return () => { subs.delete(f); if (typeof window !== 'undefined') window.removeEventListener('storage', on); }; }, []);
   return (LESSONS_REMOTE ? remote : readFiles().lessons).filter(l => l.deptId === deptId).sort((a, b) => a.title.localeCompare(b.title, undefined, { sensitivity: 'base' }));
 }
+/** The Kids lesson catalog services can pick from. */
+export const lessonCatalog = (): Lesson[] => readFiles().lessons;
 export const fmtSize = (n: number) => n >= 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`;
 async function blobOf(l: Lesson): Promise<Blob> {
   if (l.dataUrl) return toBlob(l);

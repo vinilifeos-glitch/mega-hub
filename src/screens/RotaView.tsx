@@ -2,6 +2,7 @@ import { Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { useMe } from '../state/AppContext';
 import { SetlistPreview } from './Setlist';
+import { ServiceLessonsCard } from './ServiceLessons';
 import { Card, Empty, Icon, Screen, useColors, useStyles } from '../components/ui';
 import { LiveButton, RotaRoleCard, RotaTeamCard } from '../components/rota';
 import { isoToDdmm } from '../data/dates';
@@ -37,6 +38,7 @@ export function RotaView({ serviceId }: { serviceId: string }) {
           <RotaTeamCard key={g.departmentId} testID={`rota-team-${g.departmentId}`} title={`${t('myRota.team')} · ${deptName(g.departmentId)}`}
             rows={g.members.map(m => ({ role: roleName(g.departmentId, m.position), name: displayName({ username: m.username }).replace(/^@/, ''), suffix: m.userId === currentUser.id ? `(${t('myRota.you')})` : undefined, testID: `rota-member-${m.assignmentId}` }))} />))}
         {hasSetlist && <SetlistPreview service={sv} onOpen={() => router.navigate({ pathname: '/', params: { svc: sv.id } })} />}
+        <ServiceLessonsCard service={sv} list={sv.lessons ?? []} readOnly />
         {hasSetlist && canLive(sv.id) && <LiveButton label={t('live.open')} onPress={() => router.push(`/live/${sv.id}` as any)} testID="rota-live-open" />}
       </View>
     </Screen>
