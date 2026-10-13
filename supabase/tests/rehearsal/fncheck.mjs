@@ -1,0 +1,26 @@
+// admin-users edge function against local Supabase: owner-only; create, reset-password, set-username, set-active (ban).
+import fs from 'fs'; import { createClient } from '/workspace/mega-hub-perms/node_modules/@supabase/supabase-js/dist/index.mjs'; import WS from '/workspace/mega-hub-perms/node_modules/ws/index.js';
+const env = Object.fromEntries(fs.readFileSync('/workspace/.sblocal.env', 'utf8').trim().split('\n').map(l => { const i = l.indexOf('='); return [l.slice(0, i), l.slice(i + 1).replace(/^"|"$/g, '')]; }));
+const mk = () => createClient(env.API_URL, env.ANON_KEY, { auth: { persistSession: false }, realtime: { transport: WS } });
+const em = u => `${u.toLowerCase()}@megahub.local`;
+let P = 0, F = 0; const ok = (c, m) => { console.log(c ? 'PASS' : 'FAIL', m); c ? P++ : F++; };
+const login = async (u, p) => { const c = mk(); const r = await c.auth.signInWithPassword({ email: em(u), password: p }); return r.error ? null : c; };
+const call = async (c, body) => { const r = await c.functions.invoke('admin-users', { body }); let e = null; if (r.error) { try { e = (await r.error.context.json()).error; } catch { e = r.error.message; } } return { data: r.data, error: e }; };
+const owner = await login('Vini', 'Nova-Vini1'); ok(!!owner, 'owner signs in');
+const lucas = await login('Lucas', 'Nova-Lucas1');
+ok((await call(lucas, { action: 'create', username: 'Hacker', role: 'admin', tempPassword: 'abcdef1' })).error === 'owner only', 'admin cannot call admin-users (owner only)');
+ok((await call(mk(), { action: 'create' })).error, 'anonymous rejected');
+const c1 = await call(owner, { action: 'create', username: 'Novato', role: 'volunteer', tempPassword: 'Temp-123', firstName: 'Novo', lastName: 'Membro', departmentIds: ['d-kids'], positions: { 'd-kids': ['Assistant'] } });
+ok(!!c1.data?.id, 'create volunteer with dept + role'); const id = c1.data?.id;
+ok((await call(owner, { action: 'create', username: 'Bad', role: 'owner', tempPassword: 'Temp-123' })).error === 'invalid tier', 'cannot create a second owner');
+ok((await call(owner, { action: 'create', username: 'Short', role: 'volunteer', tempPassword: '1234' })).error === 'password too short', '4-char password refused (Supabase min 6)');
+let n = await login('Novato', 'Temp-123'); ok(!!n, 'new account signs in with temp password');
+const pr = (await n.from('profiles').select('must_change_password').eq('id', id).single()).data; ok(pr?.must_change_password === true, 'new account must change password');
+ok(!(await call(owner, { action: 'reset-password', userId: id, tempPassword: 'Reset-456' })).error && !!(await login('Novato', 'Reset-456')) && !(await login('Novato', 'Temp-123')), 'reset-password works, old password stops working');
+ok((await call(owner, { action: 'set-username', userId: id, username: 'Lucas' })).error === 'username taken', 'set-username refuses a taken name');
+ok(!(await call(owner, { action: 'set-username', userId: id, username: 'Novata' })).error && !!(await login('Novata', 'Reset-456')) && !(await login('Novato', 'Reset-456')), 'set-username: signs in with the new username only');
+ok(!(await call(owner, { action: 'set-active', userId: id, active: false })).error && !(await login('Novata', 'Reset-456')), 'set-active false: banned, cannot sign in');
+ok(!(await call(owner, { action: 'set-active', userId: id, active: true })).error && !!(await login('Novata', 'Reset-456')), 'set-active true: can sign in again');
+const vini = (await owner.auth.getUser()).data.user.id;
+ok(!!(await call(owner, { action: 'set-active', userId: vini, active: false })).error, 'owner cannot be deactivated');
+console.log(`${P} passed, ${F} failed`);

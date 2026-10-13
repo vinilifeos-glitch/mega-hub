@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { confirmAsk } from '../components/confirm';
-import { ACCEPT, MAX_FILE, LessonErr, addLesson, deleteLesson, downloadLesson, fileTypeOk, fmtSize, openLesson, renameLesson, useLessons } from '../data/files';
+import { ACCEPT, MAX_FILE, LessonErr, addLesson, deleteLesson, downloadLesson, fileTypeOk, fmtSize, openLesson, renameLesson, useLessons, LESSONS_REMOTE } from '../data/files';
 import { Linking, Platform, Pressable, Text, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
 import { useMe } from '../state/AppContext';
@@ -155,7 +155,7 @@ export function DeptLessons({ id }: { id: string }) {
   const lessons = useLessons(id);
   const [title, setTitle] = useState(''); const [file, setFile] = useState<{ name: string; mime: string; size: number; dataUrl: string } | null>(null);
   const [err, setErr] = useState<string | null>(null); const [ren, setRen] = useState<{ id: string; title: string } | null>(null);
-  const [inputKey, setInputKey] = useState(0);
+  const [inputKey, setInputKey] = useState(0); const [busy, setBusy] = useState(false);
   const d = useDept(id); if (!d || d.id !== KIDS_DEPT) return <NoAccess id={id} />;
   const admin = canEditLessonsRule(currentUser);
   const msg = (e: LessonErr, size?: number) => e === 'scope' ? t('dept.errScope') : e === 'title' ? t('dept.errTitle') : e === 'type' ? t('dept.errType') : e === 'size' ? t('dept.errSize', { size: fmtSize(size ?? 0) }) : e === 'quota' ? t('dept.errQuota') : null;
@@ -166,17 +166,17 @@ export function DeptLessons({ id }: { id: string }) {
     const r = new FileReader(); r.onload = () => { setFile({ name: f.name, mime: f.type, size: f.size, dataUrl: String(r.result) }); if (!title.trim()) setTitle(f.name.replace(/\.[^.]+$/, '')); };
     r.onerror = () => setErr(msg('type')); r.readAsDataURL(f);
   };
-  const upload = () => { if (!file) { setErr(t('dept.errNoFile')); return; } const e = addLesson(currentUser as any, d.id, title, file); setErr(msg(e, file.size)); if (!e) { setFile(null); setTitle(''); setInputKey(k => k + 1); } };
+  const upload = async () => { if (!file || busy) { if (!file) setErr(t('dept.errNoFile')); return; } setBusy(true); const e = await addLesson(currentUser as any, d.id, title, file); setErr(msg(e, file.size)); if (!e) { setFile(null); setTitle(''); setInputKey(k => k + 1); } setBusy(false); };
   return (
     <Screen title={t('dept.lessonsTitle')} backTo={{ label: deptName(d.id), onPress: () => goBack(`/dept/${d.id}`) }}>
-      {admin && <Notice tone="warning" text={t('dept.lessonLocalNote')} testID="lessons-local-note" />}
+      {admin && !LESSONS_REMOTE && <Notice tone="warning" text={t('dept.lessonLocalNote')} testID="lessons-local-note" />}
       {admin && <Card>
         <CardHeader icon="cloud-upload-outline" title={t('dept.lessonUpload')} />
         <Text style={[s.small, { marginBottom: 8 }]}>{t('dept.lessonAccept')}</Text>
         {Platform.OS === 'web' && React.createElement('input', { key: inputKey, type: 'file', accept: ACCEPT, onChange: onPick, 'data-testid': 'lesson-file', 'aria-label': t('dept.lessonPick'), style: { marginBottom: 10, color: colors.text, fontSize: 15 } })}
         {file && <Text style={[s.small, { marginBottom: 6 }]} testID="lesson-picked">{file.name} · {fmtSize(file.size)}</Text>}
         <Field label={t('dept.lessonTitle')} value={title} onChangeText={setTitle} maxLength={120} testID="lesson-title" />
-        <Button label={t('dept.lessonUpload')} onPress={upload} disabled={!file} testID="lesson-upload" />
+        <Button label={t('dept.lessonUpload')} onPress={upload} disabled={!file || busy} testID="lesson-upload" />
       </Card>}
       {err && <Notice tone="error" text={err} testID="lesson-error" />}
       <Card>
@@ -186,7 +186,7 @@ export function DeptLessons({ id }: { id: string }) {
           <View key={l.id} testID={`lesson-row-${l.id}`} style={{ borderTopWidth: i ? 1 : 0, borderTopColor: colors.border, paddingVertical: 10 }}>
             {ren?.id === l.id ? <>
               <Field label={t('dept.lessonTitle')} value={ren.title} onChangeText={v => setRen({ ...ren, title: v })} maxLength={120} testID="lesson-rename-input" />
-              <Button label={t('dept.save')} onPress={() => { const e = renameLesson(currentUser as any, l.id, ren.title); setErr(msg(e)); if (!e) setRen(null); }} testID="lesson-rename-save" />
+              <Button label={t('dept.save')} onPress={async () => { const e = await renameLesson(currentUser as any, l.id, ren.title); setErr(msg(e)); if (!e) setRen(null); }} testID="lesson-rename-save" />
               <Button label={t('dept.cancel')} outline onPress={() => setRen(null)} testID="lesson-rename-cancel" />
             </> : <View style={[s.row, { flexWrap: 'nowrap', alignItems: 'center' }]}>
               <Pressable style={{ flex: 1 }} onPress={() => openLesson(l)} accessibilityRole="link" testID={`lesson-open-${l.id}`}>
@@ -196,7 +196,7 @@ export function DeptLessons({ id }: { id: string }) {
               <IconButton testID={`lesson-dl-${l.id}`} icon="download-outline" color={colors.primaryText} label={t('dept.lessonDownload')} onPress={() => downloadLesson(l)} />
               {admin && <>
                 <IconButton testID={`lesson-ren-${l.id}`} icon="create-outline" color={colors.primaryText} label={t('dept.lessonRename')} onPress={() => { setErr(null); setRen({ id: l.id, title: l.title }); }} />
-                <IconButton testID={`lesson-del-${l.id}`} icon="trash-outline" color={colors.red} label={t('dept.lessonDelete')} onPress={() => confirmAsk(t('dept.lessonDelete'), t('dept.lessonDelConfirm', { title: l.title }), t('dept.lessonDelete'), t('dept.cancel'), () => setErr(msg(deleteLesson(currentUser as any, l.id))))} />
+                <IconButton testID={`lesson-del-${l.id}`} icon="trash-outline" color={colors.red} label={t('dept.lessonDelete')} onPress={() => confirmAsk(t('dept.lessonDelete'), t('dept.lessonDelConfirm', { title: l.title }), t('dept.lessonDelete'), t('dept.cancel'), async () => setErr(msg(await deleteLesson(currentUser as any, l.id))))} />
               </>}
             </View>}
           </View>

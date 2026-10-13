@@ -334,6 +334,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (!/^[A-Za-z0-9._-]{2,30}$/.test(username)) return t('errors.usernameFormat');
         if (usernameTaken(username, id)) return t('errors.usernameTaken');
         if (id === currentUser!.id && (a.role !== 'owner' || !a.active)) return t('errors.selfOwnerLock');
+        if (repository.auth) {
+          // Supabase: sign-in name, ban/unban and password live in Auth -> owner-only edge function; tier/adminOf via RLS-checked rows
+          if (a.newPassword && a.newPassword.length < 6) return t('errors.passwordTooShort');
+          if (username !== t0.username) { const r = await repository.auth.setUsername(id, username); if (r.error) return r.error; }
+          if (a.active !== t0.active) { const r = await repository.auth.setActive(id, a.active); if (r.error) return r.error; }
+          if (a.newPassword) { const r = await repository.auth.resetPassword(id, a.newPassword); if (r.error) return r.error; }
+          const fresh = await repository.load();
+          const next = { ...fresh, users: fresh.users.map(u => u.id === id ? { ...u, role: a.role, adminOf: a.role === 'admin' ? a.adminOf : [] } : u) };
+          await repository.save(next); setData(await repository.load()); return null;
+        }
         if (a.newPassword && a.newPassword.length < 4) return t('errors.passwordTooShort');
         let pw = {};
         if (a.newPassword) { const salt = newSalt(); pw = { salt, passwordHash: await hashPassword(salt, a.newPassword), mustChangePassword: false }; }

@@ -14,7 +14,10 @@ let db = null;
 if (!dryRun) {
   const url = process.env.SUPABASE_URL, key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) { console.error('Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY'); process.exit(2); }
-  const sb = createClient(url, key, { auth: { persistSession: false } });
+  // Node < 22 has no global WebSocket (supabase-js needs one even though this script never uses realtime)
+  const transport = globalThis.WebSocket ?? (await import('ws').catch(() => null))?.default;
+  if (!transport) { console.error('Use Node 22+ (or npm i ws)'); process.exit(2); }
+  const sb = createClient(url, key, { auth: { persistSession: false }, realtime: { transport } });
   const ok = r => { if (r.error) throw r.error; return r.data; };
   db = {
     findLegacy: async legacy => ok(await sb.from('profiles').select('id').eq('legacy_id', legacy).maybeSingle())?.id ?? null,
@@ -23,6 +26,7 @@ if (!dryRun) {
       if (r.error) throw new Error(`${username}: ${r.error.message}`); return r.data.user.id;
     },
     upsert: async (table, rows, keys) => { for (let i = 0; i < rows.length; i += 500) ok(await sb.from(table).upsert(rows.slice(i, i + 500), { onConflict: keys.join(',') })); },
+    uploadFile: async (bucket, path, bytes, mime) => ok(await sb.storage.from(bucket).upload(path, bytes, { contentType: mime, upsert: true })),
     count: async table => (await sb.from(table).select('*', { count: 'exact', head: true })).count ?? 0,
   };
 }

@@ -17,6 +17,11 @@ await db.exec(`
   grant execute on function storage.foldername(text) to authenticated;`);
 for (const f of fs.readdirSync(path.join(dir, '../migrations')).sort()) await db.exec(fs.readFileSync(path.join(dir, '../migrations', f), 'utf8'));
 const data = readExport(path.join(dir, 'fixtures/live-shaped.json'));
+const uploaded = [];
+const pdf = 'data:application/pdf;base64,' + Buffer.from('%PDF-1.4 test').toString('base64');
+data.__lessons = [
+  { id: 'ls-a', deptId: 'd-kids', title: 'Arca de Noé', name: 'Lição 1.pdf', mime: 'application/pdf', size: 13, dataUrl: pdf, createdAt: '2026-10-13T10:00:00Z', by: data.users[0].id },
+  { id: 'ls-b', deptId: 'd-kids', title: 'Broken', name: 'x.pdf', mime: 'application/pdf', size: 1, createdAt: '2026-10-13T10:00:00Z', by: 'nobody' }];
 const adapter = {
   findLegacy: async l => (await db.query('select id from profiles where legacy_id=$1', [l])).rows[0]?.id ?? null,
   createAuthUser: async (u, _pw) => { const id = crypto.randomUUID(); await db.query('insert into auth.users values ($1,$2)', [id, u.toLowerCase() + '@megahub.local']); return id; },
@@ -28,14 +33,19 @@ const adapter = {
         on conflict (${keys.join(',')}) do ${upd.length ? 'update set ' + upd.map(c => `${c}=excluded.${c}`).join(',') : 'nothing'}`, vals);
     }
   },
+  uploadFile: async (bucket, p, bytes, mime) => { await db.query(`insert into storage.objects (bucket_id, name) values ($1,$2) on conflict (bucket_id, name) do nothing`, [bucket, p]); uploaded.push([p, bytes.length, mime]); },
   count: async t => Number((await db.query(`select count(*)::int n from ${t}`)).rows[0].n),
 };
 let n = 0; const ok = (c, m) => { assert.ok(c, m); n++; console.log('PASS', m); };
 const r1 = await runImport(data, adapter, { log: () => {} });
 ok(r1.created.length === data.users.length, 'one auth account + temp password per user');
 ok(r1.created.every(c => c.password.length >= 10), 'temp passwords >= 10 chars');
+ok(Number((await db.query('select count(*)::int n from lessons')).rows[0].n) === 1 && r1.counts.lesson_files_skipped === 1, 'lessons: file uploaded + row created; file-less lesson skipped');
+{ const l = (await db.query('select * from lessons')).rows[0]; ok(l.title === 'Arca de Noé' && l.file_name === 'Lição 1.pdf' && /^d-kids\/[0-9a-f-]{36}\/Licao_1\.pdf$/.test(l.storage_path) && l.size_bytes === 13 && l.created_by === r1.idMap.get(data.users[0].id) && uploaded[0][0] === l.storage_path && uploaded[0][2] === 'application/pdf', 'lessons: metadata + storage path + owner mapped'); }
+ok(data.users.every(u => !r1.created.some(c => c.username === u.username && (c.password.length < 6))), 'no temp password below Supabase 6-char minimum (current 4-char passwords are replaced)');
 const r2 = await runImport(data, adapter, { log: () => {} });
 ok(r2.created.length === 0, 're-running import is idempotent (no duplicate accounts)');
+ok(Number((await db.query('select count(*)::int n from lessons')).rows[0].n) === 1, 're-run: no duplicate lessons');
 ok(Number((await db.query('select count(*)::int n from profiles')).rows[0].n) === data.users.length, 'no duplicate profiles');
 // round trip
 const M = await loadMapping();

@@ -20,6 +20,8 @@ export interface AuthOps {
   /** Owner-only, via the admin-users edge function (service role stays on the server). */
   createAccount(input: Record<string, unknown>): Promise<{ id?: string; error?: string }>;
   resetPassword(userId: string, tempPassword: string): Promise<{ error?: string }>;
+  setUsername(userId: string, username: string): Promise<{ error?: string }>;
+  setActive(userId: string, active: boolean): Promise<{ error?: string }>;
 }
 
 export class SupabaseRepository implements Repository {
@@ -36,8 +38,11 @@ export class SupabaseRepository implements Repository {
       if (res[i].error) throw res[i].error;
       return [t, res[i].data ?? []];
     })) as Rows;
-    this.snapshot = rows;
-    return fromRows(rows);
+    // Snapshot in the same normalized shape save() produces (DB returns e.g. '16:00:00', timestamps, extra columns);
+    // otherwise unchanged rows look changed and get re-upserted (RLS then rejects admins' saves).
+    const data = fromRows(rows);
+    this.snapshot = toRows(data);
+    return data;
   }
   /** Writes only what changed since the last load/save. RLS rejects anything the signed-in user may not change. */
   async save(data: AppData): Promise<void> {
@@ -88,6 +93,14 @@ export class SupabaseRepository implements Repository {
     createAccount: async input => {
       const { data, error } = await this.sb.functions.invoke('admin-users', { body: { action: 'create', ...input } });
       return error ? { error: String((data as any)?.error ?? error.message) } : { id: (data as any).id };
+    },
+    setUsername: async (userId, username) => {
+      const { data, error } = await this.sb.functions.invoke('admin-users', { body: { action: 'set-username', userId, username } });
+      return error ? { error: String((data as any)?.error ?? error.message) } : {};
+    },
+    setActive: async (userId, active) => {
+      const { data, error } = await this.sb.functions.invoke('admin-users', { body: { action: 'set-active', userId, active } });
+      return error ? { error: String((data as any)?.error ?? error.message) } : {};
     },
     resetPassword: async (userId, tempPassword) => {
       const { data, error } = await this.sb.functions.invoke('admin-users', { body: { action: 'reset-password', userId, tempPassword } });

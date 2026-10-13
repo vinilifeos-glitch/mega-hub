@@ -8,14 +8,17 @@ steps below are done. Local mode stays the default: with no env vars set, the ap
 | Piece | File |
 |---|---|
 | Schema, RLS, triggers, seed departments/roles | `supabase/migrations/20261012000000_init.sql` |
-| RLS tests per role (41 checks, real Postgres via PGlite) | `supabase/tests/rls.test.mjs` |
-| Import + round-trip test (11 checks) | `supabase/tests/import.test.mjs` |
+| RLS tests per role (126 checks, real Postgres via PGlite) | `supabase/tests/rls.test.mjs` |
+| Import + round-trip test (15 checks, incl. lesson files) | `supabase/tests/import.test.mjs` |
 | App ⇄ table mapping + diff writer | `src/data/supabaseMapping.ts` |
 | Repository adapter (same `Repository` interface) | `src/data/supabaseRepository.ts` |
 | Backend switch | `src/data/repository.ts` (`EXPO_PUBLIC_BACKEND=supabase`) |
-| Owner-only account admin (create, reset password) | `supabase/functions/admin-users/index.ts` |
+| Owner-only account admin (create, reset password, set-username, set-active/ban) | `supabase/functions/admin-users/index.ts` |
 | One-time import tool | `scripts/supabase-import.mjs` (+ `supabase-import-core.mjs`) |
-| Owner "Export data" button (only with `EXPO_PUBLIC_ENABLE_EXPORT=1`) | `app/(tabs)/accounts.tsx` |
+| Owner "Export data" button (live on main: Profile → Admin; data:v4 + lesson files) | `src/data/export.ts`, `app/(tabs)/profile.tsx` |
+| Kids lessons: local data URLs / Supabase `lessons` table + Storage bucket | `src/data/files.ts`, migration `20261012110000_lessons.sql` |
+| Local Supabase config (rehearsal) | `supabase/config.toml` |
+| Go-live runbook | `docs/GO_LIVE_RUNBOOK.md` |
 
 Run tests: `npm run test:supabase` (no account or Docker needed).
 
@@ -46,20 +49,21 @@ Run tests: `npm run test:supabase` (no account or Docker needed).
 
 ### Marcos (about 10 minutes, free plan)
 1. Go to https://supabase.com → **Start your project** → sign up (GitHub or email).
-2. **New project**: name `mega-hub`, choose a strong database password (keep it to yourself), region **South America (São Paulo)** or the closest one → Create.
+2. **New project**: name `mega-hub`, choose a strong database password (keep it to yourself), region **West EU (London) – eu-west-2** (Marcos is in the UK) → Create.
 3. **Authentication → Sign In / Providers → Email**: keep Email **enabled**, turn **Confirm email OFF**. Under Authentication settings, turn **Allow new users to sign up OFF**.
 4. **Project Settings → API**: send me (privately, not in group chat) the **Project URL** and the **anon public** key. The `service_role` key is needed only for the one-time import: either paste it yourself when I run the import, or add me to the project (**Settings → Team → Invite**) so I can read it there. Never post it in chat.
-5. In the **live app** (current version, on the device you use): Accounts → **Export data** (I'll publish a build with this button for that day only). Send me the downloaded `megahub-export-YYYY-MM-DD.json` privately.
+5. Create a **personal access token** (Account → Access Tokens) and submit it via the secure form (`SUPABASE_ACCESS_TOKEN`).
+6. In the **live app** (on the device that has the lessons): Profile → Admin → **Export data**. Send me `megahub-export-YYYY-MM-DD.json` privately (it includes Kids lesson files).
 
 ### Me (Tom)
-1. `npx supabase login` → `npx supabase link --project-ref <ref>` → `npx supabase db push` (applies the migration).
+1. With `SUPABASE_ACCESS_TOKEN` set: `npx supabase link --project-ref <ref>` → `npx supabase db push` (applies the migration).
 2. `npx supabase functions deploy admin-users` (Supabase provides the service key to the function automatically).
 3. Rehearse the import: `node scripts/supabase-import.mjs export.json --dry-run`. It shows the row counts and writes nothing.
 4. Real import: `SUPABASE_URL=… SUPABASE_SERVICE_ROLE_KEY=… node scripts/supabase-import.mjs export.json`.
    - The import is idempotent (safe to re-run) and verifies row counts.
    - It writes `megahub-temp-passwords.csv` (chmod 600).
 5. Hand the CSV to Marcos privately, then delete it. He gives each person their temp password; on first sign-in everyone must set their own.
-6. Build with `EXPO_PUBLIC_BACKEND=supabase EXPO_PUBLIC_SUPABASE_URL=… EXPO_PUBLIC_SUPABASE_ANON_KEY=…` (the anon key is public by design; RLS protects data), test on a preview URL with real accounts per role, then deploy.
+6. Full step list: `docs/GO_LIVE_RUNBOOK.md`. Build with `EXPO_PUBLIC_BACKEND=supabase EXPO_PUBLIC_SUPABASE_URL=… EXPO_PUBLIC_SUPABASE_ANON_KEY=…` (the anon key is public by design; RLS protects data), test on a preview URL with real accounts per role, then deploy.
 7. Freeze window: from export until switch-over (about 1 hour), nobody edits in the old app, so no edits are lost.
 
 ## Risks
@@ -115,3 +119,13 @@ Run tests: `npm run test:supabase` (no account or Docker needed).
 - Trigger `one_role_guard (dropped in 20261012090000: replaced by same_role_guard, double booking allowed)` on `assignments` (insert/update): within a service a person may hold at most one non-exempt role; Desk and Assembly (`is_exempt_role`, by role id) are exempt; never two slots of the same role. It raises `role conflict` (check_violation).
 - Only new writes are checked. Unchanged rows and the service-role import (`auth.uid()` null) bypass it, so legacy conflicts are kept as-is. The app shows them as a warning.
 - Adapter/app: the same rule runs in `src/data/rota.ts` (`roleConflict` / `newConflict`), used by AppContext before any write.
+
+## Kids lessons (migration 20261012110000_lessons.sql)
+- `lessons(id uuid, department_id = 'd-kids', title 1–120, file_name, mime (PDF/images/Office), size_bytes ≤ 5 MB, storage_path '<dept>/<id>/<file>', created_by, created_at)`; trigger allows only title changes.
+- Private Storage bucket `lessons` (5 MB, mime allow-list). `storage.objects` policies use the first path segment: read `views_dept`, write/delete `administers` (Kids only).
+- App: in Supabase mode `src/data/files.ts` lists from `lessons`, uploads to Storage, renames/deletes row + file, opens/downloads via Storage; no device-only note. Device mode unchanged (`megahub:files:v1`).
+- Import: lesson files from the export (`files.lessons`, data URLs) are uploaded to Storage with stable ids (re-run safe).
+
+## Accounts in Supabase mode
+- `admin-users` actions: `create`, `reset-password`, `set-username` (keeps the synthetic Auth email in step), `set-active` (Auth ban/unban; owner can't be deactivated). Owner-only, service key stays on the server.
+- Owner edits in Accounts route username/active/password through the function; tier/admin-of go through RLS.

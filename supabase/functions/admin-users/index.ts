@@ -30,6 +30,32 @@ Deno.serve(async req => {
     await admin.from('profiles').update({ must_change_password: true }).eq('id', body.userId);
     return json({ ok: true });
   }
+  if (body.action === 'set-username') {
+    // sign-in is by username: keep the synthetic Auth email in step with profiles.username
+    const username = String(body.username ?? '').trim();
+    if (!/^[A-Za-z0-9._-]{2,30}$/.test(username)) return json({ error: 'invalid username' }, 400);
+    const { data: tgt } = await admin.from('profiles').select('id').eq('id', body.userId).single();
+    if (!tgt) return json({ error: 'not found' }, 404);
+    const { data: clash } = await admin.from('profiles').select('id').ilike('username', username).neq('id', body.userId).maybeSingle();
+    if (clash) return json({ error: 'username taken' }, 409);
+    const { error } = await admin.auth.admin.updateUserById(body.userId, { email: authEmail(username), email_confirm: true });
+    if (error) return json({ error: error.message }, 400);
+    const { error: e2 } = await admin.from('profiles').update({ username }).eq('id', body.userId);
+    if (e2) return json({ error: e2.message }, 400);
+    return json({ ok: true });
+  }
+  if (body.action === 'set-active') {
+    // deactivated accounts are also banned in Auth so existing sessions/refresh tokens stop working
+    const { data: tgt } = await admin.from('profiles').select('id, tier').eq('id', body.userId).single();
+    if (!tgt) return json({ error: 'not found' }, 404);
+    if (tgt.tier === 'owner' || body.userId === me.user.id) return json({ error: 'cannot deactivate the owner' }, 400);
+    const active = !!body.active;
+    const { error } = await admin.auth.admin.updateUserById(body.userId, { ban_duration: active ? 'none' : '876000h' });
+    if (error) return json({ error: error.message }, 400);
+    const { error: e2 } = await admin.from('profiles').update({ active }).eq('id', body.userId);
+    if (e2) return json({ error: e2.message }, 400);
+    return json({ ok: true });
+  }
   if (body.action === 'create') {
     const username = String(body.username ?? '').trim();
     if (!/^[A-Za-z0-9._-]{2,30}$/.test(username)) return json({ error: 'invalid username' }, 400);
