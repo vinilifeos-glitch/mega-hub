@@ -1,9 +1,10 @@
 import { sortRoles } from '../data/rota';
 import { DateField } from '../components/DateField';
 import { useState } from 'react';
-import { Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
+import { router } from 'expo-router';
 import { formatDobInput, fullName, ProfileInput, useMe } from '../state/AppContext';
-import { RoleBadge, Button, DeptTitle, deptIcon, Card, Chip, Field, Screen, Notice, useColors, useStyles } from '../components/ui';
+import { RoleBadge, Button, DeptTitle, deptIcon, Card, Chip, Field, Icon, Screen, Notice, useColors, useStyles } from '../components/ui';
 import { User } from '../types';
 
 
@@ -31,23 +32,32 @@ export function PersonalInfo({ user, title }: { user: User; title?: string }) {
   );
 }
 
-export function RolesView({ user }: { user: User }) {
+/** One card per department: name, the user's roles. With `linkTestId`, the whole card opens the department page when the viewer may (canViewDept). */
+export function RolesView({ user, linkTestId }: { user: User; linkTestId?: (depId: string) => string }) {
   const colors = useColors(); const s = useStyles();
-  const { data, t, roleName } = useMe();
+  const { data, t, roleName, canViewDept, deptName } = useMe();
   const deps = data.departments.filter(d => user.departmentIds.includes(d.id));
   return (
     <>
       {deps.length === 0 && <Card><Text style={s.small}>{t('departmentsScreen.notAssigned')}</Text></Card>}
       {deps.map(d => {
         const roles = sortRoles(data, d.id, user.positions?.[d.id] ?? []);
-        return (
-          <Card key={d.id} style={{ borderLeftWidth: 3, borderLeftColor: d.color }}>
-            <DeptTitle dep={d} suffix={(user.role === 'admin' && (user.adminOf ?? []).includes(d.id)) || user.role === 'owner' ? t('departmentsScreen.adminSuffix') : ''} />
-            <View style={[s.row, { marginTop: 8 }]}>
-              {roles.length ? roles.map(r => <Chip key={r} label={roleName(d.id, r)} color={d.color} active />) : <Text style={s.small}>{t('departmentsScreen.noRoles')}</Text>}
+        const link = !!linkTestId && canViewDept(d.id);
+        const card = (
+          <Card style={{ borderLeftWidth: 3, borderLeftColor: d.color }}>
+            <View style={[s.row, { flexWrap: 'nowrap', alignItems: 'center' }]}>
+              <View style={{ flex: 1 }}>
+                <DeptTitle dep={d} suffix={(user.role === 'admin' && (user.adminOf ?? []).includes(d.id)) || user.role === 'owner' ? t('departmentsScreen.adminSuffix') : ''} />
+                <View style={[s.row, { marginTop: 8 }]}>
+                  {roles.length ? roles.map(r => <Chip key={r} label={roleName(d.id, r)} color={d.color} active />) : <Text style={s.small}>{t('departmentsScreen.noRoles')}</Text>}
+                </View>
+              </View>
+              {link && <Icon name="chevron-forward" size={18} color={colors.subtle} style={{ marginLeft: 8 }} />}
             </View>
           </Card>
         );
+        return link ? <Pressable key={d.id} testID={linkTestId!(d.id)} accessibilityRole="button" accessibilityLabel={t('dept.openA11y', { dept: deptName(d.id) })} onPress={() => router.push(`/dept/${d.id}` as any)}
+          style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}>{card}</Pressable> : <View key={d.id} testID={`dept-card-${d.id}`}>{card}</View>;
       })}
     </>
   );

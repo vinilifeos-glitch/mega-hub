@@ -16,14 +16,14 @@ let seq = 0; const sid = () => `sc-${Date.now().toString(36)}${++seq}`;
 const toForm = (g?: Song): Form => ({ title: g?.title ?? '', composer: g?.composer ?? g?.artist ?? '', key: g?.key ?? '', timeSignature: g?.timeSignature ?? '', bpm: g?.bpm ? String(g.bpm) : '', link: g?.link ?? '', chords: g?.chords ?? '',
   sections: (g?.sections ?? []).map(x => ({ id: x.id, name: x.name, cue: x.cue ?? '', barsText: barsToText(x.bars), notes: x.notes ?? '' })) });
 
-export function SongView({ id, keyParam }: { id: string; keyParam?: string }) {
+export function SongView({ id, keyParam, startEdit }: { id: string; keyParam?: string; startEdit?: boolean }) {
   const colors = useColors(); const s = useStyles();
   const { data, t, canEditSongs, addLibSong, updateLibSong, removeLibSong } = useMe();
   const isNew = id === 'new';
   const song = (data.songs ?? []).find(x => x.id === id);
   const [size, setSize] = useState(18);
   const [toKey, setToKey] = useState<string>(keyLabel(parseKey(keyParam)) || song?.key || '');
-  const [form, setForm] = useState<Form | null>(isNew ? toForm() : null);
+  const [form, setForm] = useState<Form | null>(isNew ? toForm() : startEdit && canEditSongs && song ? toForm(song) : null);
   const [err, setErr] = useState<string | null>(null);
   const back = { label: t('song.back'), onPress: () => goBack('/departments') };
   if (!isNew && !song) return <Screen title={t('song.notFound')} backTo={back}><Text style={s.small}>{t('song.notFound')}</Text></Screen>;
