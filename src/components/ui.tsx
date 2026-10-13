@@ -99,7 +99,7 @@ export const space = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 };
 export const radius = { sm: 8, md: 12, lg: 18, pill: 999 };
 export const contentMax = 640; // content + tab bar width on wide screens
 const makeType = (c: Palette) => ({
-  title: { fontSize: 28, fontWeight: '800' as const, color: c.onHeader, letterSpacing: -0.6 },
+  title: { fontSize: 22, fontWeight: '800' as const, color: c.onHeader, letterSpacing: -0.4 },
   h2: { fontSize: 17, fontWeight: '700' as const, color: c.text },
   body: { fontSize: 15, color: c.text },
   small: { fontSize: 14, color: c.muted, lineHeight: 20 },
@@ -123,7 +123,7 @@ export function Screen({ title, subtitle, children, backTo }: { title: string; s
   const inner = { width: '100%' as const, maxWidth: contentMax, alignSelf: 'center' as const, paddingHorizontal: space.lg + 4 };
   return (
     <ScrollView style={{ flex: 1, backgroundColor: c.bg }} contentContainerStyle={{ paddingBottom: space.xxl + 8 }}>
-      <View style={[s.header, { paddingTop: insets.top + (back ? space.md : space.xl) }]}>
+      <View style={[s.header, { paddingTop: insets.top + (back ? space.sm : space.md) }]}>
         <View style={inner}>
           {back && (
             <Pressable testID="screen-back" onPress={backTo?.onPress ?? (() => { if (path === '/profile' && router.canGoBack()) router.back(); else router.navigate(BACK_FOR[path] as any); })} accessibilityRole="button" accessibilityLabel={backTo?.label ?? (path === '/accounts' ? t('profile.title') : t('common.back'))} hitSlop={8}
@@ -135,7 +135,7 @@ export function Screen({ title, subtitle, children, backTo }: { title: string; s
           <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
             <Text style={[s.title, { flex: 1 }]} accessibilityRole="header">{title}</Text>
             {me && <Pressable testID="header-profile" accessibilityRole="button" accessibilityLabel={t('profile.title')} hitSlop={8} onPress={() => router.navigate('/profile' as any)}
-              style={({ pressed }) => ({ width: 40, height: 40, borderRadius: 20, marginLeft: 12, backgroundColor: path === '/profile' ? c.primary : c.onHeaderMuted + '33', borderWidth: 1.5, borderColor: c.onHeaderMuted, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.8 : 1 })}>
+              style={({ pressed }) => ({ width: 34, height: 34, borderRadius: 17, marginLeft: 12, backgroundColor: path === '/profile' ? c.primary : c.onHeaderMuted + '33', borderWidth: 1.5, borderColor: c.onHeaderMuted, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.8 : 1 })}>
               <Text style={{ color: c.onHeader, fontWeight: '800', fontSize: 15 }}>{initials}</Text>
             </Pressable>}
           </View>
@@ -351,8 +351,8 @@ const makeStyles = (c: Palette) => {
   const type = makeType(c); const shadow = makeShadow(c);
   return StyleSheet.create({
     title: type.title,
-    subtitle: { fontSize: 15, lineHeight: 21, color: c.onHeaderMuted, marginTop: space.xs },
-    header: { backgroundColor: c.header, borderBottomLeftRadius: 28, borderBottomRightRadius: 28, paddingBottom: space.xl + 8 },
+    subtitle: { fontSize: 13, lineHeight: 18, color: c.onHeaderMuted, marginTop: 2 },
+    header: { backgroundColor: c.header, borderBottomWidth: 1, borderBottomColor: c.onHeaderMuted + '33', paddingBottom: space.md },
     card: { backgroundColor: c.card, borderRadius: radius.lg, padding: space.lg + 2, marginBottom: space.md, borderWidth: 1, borderColor: c.border, ...shadow },
     chip: { borderWidth: 1, borderRadius: radius.pill, paddingHorizontal: 14, paddingVertical: 6, minHeight: 36, maxWidth: '100%', justifyContent: 'center', marginRight: space.sm, marginBottom: space.sm },
     input: { borderWidth: 1, borderColor: c.border, borderRadius: radius.md, paddingHorizontal: 14, minHeight: touch, marginTop: 6, fontSize: 16, backgroundColor: c.card, color: c.text },
