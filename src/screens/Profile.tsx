@@ -1,3 +1,4 @@
+import { sortRoles } from '../data/rota';
 import { DateField } from '../components/DateField';
 import { useState } from 'react';
 import { Text, View } from 'react-native';
@@ -38,7 +39,7 @@ export function RolesView({ user }: { user: User }) {
     <>
       {deps.length === 0 && <Card><Text style={s.small}>{t('departmentsScreen.notAssigned')}</Text></Card>}
       {deps.map(d => {
-        const roles = user.positions?.[d.id] ?? [];
+        const roles = sortRoles(data, d.id, user.positions?.[d.id] ?? []);
         return (
           <Card key={d.id} style={{ borderLeftWidth: 3, borderLeftColor: d.color }}>
             <DeptTitle dep={d} suffix={(user.role === 'admin' && (user.adminOf ?? []).includes(d.id)) || user.role === 'owner' ? t('departmentsScreen.adminSuffix') : ''} />
@@ -71,7 +72,7 @@ export function ProfileEditor({ user, onClose }: { user: User; onClose: (msg?: s
     : { ...p, departmentIds: [...p.departmentIds, id], positions: { ...p.positions, [id]: p.positions[id] ?? [] } });
   const toggleRole = (dep: string, r: string) => setF(p => {
     const cur = p.positions[dep] ?? [];
-    return { ...p, positions: { ...p.positions, [dep]: cur.includes(r) ? cur.filter(x => x !== r) : [...cur, r] } };
+    return { ...p, positions: { ...p.positions, [dep]: cur.includes(r) ? cur.filter(x => x !== r) : sortRoles(data, dep, [...cur, r]) } };
   });
   const save = () => { const e = saveProfile(user.id, f); if (e) setErr(e); else onClose(t('profile.savedFor', { name: fullName(f) })); };
   return (

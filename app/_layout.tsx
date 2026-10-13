@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { AppProvider, useApp } from '../src/state/AppContext';
 import { ThemeProvider } from '../src/components/ui';
 import { ConfirmHost } from '../src/components/confirm';
+import { UnsavedHost } from '../src/unsaved';
 
 /** Palette follows the per-user theme from AppContext (device last theme on the sign-in screen). */
 function Themed() {
@@ -12,6 +13,7 @@ function Themed() {
       <StatusBar style="light" />
       <Stack screenOptions={{ headerShown: false }} />
       <ConfirmHost />
+      <UnsavedHost />
     </ThemeProvider>
   );
 }

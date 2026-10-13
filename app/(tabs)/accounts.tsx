@@ -1,3 +1,4 @@
+import { sortRoles } from '../../src/data/rota';
 import { UnavailEditor } from '../../src/components/UnavailEditor';
 import { AppData } from '../../src/types';
 /** Owner-only one-time export for the Supabase import (enabled only with EXPO_PUBLIC_ENABLE_EXPORT=1). Password hashes are never exported. */
@@ -89,7 +90,7 @@ export default function Accounts() {
               <Text style={[s.h2, { marginRight: 8, flexShrink: 1 }]}>{u.name}{u.id === currentUser.id ? ` ${t('common.you')}` : ''}</Text>
               <RoleBadge role={u.role} />{u.active ? null : <Badge tone="danger" label={t('common.deactivated')} />}
             </View>
-            <Text style={s.small} numberOfLines={2}>{t('rows.username')}: @{u.username}{u.role === 'admin' ? ` · ${t('accounts.adminOf', { depts: (u.adminOf ?? []).map(depName).join(', ') || t('accounts.noneYet') })}` : ''}{u.departmentIds.length ? ` · ${u.departmentIds.map(id => `${depName(id)}${(u.positions?.[id] ?? []).length ? ` (${u.positions![id].map(r => roleName(id, r)).join(', ')})` : ''}`).join(' · ')}` : ` · ${t('accounts.noDeptYet')}`}</Text>
+            <Text style={s.small} numberOfLines={2}>{t('rows.username')}: @{u.username}{u.role === 'admin' ? ` · ${t('accounts.adminOf', { depts: (u.adminOf ?? []).map(depName).join(', ') || t('accounts.noneYet') })}` : ''}{u.departmentIds.length ? ` · ${u.departmentIds.map(id => `${depName(id)}${(u.positions?.[id] ?? []).length ? ` (${sortRoles(data, id, u.positions![id]).map(r => roleName(id, r)).join(', ')})` : ''}`).join(' · ')}` : ` · ${t('accounts.noDeptYet')}`}</Text>
           </View>
           <Icon name="chevron-forward" size={20} />
         </Pressable>

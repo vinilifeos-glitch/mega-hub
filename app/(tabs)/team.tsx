@@ -1,3 +1,4 @@
+import { sortRoles } from '../../src/data/rota';
 import { UnavailEditor } from '../../src/components/UnavailEditor';
 import { useTabReset } from '../../src/tabReset';
 import { displayName } from '../../src/display';
@@ -26,7 +27,7 @@ export default function Team() {
       <View style={[s.row, { justifyContent: 'space-between', paddingVertical: 8, borderTopWidth: 1, borderTopColor: colors.border }]}>
         <View style={{ flex: 1 }}>
           <Text style={{ fontWeight: '600', color: colors.text }}>{displayName(u)}</Text>
-          <Text style={s.small}>{depId ? ((u.positions?.[depId] ?? []).map(r => roleName(depId, r)).join(', ') || t('team.noRolesYet')) : t('team.notInDeptShort')}</Text>
+          <Text style={s.small}>{depId ? (sortRoles(data, depId, u.positions?.[depId] ?? []).map(r => roleName(depId, r)).join(', ') || t('team.noRolesYet')) : t('team.notInDeptShort')}</Text>
         </View>
         {canEditMember(u) && <Text style={{ color: colors.primary, fontWeight: '700' }}>{t('common.editArrow')}</Text>}
       </View>

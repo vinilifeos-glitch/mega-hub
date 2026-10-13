@@ -63,7 +63,7 @@ export function BusyChoiceSheet({ name, detail, onDouble, onSwap, onCancel, test
         <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: c.amberSoft, alignItems: 'center', justifyContent: 'center', marginRight: 10 }}>
           <Icon name="swap-horizontal" size={18} color={c.statusTextAmber} />
         </View>
-        <Text style={{ flex: 1, fontSize: 16, lineHeight: 22, color: c.text, fontWeight: '600' }}>{t('rota.alreadyServing' as any, { name, detail })}</Text>
+        <Text style={{ flex: 1, fontSize: 16, lineHeight: 22, color: c.text, fontWeight: '600' }}>{t('rota.rolesAssigned' as any, { roles: detail })}</Text>
       </View>
       <Button label={t('rota.swap')} onPress={onSwap} testID={testIDs.swap ?? 'pick-swap'} />
       <Button label={t('rota.doubleBook')} outline onPress={onDouble} testID={testIDs.double ?? 'pick-double'} />

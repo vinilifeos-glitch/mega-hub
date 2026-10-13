@@ -1,11 +1,11 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { AppData, Department, Resource, Role, Service, SetlistItem, Song, Theme, Unavailability, User, Assignment } from '../types';
-import { planAssign, AssignMode, sameRoleSlot, newSameRoleDup } from '../data/rota';
+import { planAssign, AssignMode, sameRoleSlot, newSameRoleDup, sortRoles } from '../data/rota';
 import { NOTE_MAX, awayOn, covers, getUnavailableFor, rangeError } from '../data/unavailability';
 import { todayIso as todayIsoFn } from '../data/dates';
 import { repository, newerFromOtherTab, DATA_STORAGE_KEY } from '../data/repository';
 import { hashPassword, newSalt } from '../data/auth';
-import { canEditMemberRule, canEditPersonal, changedProtected, pickPref, visibleServiceData, visibleSetlists, canEditSetlistRule, canEditDeptRule, visibleSongs, cleanUrl, canLiveRule, canViewDeptRule, visibleDeptPages } from './permissions';
+import { canEditMemberRule, canEditPersonal, changedProtected, pickPref, visibleServiceData, visibleSetlists, canEditSetlistRule, canEditSongsRule, canEditServiceSetlistRule, canEditDeptRule, visibleSongs, cleanUrl, canLiveRule, canViewDeptRule, visibleDeptPages } from './permissions';
 import { keyLabel, parseKey } from '../data/music';
 import { DEFAULT_LANG, Lang, TKey, TParams, deptLabel, formatDateShort, roleLabel, tierLabel, translate } from '../i18n';
 
@@ -69,6 +69,8 @@ interface Ctx {
   assign: (serviceId: string, departmentId: string, position: string, index: number, userId: string, mode?: AssignMode) => string | null;
   whyBlocked: (serviceId: string, userId: string) => string | null;
   saveService: (id: string | null, s: Omit<Service, 'id'>, picks?: { departmentId: string; position: string; index: number; userId: string }[]) => string | null;
+  /** Service page Save: commit pending assignments (only the caller's departments) and/or setlist in one go. */
+  saveServiceEdits: (serviceId: string, edits: { assignments?: Assignment[]; setlist?: SetlistItem[] }) => string | null;
   deleteService: (id: string) => void;
   publishService: (id: string) => void;
   canEditDept: (deptId: string) => boolean;
@@ -158,6 +160,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const o: Partial<SetlistItem> = {}; const k = p.key?.trim().slice(0, 8); const n = p.notes?.trim().slice(0, 200);
       if (k) o.key = k; if (n) o.notes = n; if (p.songId) o.songId = p.songId; return o;
     };
+    /** New setlist items must come from the song library (legacy free-text items already saved are kept). */
+    const libOnly = (next: SetlistItem[], prev?: SetlistItem[]) => next.every(x => (prev ?? []).some(p => p.id === x.id) || (!!x.songId && (data?.songs ?? []).some(z => z.id === x.songId)));
     const raw: AppData = data ?? { users: [], departments: [], services: [], availability: [], assignments: [] };
     const found = raw.users.find(u => u.id === sessionId && u.active);
     // Privacy: screens only ever receive notes they may see (owner, any admin, or the person themself).
@@ -255,7 +259,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           if (input.dob && !validDob(input.dob)) return t('errors.dobInvalid');
           if (input.contact && !validContact(input.contact.trim())) return t('errors.contactInvalid');
           if (!validEmail(input.email)) return t('errors.emailInvalid');
-          const positions = Object.fromEntries(departmentIds.map(dp => [dp, input.positions?.[dp] ?? []]));
+          const positions = Object.fromEntries(departmentIds.map(dp => [dp, sortRoles(d, dp, input.positions?.[dp] ?? [])]));
           const user: User = {
             id: `u-${Date.now().toString(36)}`, name,
             firstName: input.firstName?.trim() ?? parts[0], middleNames: input.middleNames?.trim() ?? parts.slice(1, -1).join(' '),
@@ -305,7 +309,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (p.dob && !validDob(p.dob)) return t('errors.dobInvalid');
         const departmentIds = p.departmentIds;
         const positions: Record<string, string[]> = {};
-        departmentIds.forEach(dep => { positions[dep] = p.positions[dep] ?? []; });
+        departmentIds.forEach(dep => { positions[dep] = sortRoles(d, dep, p.positions[dep] ?? []); });
         update(x => ({
           ...x,
           users: x.users.map(u => u.id === id ? { ...u, firstName: p.firstName.trim(), middleNames: p.middleNames.trim(), lastName: p.lastName.trim(), name: fullName(p), dob: p.dob, contact: p.contact.trim(), ...(p.email !== undefined ? { email: normEmail(p.email) } : {}), departmentIds, positions } : u),
@@ -372,7 +376,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         for (const [dep, roles] of Object.entries(p.departments)) {
           if (!canManage(dep)) continue; // admins only touch their own departments
           if (roles === null) { departmentIds = departmentIds.filter(x => x !== dep); delete positions[dep]; }
-          else { if (!departmentIds.includes(dep)) departmentIds.push(dep); positions[dep] = roles; }
+          else { if (!departmentIds.includes(dep)) departmentIds.push(dep); positions[dep] = sortRoles(d, dep, roles); }
         }
         update(x => ({
           ...x,
@@ -425,6 +429,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (!hm.test(sv.start) || !hm.test(sv.end)) return t('errors.timeFormat');
         if (sv.end <= sv.start) return t('errors.endAfterStart');
         const slots = sv.slots.filter(sl => sl.count > 0);
+        { const prevS = id ? x0().services.find(s => s.id === id) : undefined;
+          if (sv.setlist && JSON.stringify(sv.setlist) !== JSON.stringify(prevS?.setlist ?? [])) { if (!canEditServiceSetlistRule(currentUser, id ?? undefined, x0().assignments)) return t('errors.setlistScope'); if (!libOnly(sv.setlist, prevS?.setlist)) return t('errors.libraryOnly'); } }
         const clean: Omit<Service, 'id'> = { ...sv, title: sv.title.trim(), location: sv.location.trim(), slots };
         const prevSv = id ? x0().services.find(s => s.id === id) : undefined;
         if (prevSv && prevSv.status !== 'draft') { if (prevSv.status) clean.status = prevSv.status; else delete clean.status; } // published stays published
@@ -457,20 +463,51 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }));
         return null;
       },
-      canEditSetlist: _sv => canEditSetlistRule(currentUser),
+      saveServiceEdits: (sid, edits) => {
+        const sv = d.services.find(x => x.id === sid); if (!sv) return t('errors.notFound');
+        const cur = d.assignments.filter(a => a.serviceId === sid);
+        let mine: Assignment[] | null = null;
+        if (edits.assignments) {
+          mine = edits.assignments.filter(a => a.serviceId === sid && canManage(a.departmentId));
+          for (const a of mine) {
+            if (cur.some(c => c.id === a.id && c.userId === a.userId)) continue; // unchanged
+            const u = d.users.find(x => x.id === a.userId); const sl = sv.slots.find(z => z.departmentId === a.departmentId && z.position === a.position);
+            if (!u || !u.active || !sl || a.index >= sl.count || a.id !== `${sid}:${a.departmentId}:${a.position}:${a.index}`) return t('errors.notFound');
+            if (!(u.positions?.[a.departmentId] ?? []).includes(a.position)) return t('errors.doesntHoldRole', { name: u.firstName, role: a.position });
+            if (awayOn(u, sv.date)) return t('errors.unavailableThatDay', { name: u.firstName });
+          }
+          const next = [...cur.filter(a => !canManage(a.departmentId)), ...mine];
+          const nc = newSameRoleDup(next, cur);
+          if (nc) { const u = d.users.find(z => z.id === nc[0].userId); return t('errors.sameRole', { name: u?.firstName ?? '?', role: roleLabel(nc[1].departmentId, nc[1].position, language) }); }
+        }
+        let list: SetlistItem[] | null = null;
+        if (edits.setlist) {
+          if (!canEditServiceSetlistRule(currentUser, sid, d.assignments)) return t('errors.setlistScope');
+          if (edits.setlist.some(x => !x.title.trim())) return t('errors.songTitle');
+          if (!libOnly(edits.setlist, sv.setlist)) return t('errors.libraryOnly');
+          list = edits.setlist.map(x => ({ id: x.id, title: x.title.trim().slice(0, 120), ...cleanSong(x) }));
+        }
+        const m = mine;
+        update(x => ({ ...x,
+          assignments: m ? [...x.assignments.filter(a => a.serviceId !== sid || !canManage(a.departmentId)), ...m] : x.assignments,
+          services: list ? x.services.map(s => s.id === sid ? { ...s, setlist: list! } : s) : x.services }));
+        return null;
+      },
+      canEditSetlist: sv => canEditServiceSetlistRule(currentUser, sv?.id, d.assignments),
       addSong: (sid, song) => {
-        if (!canEditSetlistRule(currentUser)) return t('errors.setlistScope');
+        if (!canEditServiceSetlistRule(currentUser, sid, d.assignments)) return t('errors.setlistScope');
         const title = song.title.trim(); if (!title) return t('errors.songTitle');
+        if (!song.songId || !(d.songs ?? []).some(z => z.id === song.songId)) return t('errors.libraryOnly');
         const item: SetlistItem = { id: `so-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`, title, ...cleanSong(song) };
         editSetlist(sid, l => [...l, item]); return null;
       },
       updateSong: (sid, id, patch) => {
-        if (!canEditSetlistRule(currentUser)) return t('errors.setlistScope');
+        if (!canEditServiceSetlistRule(currentUser, sid, d.assignments)) return t('errors.setlistScope');
         if (patch.title !== undefined && !patch.title.trim()) return t('errors.songTitle');
         editSetlist(sid, l => l.map(x => x.id === id ? (({ key, notes, ...r }) => ({ ...r, ...(patch.title !== undefined ? { title: patch.title.trim() } : {}), ...cleanSong({ key, notes, songId: x.songId, ...patch }) }))(x) : x)); return null;
       },
-      removeSong: (sid, id) => { if (canEditSetlistRule(currentUser)) editSetlist(sid, l => l.filter(x => x.id !== id)); },
-      moveSong: (sid, id, dir) => { if (canEditSetlistRule(currentUser)) editSetlist(sid, l => { const i = l.findIndex(x => x.id === id); const j = dir === 'up' ? i - 1 : i + 1; if (i < 0 || j < 0 || j >= l.length) return l; const n = [...l]; [n[i], n[j]] = [n[j], n[i]]; return n; }); },
+      removeSong: (sid, id) => { if (canEditServiceSetlistRule(currentUser, sid, d.assignments)) editSetlist(sid, l => l.filter(x => x.id !== id)); },
+      moveSong: (sid, id, dir) => { if (canEditServiceSetlistRule(currentUser, sid, d.assignments)) editSetlist(sid, l => { const i = l.findIndex(x => x.id === id); const j = dir === 'up' ? i - 1 : i + 1; if (i < 0 || j < 0 || j >= l.length) return l; const n = [...l]; [n[i], n[j]] = [n[j], n[i]]; return n; }); },
       canEditDept: dep => canEditDeptRule(currentUser, dep),
       canViewDept: dep => canViewDeptRule(currentUser, dep),
       setDeptAbout: (dep, text) => { if (!canEditDeptRule(currentUser, dep)) return t('errors.deptScope'); const v = text.trim().slice(0, 1000);
@@ -484,15 +521,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         editRes(dep, l => l.map(z => z.id === id ? { ...z, title: title.slice(0, 120), url } : z)); return null; },
       removeResource: (dep, id) => { if (canEditDeptRule(currentUser, dep)) editRes(dep, l => l.filter(z => z.id !== id)); },
       moveResource: (dep, id, dir) => { if (canEditDeptRule(currentUser, dep)) editRes(dep, l => swap(l, id, dir)); },
-      canEditSongs: canEditSetlistRule(currentUser),
+      canEditSongs: canEditSongsRule(currentUser),
       canLive: sid => canLiveRule(currentUser, sid, d.assignments) && d.services.some(s => s.id === sid),
-      addLibSong: so => { if (!canEditSetlistRule(currentUser)) return { error: t('errors.setlistScope') }; const c = cleanLib(so); if (!c.title) return { error: t('errors.songTitle') };
+      addLibSong: so => { if (!canEditSongsRule(currentUser)) return { error: t('errors.setlistScope') }; const c = cleanLib(so); if (!c.title) return { error: t('errors.songTitle') };
         if (c.link === null) return { error: t('errors.urlInvalid') };
         const id = `sg-${uid()}`; update(x => ({ ...x, songs: [...(x.songs ?? []), { id, deptId: 'd-music', ...c, title: c.title! } as Song] })); return id; },
-      updateLibSong: (id, so) => { if (!canEditSetlistRule(currentUser)) return t('errors.setlistScope'); const c = cleanLib(so); if (so.title !== undefined && !c.title) return t('errors.songTitle');
+      updateLibSong: (id, so) => { if (!canEditSongsRule(currentUser)) return t('errors.setlistScope'); const c = cleanLib(so); if (so.title !== undefined && !c.title) return t('errors.songTitle');
         if (c.link === null) return t('errors.urlInvalid');
         update(x => ({ ...x, songs: (x.songs ?? []).map(z => { if (z.id !== id) return z; const n: any = { ...z, ...c }; delete n.artist; for (const k of ['composer', 'key', 'chords', 'link', 'timeSignature', 'bpm', 'sections']) if ((k in so || (k === 'composer' && 'artist' in so)) && c[k as keyof typeof c] === undefined) delete n[k]; return n; }) })); return null; },
-      removeLibSong: id => { if (canEditSetlistRule(currentUser)) update(x => ({ ...x, songs: (x.songs ?? []).filter(z => z.id !== id),
+      removeLibSong: id => { if (canEditSongsRule(currentUser)) update(x => ({ ...x, songs: (x.songs ?? []).filter(z => z.id !== id),
         services: x.services.map(s => s.setlist?.some(i => i.songId === id) ? { ...s, setlist: s.setlist.map(i => i.songId === id ? (({ songId, ...r }) => r)(i) : i) } : s) })); },
       publishService: id => isOwner && update(x => ({ ...x, services: x.services.map(s => s.id === id ? { ...s, status: 'published' } : s) })),
       deleteService: id => isOwner && update(x => ({ ...x, services: x.services.filter(s => s.id !== id), assignments: x.assignments.filter(a => a.serviceId !== id), availability: x.availability.filter(a => a.serviceId !== id) })),

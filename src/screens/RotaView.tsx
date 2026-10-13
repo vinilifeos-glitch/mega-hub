@@ -5,7 +5,7 @@ import { SetlistPreview } from './Setlist';
 import { Card, Empty, Icon, Screen, useColors, useStyles } from '../components/ui';
 import { LiveButton, RotaRoleCard, RotaTeamCard } from '../components/rota';
 import { isoToDdmm } from '../data/dates';
-import { teamFor } from '../data/rota';
+import { byCanon, teamFor } from '../data/rota';
 import { displayName } from '../display';
 
 /** My Rota detail: service info, my roles, the team per department; setlist + Live only for Music people (data is already scoped). */
@@ -13,7 +13,7 @@ export function RotaView({ serviceId }: { serviceId: string }) {
   const s = useStyles(); const c = useColors(); const B = { fontSize: 15, color: c.text }; const { data, currentUser, t, fmtDate, deptName, roleName, canLive } = useMe();
   const back = { label: t('myRota.title'), onPress: () => router.navigate('/my-rota' as any) };
   const sv = data.services.find(x => x.id === serviceId);
-  const mine = sv ? data.assignments.filter(a => a.serviceId === sv.id && a.userId === currentUser.id) : [];
+  const mine = sv ? data.assignments.filter(a => a.serviceId === sv.id && a.userId === currentUser.id).sort(byCanon(data, a => a.departmentId, a => a.position, (a, b) => a.index - b.index)) : [];
   if (!sv || sv.status === 'draft' || mine.length === 0) return <Screen title={t('myRota.title')} backTo={back}><View testID="rota-view-missing"><Empty text={t('myRota.notFound')} /></View></Screen>;
   const team = teamFor(data, sv.id);
   const hasSetlist = (sv.setlist ?? []).length > 0;
