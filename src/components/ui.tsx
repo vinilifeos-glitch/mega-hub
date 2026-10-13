@@ -1,3 +1,4 @@
+import { useIsFocused } from 'expo-router';
 import React from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -109,25 +110,35 @@ export const touch = 48; // minimum touch target
 
 
 /* ── Layout ─────────────────────────────────────────────────── */
-const BACK_TO_MORE = ['/profile', '/team', '/accounts'];
+/** Hidden routes and where their header back goes (More tab removed). */
+const BACK_FOR: Record<string, string> = { '/profile': '/', '/accounts': '/profile' };
 /** Screen = dark header band (title + subtitle) over a tinted content area. */
 export function Screen({ title, subtitle, children, backTo }: { title: string; subtitle?: string; children: React.ReactNode; backTo?: { label: string; onPress: () => void } }) {
   const insets = useSafeAreaInsets(); const c = useColors(); const s = useStyles(); const { t } = useApp();
   const path = usePathname(); const router = useRouter();
-  const back = !!backTo || BACK_TO_MORE.includes(path);
+  const focused = useIsFocused();
+  const back = !!backTo || (focused && !!BACK_FOR[path]);
+  const me = (useApp() as any).currentUser as { firstName?: string; lastName?: string; username: string } | null | undefined;
+  const initials = me ? ((me.firstName?.[0] ?? me.username[0] ?? '?') + (me.lastName?.[0] ?? '')).toUpperCase() : '';
   const inner = { width: '100%' as const, maxWidth: contentMax, alignSelf: 'center' as const, paddingHorizontal: space.lg + 4 };
   return (
     <ScrollView style={{ flex: 1, backgroundColor: c.bg }} contentContainerStyle={{ paddingBottom: space.xxl + 8 }}>
       <View style={[s.header, { paddingTop: insets.top + (back ? space.md : space.xl) }]}>
         <View style={inner}>
           {back && (
-            <Pressable testID="screen-back" onPress={backTo?.onPress ?? (() => router.navigate('/more'))} accessibilityRole="button" accessibilityLabel={backTo?.label ?? t('more.back')} hitSlop={8}
+            <Pressable testID="screen-back" onPress={backTo?.onPress ?? (() => { if (path === '/profile' && router.canGoBack()) router.back(); else router.navigate(BACK_FOR[path] as any); })} accessibilityRole="button" accessibilityLabel={backTo?.label ?? (path === '/accounts' ? t('profile.title') : t('common.back'))} hitSlop={8}
               style={{ flexDirection: 'row', alignItems: 'center', minHeight: 44, alignSelf: 'flex-start' }}>
               <Icon name="chevron-back" size={20} color={c.onHeaderMuted} />
-              <Text style={{ color: c.onHeaderMuted, fontSize: 15, fontWeight: '600' }}>{backTo?.label ?? t('more.title')}</Text>
+              <Text style={{ color: c.onHeaderMuted, fontSize: 15, fontWeight: '600' }}>{backTo?.label ?? (path === '/accounts' ? t('profile.title') : t('common.back'))}</Text>
             </Pressable>
           )}
-          <Text style={s.title} accessibilityRole="header">{title}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+            <Text style={[s.title, { flex: 1 }]} accessibilityRole="header">{title}</Text>
+            {me && <Pressable testID="header-profile" accessibilityRole="button" accessibilityLabel={t('profile.title')} hitSlop={8} onPress={() => router.navigate('/profile' as any)}
+              style={({ pressed }) => ({ width: 40, height: 40, borderRadius: 20, marginLeft: 12, backgroundColor: path === '/profile' ? c.primary : c.onHeaderMuted + '33', borderWidth: 1.5, borderColor: c.onHeaderMuted, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.8 : 1 })}>
+              <Text style={{ color: c.onHeader, fontWeight: '800', fontSize: 15 }}>{initials}</Text>
+            </Pressable>}
+          </View>
           {subtitle ? <Text style={s.subtitle}>{subtitle}</Text> : null}
         </View>
       </View>
@@ -326,11 +337,11 @@ export function Empty({ text, icon }: { text: string; icon?: IconName }) {
   );
 }
 
-export function Notice({ text, tone = 'success' }: { text: string; tone?: 'success' | 'error' | 'warning' }) {
+export function Notice({ text, tone = 'success', testID }: { text: string; tone?: 'success' | 'error' | 'warning'; testID?: string }) {
   const colors = useColors(); const s = useStyles();
   const [bg, fg] = tone === 'success' ? [colors.greenSoft, colors.green] : tone === 'warning' ? [colors.amberSoft, colors.amber] : [colors.redSoft, colors.red];
   return (
-    <View style={[s.notice, { backgroundColor: bg }]}>
+    <View testID={testID} style={[s.notice, { backgroundColor: bg }]}>
       <Text style={{ color: fg, fontSize: 14, fontWeight: '600' }}>{text}</Text>
     </View>
   );
