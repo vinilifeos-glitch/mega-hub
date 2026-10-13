@@ -10,6 +10,14 @@ await db.exec(`
   create schema auth; create table auth.users (id uuid primary key, email text);
   create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
   grant usage on schema auth to authenticated; grant execute on function auth.uid() to authenticated;`);
+await db.exec(`
+  -- Supabase Storage stand-in (schema subset used by migrations)
+  create schema storage; create table storage.buckets (id text primary key, name text, public boolean, file_size_limit bigint, allowed_mime_types text[]);
+  create table storage.objects (id uuid primary key default gen_random_uuid(), bucket_id text references storage.buckets(id), name text, owner uuid default auth.uid(), unique (bucket_id, name));
+  alter table storage.objects enable row level security;
+  create function storage.foldername(name text) returns text[] language sql immutable as $$ select (string_to_array(name, '/'))[1:array_length(string_to_array(name, '/'), 1) - 1] $$;
+  grant usage on schema storage to authenticated; grant select, insert, update, delete on storage.objects to authenticated; grant select on storage.buckets to authenticated;
+  grant execute on function storage.foldername(text) to authenticated;`);
 for (const f of fs.readdirSync(path.join(dir, '../migrations')).sort()) await db.exec(fs.readFileSync(path.join(dir, '../migrations', f), 'utf8'));
 const id = n => `00000000-0000-0000-0000-${String(n).padStart(12, '0')}`;
 const U = { owner: id(1), lucas: id(2), camila: id(3), ana: id(4), miguel: id(5), tiago: id(6) };
@@ -179,5 +187,34 @@ await ok('ASSEMBLY: owner can give a volunteer the Assembly role and assign it',
   await ok('LIBRARY: free-text (no song_id) setlist item rejected, even for owner', () => denied('owner', `insert into setlist_items (id, service_id, position, title) values ('sl4',$1,0,'Free')`, [L1]));
   await ok('SONGS: non-admin Music member cannot create/edit songs', async () => (await denied('miguel', `insert into songs (id, department_id, title) values ('sgX','d-music','X')`)) && (await denied('miguel', `update songs set title='x' where id='sgL'`)));
   await ok('SONGS: Kids admin cannot create songs; Music admin can', async () => (await denied('camila', `insert into songs (id, department_id, title) values ('sgY','d-music','Y')`)) && (await allowed('lucas', `insert into songs (id, department_id, title) values ('sgZ','d-music','Z')`)));
+}
+// Kids lessons: table + Storage bucket 'lessons' (read: Kids members/admins/owner; write: owner + Kids admins)
+{ U.zoe = id(77); await db.query(`insert into auth.users values ($1,'zoe@megahub.local')`, [U.zoe]); await db.query(`insert into profiles (id, username, tier, must_change_password) values ($1,'Zoe','volunteer',false)`, [U.zoe]);
+  const ins = (who, idv, p, extra = {}) => as(who, `insert into lessons (id, department_id, title, file_name, mime, size_bytes, storage_path) values ($1,$2,$3,$4,$5,$6,$7)`,
+    [idv, extra.dep ?? 'd-kids', extra.title ?? 'Aula', 'a.pdf', extra.mime ?? 'application/pdf', extra.size ?? 1000, p]);
+  const L = id(300);
+  await ok('LESSONS: bucket exists, private, 5MB limit', async () => { const b = (await db.query(`select * from storage.buckets where id='lessons'`)).rows[0]; return b && b.public === false && Number(b.file_size_limit) === 5242880 && b.allowed_mime_types.includes('application/pdf'); });
+  await ok('LESSONS: Kids admin can create lesson metadata', async () => (await ins('camila', L, `d-kids/${L}/a.pdf`)).affectedRows === 1);
+  await ok('LESSONS: owner can create lesson metadata', async () => (await ins('owner', id(301), `d-kids/${id(301)}/a.pdf`)).affectedRows === 1);
+  await ok('LESSONS: Music admin cannot create', async () => { try { await ins('lucas', id(302), `d-kids/${id(302)}/a.pdf`); return false; } catch { return true; } });
+  await ok('LESSONS: Kids volunteer cannot create', async () => { try { await ins('ana', id(303), `d-kids/${id(303)}/a.pdf`); return false; } catch { return true; } });
+  await ok('LESSONS: >5MB rejected', async () => { try { await ins('camila', id(304), `d-kids/${id(304)}/a.pdf`, { size: 5242881 }); return false; } catch { return true; } });
+  await ok('LESSONS: bad mime rejected', async () => { try { await ins('camila', id(305), `d-kids/${id(305)}/a.exe`, { mime: 'application/x-msdownload' }); return false; } catch { return true; } });
+  await ok('LESSONS: Office docx + image accepted', async () => (await ins('camila', id(306), `d-kids/${id(306)}/a.docx`, { mime: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' })).affectedRows === 1 && (await ins('camila', id(307), `d-kids/${id(307)}/a.png`, { mime: 'image/png' })).affectedRows === 1);
+  await ok('LESSONS: empty title rejected', async () => { try { await ins('camila', id(308), `d-kids/${id(308)}/a.pdf`, { title: '  ' }); return false; } catch { return true; } });
+  await ok('LESSONS: Kids member reads lessons', async () => (await rows('ana', 'select id from lessons')).length === 4);
+  await ok('LESSONS: non-member volunteer sees none', async () => (await rows('zoe', 'select id from lessons')).length === 0);
+  await ok('LESSONS: Music admin sees none', async () => (await rows('lucas', 'select id from lessons')).length === 0);
+  await ok('LESSONS: Kids admin renames', () => allowed('camila', `update lessons set title='Arca' where id=$1`, [L]));
+  await ok('LESSONS: rename-only (file columns immutable)', () => denied('camila', `update lessons set size_bytes=1 where id=$1`, [L]));
+  await ok('LESSONS: Kids member cannot rename/delete', async () => (await denied('ana', `update lessons set title='x' where id=$1`, [L])) && (await denied('ana', `delete from lessons where id=$1`, [L])));
+  await ok('LESSONS: Kids admin deletes', () => allowed('camila', `delete from lessons where id=$1`, [id(301)]));
+  const obj = (who, nm) => as(who, `insert into storage.objects (bucket_id, name) values ('lessons', $1)`, [nm]);
+  await ok('STORAGE: Kids admin uploads to d-kids/', async () => (await obj('camila', `d-kids/${L}/a.pdf`)).affectedRows === 1);
+  await ok('STORAGE: owner uploads', async () => (await obj('owner', `d-kids/${id(306)}/a.docx`)).affectedRows === 1);
+  await ok('STORAGE: Music admin / Kids volunteer cannot upload', async () => { let d = 0; for (const w of ['lucas', 'ana']) { try { await obj(w, `d-kids/x-${w}/a.pdf`); } catch { d++; } } return d === 2; });
+  await ok('STORAGE: Music admin cannot upload into d-music/ either (Kids only)', async () => { try { await obj('lucas', `d-music/x/a.pdf`); return false; } catch { return true; } });
+  await ok('STORAGE: Kids member reads objects; others do not', async () => (await rows('ana', `select name from storage.objects where bucket_id='lessons'`)).length === 2 && (await rows('zoe', `select name from storage.objects where bucket_id='lessons'`)).length === 0);
+  await ok('STORAGE: Kids member cannot delete; Kids admin can', async () => (await denied('ana', `delete from storage.objects where name=$1`, [`d-kids/${L}/a.pdf`])) && allowed('camila', `delete from storage.objects where name=$1`, [`d-kids/${L}/a.pdf`]));
 }
 console.log(`${n} passed, ${fails} failed`); process.exit(fails ? 1 : 0);
