@@ -5,6 +5,8 @@ import { NOTE_MAX, awayOn, covers, getUnavailableFor, rangeError } from '../data
 import { todayIso as todayIsoFn } from '../data/dates';
 import { repository, newerFromOtherTab, DATA_STORAGE_KEY } from '../data/repository';
 import { hashPassword, newSalt } from '../data/auth';
+import { canEditServiceLessonsRule, visibleServiceLessons } from './permissions';
+import { lessonCatalog } from '../data/files';
 import { canEditMemberRule, canEditPersonal, changedProtected, pickPref, visibleServiceData, visibleSetlists, canEditSetlistRule, canEditSongsRule, canEditServiceSetlistRule, canEditDeptRule, visibleSongs, cleanUrl, canLiveRule, canViewDeptRule, visibleDeptPages } from './permissions';
 import { keyLabel, parseKey } from '../data/music';
 import { DEFAULT_LANG, Lang, TKey, TParams, deptLabel, formatDateShort, roleLabel, tierLabel, translate } from '../i18n';
@@ -70,7 +72,9 @@ interface Ctx {
   whyBlocked: (serviceId: string, userId: string) => string | null;
   saveService: (id: string | null, s: Omit<Service, 'id'>, picks?: { departmentId: string; position: string; index: number; userId: string }[]) => string | null;
   /** Service page Save: commit pending assignments (only the caller's departments) and/or setlist in one go. */
-  saveServiceEdits: (serviceId: string, edits: { assignments?: Assignment[]; setlist?: SetlistItem[] }) => string | null;
+  saveServiceEdits: (serviceId: string, edits: { assignments?: Assignment[]; setlist?: SetlistItem[]; lessons?: string[] }) => string | null;
+  /** Owner, Kids admins, or that service's Kids Teacher (no service = create form). */
+  canEditServiceLessons: (service?: Service) => boolean;
   deleteService: (id: string) => void;
   publishService: (id: string) => void;
   canEditDept: (deptId: string) => boolean;
@@ -157,12 +161,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (k) o.key = k; if (n) o.notes = n; if (p.songId) o.songId = p.songId; return o;
     };
     /** New setlist items must come from the song library (legacy free-text items already saved are kept). */
+    /** New service lessons must come from the Kids lesson catalog (already-picked ids that were since deleted are kept and shown as removed). */
+    const catalogOnly = (next: string[], prev?: string[]) => { const ids = new Set(lessonCatalog().map(l => l.id)); return next.every(id => (prev ?? []).includes(id) || ids.has(id)) && new Set(next).size === next.length; };
     const libOnly = (next: SetlistItem[], prev?: SetlistItem[]) => next.every(x => (prev ?? []).some(p => p.id === x.id) || (!!x.songId && (data?.songs ?? []).some(z => z.id === x.songId)));
     const raw: AppData = data ?? { users: [], departments: [], services: [], availability: [], assignments: [] };
     const found = raw.users.find(u => u.id === sessionId && u.active);
     // Privacy: screens only ever receive notes they may see (owner, any admin, or the person themself).
     // Drafts: volunteers / signed-out never receive draft services or their assignments.
-    const d: AppData = visibleDeptPages(found, visibleSongs(found, visibleSetlists(found, visibleServiceData(found, { ...raw, users: raw.users.map(u => ({ ...u, unavailable: getUnavailableFor(found, u) })) }))));
+    const d: AppData = visibleServiceLessons(found, visibleDeptPages(found, visibleSongs(found, visibleSetlists(found, visibleServiceData(found, { ...raw, users: raw.users.map(u => ({ ...u, unavailable: getUnavailableFor(found, u) })) })))));
     const currentUser = found ?? null;
     const role = currentUser?.role;
     const language: Lang = pickPref<Lang>(!!currentUser, currentUser?.language, deviceLang, DEFAULT_LANG);
@@ -398,6 +404,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (sv.end <= sv.start) return t('errors.endAfterStart');
         const slots = sv.slots.filter(sl => sl.count > 0);
         { const prevS = id ? x0().services.find(s => s.id === id) : undefined;
+          if (sv.lessons && JSON.stringify(sv.lessons) !== JSON.stringify(prevS?.lessons ?? [])) { if (!canEditServiceLessonsRule(currentUser, id ?? undefined, x0().assignments)) return t('errors.lessonsScope'); if (!catalogOnly(sv.lessons, prevS?.lessons)) return t('errors.lessonCatalogOnly'); }
           if (sv.setlist && JSON.stringify(sv.setlist) !== JSON.stringify(prevS?.setlist ?? [])) { if (!canEditServiceSetlistRule(currentUser, id ?? undefined, x0().assignments)) return t('errors.setlistScope'); if (!libOnly(sv.setlist, prevS?.setlist)) return t('errors.libraryOnly'); } }
         const clean: Omit<Service, 'id'> = { ...sv, title: sv.title.trim(), location: sv.location.trim(), slots };
         const prevSv = id ? x0().services.find(s => s.id === id) : undefined;
@@ -455,13 +462,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           if (!libOnly(edits.setlist, sv.setlist)) return t('errors.libraryOnly');
           list = edits.setlist.map(x => ({ id: x.id, title: x.title.trim().slice(0, 120), ...cleanSong(x) }));
         }
+        let les: string[] | null = null;
+        if (edits.lessons && JSON.stringify(edits.lessons) !== JSON.stringify(sv.lessons ?? [])) {
+          if (!canEditServiceLessonsRule(currentUser, sid, d.assignments)) return t('errors.lessonsScope');
+          if (!catalogOnly(edits.lessons, sv.lessons)) return t('errors.lessonCatalogOnly');
+          les = [...edits.lessons];
+        }
         const m = mine;
         update(x => ({ ...x,
           assignments: m ? [...x.assignments.filter(a => a.serviceId !== sid || !canManage(a.departmentId)), ...m] : x.assignments,
-          services: list ? x.services.map(s => s.id === sid ? { ...s, setlist: list! } : s) : x.services }));
+          services: list || les ? x.services.map(s => s.id === sid ? { ...s, ...(list ? { setlist: list } : {}), ...(les ? { lessons: les } : {}) } : s) : x.services }));
         return null;
       },
       canEditSetlist: sv => canEditServiceSetlistRule(currentUser, sv?.id, d.assignments),
+      canEditServiceLessons: sv => canEditServiceLessonsRule(currentUser, sv?.id, d.assignments),
       addSong: (sid, song) => {
         if (!canEditServiceSetlistRule(currentUser, sid, d.assignments)) return t('errors.setlistScope');
         const title = song.title.trim(); if (!title) return t('errors.songTitle');

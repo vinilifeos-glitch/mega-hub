@@ -2,6 +2,7 @@ import React from 'react';
 import { useTabReset } from '../tabReset';
 import { useLocalSearchParams, router } from 'expo-router';
 import { SetlistCard } from './Setlist';
+import { ServiceLessonsCard } from './ServiceLessons';
 import { leaveGuarded, useUnsavedGuard } from '../unsaved';
 import { displayName } from '../display';
 import { DateField } from '../components/DateField';
@@ -70,11 +71,12 @@ export function ServicesHome() {
 
 function ServiceDetail({ service: sv, msg, onBack, onDeleted }: { service: Service; msg: string | null; onBack: (msg?: string) => void; onDeleted: (msg: string) => void }) {
   const colors = useColors(); const s = useStyles();
-  const { data, currentUser, canManage, saveServiceEdits, saveService, canEditSetlist, deleteService, publishService, t, fmtDate, deptName, roleName } = useMe();
+  const { data, currentUser, canManage, saveServiceEdits, saveService, canEditSetlist, canEditServiceLessons, deleteService, publishService, t, fmtDate, deptName, roleName } = useMe();
   // Pending edits (nothing persists until Save). null = no pending change for that part (shows stored data).
   const stored = data.assignments.filter(a => a.serviceId === sv.id);
   const [pAsg, setPAsg] = useState<Assignment[] | null>(null);
   const [pSet, setPSet] = useState<SetlistItem[] | null>(null);
+  const [pLes, setPLes] = useState<string[] | null>(null);
   // Inline details (owner only, as before: saveService is owner-only)
   const canDetails = currentUser.role === 'owner';
   const storedDet = { title: sv.title, location: sv.location ?? '', date: isoToDdmm(sv.date), start: sv.start, end: sv.end };
@@ -84,9 +86,9 @@ function ServiceDetail({ service: sv, msg, onBack, onDeleted }: { service: Servi
   const detDirty = pDet !== null && JSON.stringify(pDet) !== JSON.stringify(storedDet);
   const newIso = detDirty ? toIso(det.date) : null;
   const [awayAsk, setAwayAsk] = useState(false);
-  const asg = pAsg ?? stored; const setlist = pSet ?? sv.setlist ?? [];
+  const asg = pAsg ?? stored; const setlist = pSet ?? sv.setlist ?? []; const lessons = pLes ?? sv.lessons ?? [];
   const norm = (l: Assignment[]) => JSON.stringify(l.map(a => [a.id, a.userId]).sort());
-  const dirty = detDirty || (pAsg !== null && norm(pAsg) !== norm(stored)) || (pSet !== null && JSON.stringify(pSet) !== JSON.stringify(sv.setlist ?? []));
+  const dirty = detDirty || (pAsg !== null && norm(pAsg) !== norm(stored)) || (pSet !== null && JSON.stringify(pSet) !== JSON.stringify(sv.setlist ?? [])) || (pLes !== null && JSON.stringify(pLes) !== JSON.stringify(sv.lessons ?? []));
   const [savedMsg, setSavedMsg] = useState<string | null>(null);
   const commit = (): string | false => {
     if (!dirty) return '';
@@ -96,9 +98,9 @@ function ServiceDetail({ service: sv, msg, onBack, onDeleted }: { service: Servi
       const ve = !det.title.trim() ? t('errors.nameRequired') : !iso ? t('errors.dateInvalid') : !hm.test(det.start) || !hm.test(det.end) ? t('errors.timeFormat') : det.end <= det.start ? t('errors.endAfterStart') : null;
       if (ve) { setErr(ve); return false; }
     }
-    if (pAsg || pSet) { const e = saveServiceEdits(sv.id, { ...(pAsg ? { assignments: pAsg } : {}), ...(pSet ? { setlist: pSet } : {}) }); if (e) { setErr(e); return false; } }
+    if (pAsg || pSet || pLes) { const e = saveServiceEdits(sv.id, { ...(pAsg ? { assignments: pAsg } : {}), ...(pSet ? { setlist: pSet } : {}), ...(pLes ? { lessons: pLes } : {}) }); if (e) { setErr(e); return false; } }
     if (detDirty && iso) { const e = saveService(sv.id, { title: det.title, location: det.location, date: iso, start: det.start, end: det.end, slots: sv.slots, ...(sv.status ? { status: sv.status } : {}) }); if (e) { setErr(e); return false; } }
-    setPAsg(null); setPSet(null); setPDet(null); setErr(null); return t('services.changesSaved');
+    setPAsg(null); setPSet(null); setPLes(null); setPDet(null); setErr(null); return t('services.changesSaved');
   };
   useUnsavedGuard(dirty, { save: commit, back: m => onBack(m) });
   const unassign = (id: string) => setPAsg(asg.filter(a => a.id !== id));
@@ -117,7 +119,7 @@ function ServiceDetail({ service: sv, msg, onBack, onDeleted }: { service: Servi
   // People who would be dropped because they're away on the new (unsaved) date
   const awayNames = newIso && newIso !== sv.date ? asg.flatMap(a => { const u = data.users.find(x => x.id === a.userId); return u && awayOn(u, newIso) ? [`${displayName(u)} (${roleName(a.departmentId, a.position)})`] : []; }) : [];
   const saveAndBack = () => { const m = commit(); if (m !== false) onBack(m || undefined); };
-  const canEditAny = canDetails || data.departments.some(d => canManage(d.id) && sv.slots.some(z => z.departmentId === d.id)) || canEditSetlist(sv);
+  const canEditAny = canDetails || data.departments.some(d => canManage(d.id) && sv.slots.some(z => z.departmentId === d.id)) || canEditSetlist(sv) || canEditServiceLessons(sv);
   const [open, setOpen] = useState<string | null>(null); // slot key being filled
   const [err, setErr] = useState<string | null>(null);
   const [busyPick, setBusyPick] = useState<{ m: { firstName: string; username: string }; detail: string; run: (mode: 'double' | 'swap') => void } | null>(null);
@@ -161,10 +163,12 @@ function ServiceDetail({ service: sv, msg, onBack, onDeleted }: { service: Servi
       {/* Setlist sits right after Music's slots; if Music isn't shown it falls back to after all departments. */}
       {(() => { const setCard = <SetlistCard key="setlist" service={sv} list={setlist} onChange={l => setPSet(l)} />;
         const musicShown = sv.slots.some(z => z.departmentId === 'd-music');
+        const lesCard = <ServiceLessonsCard key="lessons" service={sv} list={lessons} onChange={l => setPLes(l)} editable={canEditServiceLessons(sv)} />;
+        const kidsShown = sv.slots.some(z => z.departmentId === 'd-kids');
         return <>{data.departments.map(d => {
         const slots = sv.slots.filter(z => z.departmentId === d.id).sort((a, b) => roleIdx(data, d.id, a.position) - roleIdx(data, d.id, b.position));
         if (!slots.length) return null;
-        const after = d.id === 'd-music' ? setCard : null;
+        const after = d.id === 'd-music' ? setCard : d.id === 'd-kids' ? lesCard : null;
         const manage = canManage(d.id);
         const members = data.users.filter(u => u.active && u.departmentIds.includes(d.id));
         return (<React.Fragment key={d.id}>
@@ -212,7 +216,7 @@ function ServiceDetail({ service: sv, msg, onBack, onDeleted }: { service: Servi
             }))}
           </Card>{after}</React.Fragment>
         );
-      })}{!musicShown && setCard}</>; })()}
+      })}{!musicShown && setCard}{!kidsShown && lesCard}</>; })()}
       <View style={[s.row, { marginTop: 4, marginBottom: 4 }]}>{([['checkmark-circle-outline', t('services.legendAvailable')], ['close-circle-outline', t('services.legendAway')], ['time-outline', t('services.legendBusy')]] as const).map(([n, l]) => <View key={l} style={[s.row, { marginRight: 16, marginBottom: 4 }]}><Icon name={n} size={16} style={{ marginRight: 4 }} /><Text style={s.small}>{l}</Text></View>)}</View>
       <Text style={s.small}>{t('services.onlyHolders')}</Text>
       {isOwner && draft && <Button label={t('services.publish')} onPress={() => { publishService(sv.id); setPubMsg(t('services.published')); }} testID="publish-service" />}
@@ -229,8 +233,9 @@ const newRowId = () => `r${++rowSeq}`;
 
 function ServiceForm({ service, onClose, onDeleted }: { service?: Service; onClose: (msg?: string, id?: string) => void; onDeleted?: (msg: string) => void }) {
   const colors = useColors(); const s = useStyles();
-  const { data, saveService, deleteService, canManage, canEditSetlist, t, deptName, roleName } = useMe();
+  const { data, saveService, deleteService, canManage, canEditSetlist, canEditServiceLessons, t, deptName, roleName } = useMe();
   const [setlist, setSetlist] = useState<SetlistItem[]>(service?.setlist ?? []);
+  const [lessons, setLessons] = useState<string[]>(service?.lessons ?? []);
   const [title, setTitle] = useState(service?.title ?? t('services.defaultName'));
   const [location, setLocation] = useState(service?.location ?? DEFAULT_LOCATION);
   const [date, setDate] = useState(isoToDdmm(service?.date ?? upcomingSundayIso()));
@@ -270,7 +275,7 @@ function ServiceForm({ service, onClose, onDeleted }: { service?: Service; onClo
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [iso]);
   const isDraftSv = service?.status === 'draft';
-  const snap = () => JSON.stringify([title, location, date, start, end, data.departments.map(d => rows.filter(x => x.dep === d.id).sort((a, b) => roleIdx(data, d.id, a.role) - roleIdx(data, d.id, b.role)).map(x => [x.role, x.assigneeId ?? ''])), setlist]);
+  const snap = () => JSON.stringify([title, location, date, start, end, data.departments.map(d => rows.filter(x => x.dep === d.id).sort((a, b) => roleIdx(data, d.id, a.role) - roleIdx(data, d.id, b.role)).map(x => [x.role, x.assigneeId ?? ''])), setlist, lessons]);
   const [initial] = useState(snap);
   const [done, setDone] = useState(false);
   const dirty = !done && snap() !== initial;
@@ -286,7 +291,8 @@ function ServiceForm({ service, onClose, onDeleted }: { service?: Service; onClo
       rs.forEach((x, i) => { if (x.assigneeId) pk.push({ departmentId: d.id, position: p, index: i, userId: x.assigneeId }); });
     }
     const withSet = canEditSetlist(service) && (setlist.length || service?.setlist) ? { setlist } : {};
-    const e = saveService(service?.id ?? null, { title, location, date: iso, start, end, slots, status, ...withSet }, pk);
+    const withLes = canEditServiceLessons(service) && (lessons.length || service?.lessons) ? { lessons } : {};
+    const e = saveService(service?.id ?? null, { title, location, date: iso, start, end, slots, status, ...withSet, ...withLes }, pk);
     if (e) { setErr(e); return false; }
     setDone(true);
     return status === 'draft' ? t('services.draftSaved') : isDraftSv ? t('services.published') : service ? t('services.updated') : t('services.created');
@@ -315,6 +321,8 @@ function ServiceForm({ service, onClose, onDeleted }: { service?: Service; onClo
       {notice && <Card style={{ backgroundColor: colors.amberSoft, borderColor: colors.amberSoft }}><Text testID="sv-notice" style={{ color: colors.text }}>{notice}</Text></Card>}
       {(() => { const setCard = canEditSetlist(service) ? <SetlistCard key="setlist" service={service} list={setlist} onChange={setSetlist} startEditing={!service} /> : null;
         const musicShown = data.departments.some(d => d.id === 'd-music');
+        const lesCard = canEditServiceLessons(service) ? <ServiceLessonsCard key="lessons" service={service} list={lessons} onChange={setLessons} editable startEditing={!service} /> : null;
+        const kidsShown = data.departments.some(d => d.id === 'd-kids');
         return <>{data.departments.map(d => {
         const mine = rows.filter(x => x.dep === d.id).sort((a, b) => roleIdx(data, d.id, a.role) - roleIdx(data, d.id, b.role));
         const manage = canManage(d.id);
@@ -375,9 +383,9 @@ function ServiceForm({ service, onClose, onDeleted }: { service?: Service; onClo
               </View>
               {openAdd === d.id && <View style={[s.row, { marginTop: 6 }]}>{d.positions.map(p => <Chip key={p} testID={`sl-add-${d.id}-${p}`} label={`+ ${roleName(d.id, p)}`} color={d.color} onPress={() => { addSlot(d.id, p); setOpenAdd(null); }} />)}</View>}
             </>}
-          </Card>{d.id === 'd-music' && setCard}</React.Fragment>
+          </Card>{d.id === 'd-music' && setCard}{d.id === 'd-kids' && lesCard}</React.Fragment>
         );
-      })}{!musicShown && setCard}</>; })()}
+      })}{!musicShown && setCard}{!kidsShown && lesCard}</>; })()}
       {err && <Notice tone="error" text={err} />}
       <Button label={!service ? t('services.createService') : isDraftSv ? t('services.publish') : t('services.saveService')} onPress={() => save('published')} testID="sv-save" />
       {(!service || isDraftSv) && <Button label={t('services.saveDraft')} outline onPress={() => save('draft')} testID="sv-save-draft" />}
