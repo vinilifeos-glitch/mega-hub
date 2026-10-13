@@ -125,6 +125,7 @@ draft: 'Rascunho', saveDraft: 'Salvar rascunho', publish: 'Publicar', published:
   appearance: { title: 'Aparência', hint: 'Escolha o modo claro ou escuro.', light: 'Claro', dark: 'Escuro' },
   badges: { assigned: 'Escalado', open: 'Em aberto', away: 'Ausente', draft: 'Rascunho' },
   more: {
+    exportData: 'Exportar dados', exportHint: 'Baixa todos os dados do app e os arquivos das aulas do Kids em um arquivo JSON (para a mudança para o banco de dados online). Guarde em sigilo.', exported: 'Salvo {file}', exportFailed: 'Falha ao exportar.',
     title: 'Mais', subtitle: 'Seu perfil, configurações e ferramentas de administração.', back: 'Voltar para Mais',
     profile: 'Meu perfil', profileHint: 'Dados pessoais, idioma e aparência', team: 'Minha equipe', teamHint: 'Pessoas dos departamentos que você administra',
     accounts: 'Contas', ownerOnlyField: 'Somente o proprietário pode alterar nome e telefone.', accountsHint: 'Crie e gerencie o acesso de todos', settings: 'Configurações', admin: 'Administração',
