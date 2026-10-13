@@ -1,3 +1,4 @@
+import React from 'react';
 import { useTabReset } from '../tabReset';
 import { useLocalSearchParams, router } from 'expo-router';
 import { SetlistCard } from './Setlist';
@@ -157,13 +158,17 @@ function ServiceDetail({ service: sv, msg, onBack, onDeleted }: { service: Servi
             testIDs={{ root: 'busy-sheet', double: 'busy-double', swap: 'busy-swap', cancel: 'busy-cancel' }} />}
         </View>
       </Modal>
-      {data.departments.map(d => {
+      {/* Setlist sits right after Music's slots; if Music isn't shown it falls back to after all departments. */}
+      {(() => { const setCard = <SetlistCard key="setlist" service={sv} list={setlist} onChange={l => setPSet(l)} />;
+        const musicShown = sv.slots.some(z => z.departmentId === 'd-music');
+        return <>{data.departments.map(d => {
         const slots = sv.slots.filter(z => z.departmentId === d.id).sort((a, b) => roleIdx(data, d.id, a.position) - roleIdx(data, d.id, b.position));
         if (!slots.length) return null;
+        const after = d.id === 'd-music' ? setCard : null;
         const manage = canManage(d.id);
         const members = data.users.filter(u => u.active && u.departmentIds.includes(d.id));
-        return (
-          <Card key={d.id} style={{ borderLeftWidth: 3, borderLeftColor: d.color }}>
+        return (<React.Fragment key={d.id}>
+          <Card style={{ borderLeftWidth: 3, borderLeftColor: d.color }}>
             <DeptTitle dep={d} />
             {!manage && <Text style={s.small}>{t('common.viewOnly')}</Text>}
             {slots.flatMap(sl => Array.from({ length: sl.count }, (_, i) => {
@@ -205,10 +210,9 @@ function ServiceDetail({ service: sv, msg, onBack, onDeleted }: { service: Servi
                 </View>
               );
             }))}
-          </Card>
+          </Card>{after}</React.Fragment>
         );
-      })}
-      <SetlistCard service={sv} list={setlist} onChange={l => setPSet(l)} />
+      })}{!musicShown && setCard}</>; })()}
       <View style={[s.row, { marginTop: 4, marginBottom: 4 }]}>{([['checkmark-circle-outline', t('services.legendAvailable')], ['close-circle-outline', t('services.legendAway')], ['time-outline', t('services.legendBusy')]] as const).map(([n, l]) => <View key={l} style={[s.row, { marginRight: 16, marginBottom: 4 }]}><Icon name={n} size={16} style={{ marginRight: 4 }} /><Text style={s.small}>{l}</Text></View>)}</View>
       <Text style={s.small}>{t('services.onlyHolders')}</Text>
       {isOwner && draft && <Button label={t('services.publish')} onPress={() => { publishService(sv.id); setPubMsg(t('services.published')); }} testID="publish-service" />}
@@ -309,12 +313,14 @@ function ServiceForm({ service, onClose, onDeleted }: { service?: Service; onClo
       </Card>
       <Text style={s.section}>{t('services.slotsAndPeople')}</Text>
       {notice && <Card style={{ backgroundColor: colors.amberSoft, borderColor: colors.amberSoft }}><Text testID="sv-notice" style={{ color: colors.text }}>{notice}</Text></Card>}
-      {data.departments.map(d => {
+      {(() => { const setCard = canEditSetlist(service) ? <SetlistCard key="setlist" service={service} list={setlist} onChange={setSetlist} startEditing={!service} /> : null;
+        const musicShown = data.departments.some(d => d.id === 'd-music');
+        return <>{data.departments.map(d => {
         const mine = rows.filter(x => x.dep === d.id).sort((a, b) => roleIdx(data, d.id, a.role) - roleIdx(data, d.id, b.role));
         const manage = canManage(d.id);
         const open = openDept === d.id;
-        return (
-          <Card key={d.id} style={{ borderLeftWidth: 3, borderLeftColor: d.color, opacity: manage ? 1 : 0.6 }}>
+        return (<React.Fragment key={d.id}>
+          <Card style={{ borderLeftWidth: 3, borderLeftColor: d.color, opacity: manage ? 1 : 0.6 }}>
             <Pressable testID={`dept-toggle-${d.id}`} accessibilityRole="button" accessibilityState={{ expanded: open }} accessibilityLabel={t('services.slotsA11y', { dept: deptName(d.id) })} onPress={() => setOpenDept(open ? null : d.id)} style={[s.row, { justifyContent: 'space-between', flexWrap: 'nowrap', minHeight: 44 }]}>
               <View style={{ flex: 1, marginRight: 8 }}>
                 <DeptTitle dep={d} />
@@ -369,10 +375,9 @@ function ServiceForm({ service, onClose, onDeleted }: { service?: Service; onClo
               </View>
               {openAdd === d.id && <View style={[s.row, { marginTop: 6 }]}>{d.positions.map(p => <Chip key={p} testID={`sl-add-${d.id}-${p}`} label={`+ ${roleName(d.id, p)}`} color={d.color} onPress={() => { addSlot(d.id, p); setOpenAdd(null); }} />)}</View>}
             </>}
-          </Card>
+          </Card>{d.id === 'd-music' && setCard}</React.Fragment>
         );
-      })}
-      {canEditSetlist(service) && <SetlistCard service={service} list={setlist} onChange={setSetlist} startEditing={!service} />}
+      })}{!musicShown && setCard}</>; })()}
       {err && <Notice tone="error" text={err} />}
       <Button label={!service ? t('services.createService') : isDraftSv ? t('services.publish') : t('services.saveService')} onPress={() => save('published')} testID="sv-save" />
       {(!service || isDraftSv) && <Button label={t('services.saveDraft')} outline onPress={() => save('draft')} testID="sv-save-draft" />}
