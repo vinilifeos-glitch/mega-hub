@@ -23,8 +23,8 @@ export default function TabsLayout() {
       <Tabs.Screen name="my-rota" options={{ title: t('tabs.myRota'), tabBarIcon: icon('clipboard') }} />
       <Tabs.Screen name="availability" options={{ title: t('tabs.availability'), headerTitle: t('availability.title'), tabBarIcon: icon('calendar') }} />
       <Tabs.Screen name="departments" options={{ title: t('tabs.departments'), headerTitle: t('departmentsScreen.title'), tabBarIcon: icon('grid') }} />
-      <Tabs.Screen name="more" options={{ title: t('more.title'), tabBarIcon: icon('ellipsis-horizontal-circle') }} />
-      {/* Reached from More (permission checks unchanged inside each screen and on the More list). */}
+      <Tabs.Screen name="more" options={{ href: null }} />
+      {/* Profile: header avatar. Accounts: link on the profile screen (owner). Team: redirects to Departments (per-department Team pages). */}
       <Tabs.Screen name="profile" options={{ href: null, title: t('tabs.profile') }} />
       <Tabs.Screen name="team" options={{ href: null, title: t('tabs.team') }} />
       <Tabs.Screen name="accounts" options={{ href: null, title: t('tabs.accounts') }} />

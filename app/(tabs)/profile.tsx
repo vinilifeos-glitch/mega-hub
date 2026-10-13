@@ -1,6 +1,7 @@
 import { useTabReset } from '../../src/tabReset';
 import { DateField } from '../../src/components/DateField';
 import { useState } from 'react';
+import { router } from 'expo-router';
 import { Text } from 'react-native';
 import { formatDobInput, useMe } from '../../src/state/AppContext';
 import { Button, Card, Field, LanguagePicker, ThemeToggle, Screen, Notice, useColors, useStyles } from '../../src/components/ui';
@@ -9,7 +10,7 @@ import { ChangePasswordScreen } from '../../src/screens/Auth';
 
 export default function MyProfile() {
   const colors = useColors(); const s = useStyles();
-  const { currentUser: me, saveMyProfile, signOut, t, language, setLanguage, theme, setTheme } = useMe();
+  const { currentUser: me, saveMyProfile, signOut, t, language, setLanguage, theme, setTheme, canManageAccounts } = useMe();
   const [mode, setMode] = useState<'view' | 'edit' | 'password'>('view');
   useTabReset(() => setMode('view'));
   const init = () => ({ firstName: me.firstName, middleNames: me.middleNames, lastName: me.lastName, dob: me.dob, contact: me.contact ?? '', email: me.email ?? '' });
@@ -46,6 +47,10 @@ export default function MyProfile() {
         <Text style={[s.small, { marginBottom: 12 }]}>{t('appearance.hint')}</Text>
         <ThemeToggle value={theme} onChange={setTheme} />
       </Card>
+      {canManageAccounts && <>
+        <Text style={s.section}>{t('more.admin')}</Text>
+        <Button label={t('more.accounts')} outline onPress={() => router.navigate('/accounts' as any)} testID="profile-accounts" />
+      </>}
       <Text style={s.section}>{t('profile.accountSection')}</Text>
       <Button label={t('profile.editDetails')} onPress={() => { setMsg(null); setF(init()); setMode('edit'); }} testID="edit-me" />
       <Button label={t('auth.changePassword')} outline onPress={() => { setMsg(null); setMode('password'); }} testID="change-password" />

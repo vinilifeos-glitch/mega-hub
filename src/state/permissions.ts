@@ -38,6 +38,10 @@ export function visibleServiceData<D extends { services: { id: string; status?: 
 }
 
 export const MUSIC_DEPT = 'd-music';
+export const KIDS_DEPT = 'd-kids';
+/** Kids lessons: upload/rename/delete by the owner and Kids admins; viewing follows canViewDeptRule. */
+export const canEditLessonsRule = (actor: { role: Tier; adminOf?: string[] } | null | undefined) =>
+  !!actor && (actor.role === 'owner' || (actor.role === 'admin' && (actor.adminOf ?? []).includes(KIDS_DEPT)));
 /** Owner, or an admin of Music, may edit setlists. */
 /** Song library create/edit/delete: owner + Music admins (by role, not name). Also the base for setlist editing. */
 export const canEditSongsRule = (actor: { role: Tier; adminOf?: string[] } | null | undefined) =>
