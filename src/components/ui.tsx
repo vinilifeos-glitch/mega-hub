@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View, ViewStyle } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { usePathname, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -195,13 +195,15 @@ export function Button({ label, onPress, color, outline, danger: dangerProp, tes
   const fill = (danger ? colors.red : color) ?? colors.primary;
   return (
     <Pressable testID={testID} onPress={disabled ? undefined : onPress} disabled={disabled} accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled: !!disabled }} aria-disabled={!!disabled}
-      style={({ pressed }) => [s.btn, disabled ? { opacity: 0.4 } : null,
+      style={({ pressed }) => [s.btn,
         danger
           ? { backgroundColor: pressed ? colors.redSoft : colors.card, borderColor: colors.dangerBorder }
           : outline
           ? { backgroundColor: pressed ? colors.soft : colors.card, borderColor: colors.border }
-          : { backgroundColor: fill, borderColor: fill, opacity: pressed ? 0.85 : 1 }]}>
-      <Text style={{ color: danger ? colors.red : outline ? colors.text : colors.onPrimary, fontWeight: '700', fontSize: 16, textAlign: 'center' }}>{label}</Text>
+          : { backgroundColor: fill, borderColor: fill, opacity: pressed ? 0.85 : 1 },
+        // disabled wins over every variant: muted grey, no press feedback, not-allowed cursor on web
+        disabled ? { backgroundColor: colors.soft, borderColor: colors.border, opacity: 0.6, ...(Platform.OS === 'web' ? { cursor: 'not-allowed' as any } : {}) } : null]}>
+      <Text style={{ color: disabled ? colors.muted : danger ? colors.red : outline ? colors.text : colors.onPrimary, fontWeight: '700', fontSize: 16, textAlign: 'center' }}>{label}</Text>
     </Pressable>
   );
 }

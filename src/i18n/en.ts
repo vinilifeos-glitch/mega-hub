@@ -43,7 +43,7 @@ export const en = {
   },
   unsaved: { title: 'Save changes?', msg: 'You have unsaved changes to this service.', save: 'Save', cancel: 'Cancel' },
   services: {
-    saveEdits: 'Save', discardEdits: 'Discard changes', unsavedBadge: 'Unsaved changes', changesSaved: 'Changes saved.',
+    saveEdits: 'Save', awayWillRemove: 'These people are away and will be removed: {names}', awayConfirmTitle: 'Save changes?', discardEdits: 'Discard changes', unsavedBadge: 'Unsaved changes', changesSaved: 'Changes saved.',
     title: 'Services', greeting: 'Hi {name}. Upcoming services and who\'s serving.', newService: 'New service', editService: 'Edit service',
 draft: 'Draft', saveDraft: 'Save draft', publish: 'Publish', published: 'Service published.', draftSaved: 'Draft saved.', deleteDraft: 'Delete draft', deleteDraftConfirm: 'Delete draft {title} on {date}? Its assignments will be removed too.', draftDeleted: 'Draft deleted.', draftHint: 'Draft — only the owner and admins can see it.',
     alreadyInRole: 'Already in this role', deleteService: 'Delete service', deleteConfirmTitle: 'Delete service?', deleteConfirm: 'Delete {title} on {date}?', backToServices: 'Back to services',

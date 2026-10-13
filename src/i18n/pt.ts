@@ -45,7 +45,7 @@ export const pt: Dict = {
   },
   unsaved: { title: 'Salvar alterações?', msg: 'Você tem alterações não salvas neste culto.', save: 'Salvar', cancel: 'Cancelar' },
   services: {
-    saveEdits: 'Salvar', discardEdits: 'Descartar alterações', unsavedBadge: 'Alterações não salvas', changesSaved: 'Alterações salvas.',
+    saveEdits: 'Salvar', awayWillRemove: 'Estas pessoas estão ausentes e serão removidas: {names}', awayConfirmTitle: 'Salvar alterações?', discardEdits: 'Descartar alterações', unsavedBadge: 'Alterações não salvas', changesSaved: 'Alterações salvas.',
     title: 'Cultos', greeting: 'Olá, {name}. Próximos cultos e quem vai servir.', newService: 'Novo culto', editService: 'Editar culto',
 draft: 'Rascunho', saveDraft: 'Salvar rascunho', publish: 'Publicar', published: 'Culto publicado.', draftSaved: 'Rascunho salvo.', deleteDraft: 'Excluir rascunho', deleteDraftConfirm: 'Excluir o rascunho {title} em {date}? As escalas também serão removidas.', draftDeleted: 'Rascunho excluído.', draftHint: 'Rascunho — só o dono e os admins podem ver.',
     alreadyInRole: 'Já está nesta função', deleteService: 'Excluir culto', deleteConfirmTitle: 'Excluir culto?', deleteConfirm: 'Excluir {title} em {date}?', backToServices: 'Voltar aos cultos',

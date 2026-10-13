@@ -81,6 +81,8 @@ function ServiceDetail({ service: sv, msg, onBack, onDeleted }: { service: Servi
   const det = pDet ?? storedDet;
   const setDet = (p: Partial<typeof storedDet>) => setPDet({ ...det, ...p });
   const detDirty = pDet !== null && JSON.stringify(pDet) !== JSON.stringify(storedDet);
+  const newIso = detDirty ? toIso(det.date) : null;
+  const [awayAsk, setAwayAsk] = useState(false);
   const asg = pAsg ?? stored; const setlist = pSet ?? sv.setlist ?? [];
   const norm = (l: Assignment[]) => JSON.stringify(l.map(a => [a.id, a.userId]).sort());
   const dirty = detDirty || (pAsg !== null && norm(pAsg) !== norm(stored)) || (pSet !== null && JSON.stringify(pSet) !== JSON.stringify(sv.setlist ?? []));
@@ -111,6 +113,9 @@ function ServiceDetail({ service: sv, msg, onBack, onDeleted }: { service: Servi
     if ('error' in r) return t('errors.alreadyServing', { name: u.firstName });
     setPAsg(r.assignments); return null;
   };
+  // People who would be dropped because they're away on the new (unsaved) date
+  const awayNames = newIso && newIso !== sv.date ? asg.flatMap(a => { const u = data.users.find(x => x.id === a.userId); return u && awayOn(u, newIso) ? [`${displayName(u)} (${roleName(a.departmentId, a.position)})`] : []; }) : [];
+  const saveAndBack = () => { const m = commit(); if (m !== false) onBack(m || undefined); };
   const canEditAny = canDetails || data.departments.some(d => canManage(d.id) && sv.slots.some(z => z.departmentId === d.id)) || canEditSetlist(sv);
   const [open, setOpen] = useState<string | null>(null); // slot key being filled
   const [err, setErr] = useState<string | null>(null);
@@ -134,7 +139,18 @@ function ServiceDetail({ service: sv, msg, onBack, onDeleted }: { service: Servi
           <View style={{ flex: 1, marginRight: 8 }}><Field label={t('fields.start')} value={det.start} keyboardType="number-pad" maxLength={5} onChangeText={v => setDet({ start: formatTimeInput(v) })} testID="sv-start" /></View>
           <View style={{ flex: 1 }}><Field label={t('fields.end')} value={det.end} keyboardType="number-pad" maxLength={5} onChangeText={v => setDet({ end: formatTimeInput(v) })} testID="sv-end" /></View>
         </View>
+        {awayNames.length > 0 && <View testID="svd-away-notice" style={{ backgroundColor: colors.amberSoft, borderRadius: 12, padding: 12, marginTop: 4 }}><Text style={{ color: colors.text }}>{t('services.awayWillRemove', { names: awayNames.join(', ') })}</Text></View>}
       </Card></View>}
+      <Modal visible={awayAsk} transparent animationType="fade" onRequestClose={() => setAwayAsk(false)}>
+        <View style={{ flex: 1, justifyContent: 'center', padding: 24, backgroundColor: 'rgba(0,0,0,0.45)' }}>
+          <View testID="away-sheet" accessibilityRole="alert" style={{ backgroundColor: colors.card, borderRadius: 16, padding: 20, maxWidth: 420, width: '100%', alignSelf: 'center' }}>
+            <Text style={{ fontSize: 18, fontWeight: '800', color: colors.text, marginBottom: 8 }}>{t('services.awayConfirmTitle')}</Text>
+            <Text style={{ fontSize: 15, color: colors.muted, marginBottom: 12 }}>{t('services.awayWillRemove', { names: awayNames.join(', ') })}</Text>
+            <Button label={t('unsaved.save')} testID="away-save" onPress={() => { setAwayAsk(false); saveAndBack(); }} />
+            <Button label={t('unsaved.cancel')} outline testID="away-cancel" onPress={() => setAwayAsk(false)} />
+          </View>
+        </View>
+      </Modal>
       <Modal visible={!!busyPick} transparent animationType="fade" onRequestClose={() => setBusyPick(null)}>
         <View style={{ flex: 1, justifyContent: 'center', padding: 16, backgroundColor: 'rgba(0,0,0,0.4)' }}>
           {busyPick && <BusyChoiceSheet name={busyPick.m.username} detail={busyPick.detail} onDouble={() => busyPick.run('double')} onSwap={() => busyPick.run('swap')} onCancel={() => setBusyPick(null)}
@@ -197,7 +213,7 @@ function ServiceDetail({ service: sv, msg, onBack, onDeleted }: { service: Servi
       <Text style={s.small}>{t('services.onlyHolders')}</Text>
       {isOwner && draft && <Button label={t('services.publish')} onPress={() => { publishService(sv.id); setPubMsg(t('services.published')); }} testID="publish-service" />}
       {err && <Notice tone="error" text={err} />}
-      {canEditAny && <Button label={t('services.saveEdits')} disabled={!dirty} onPress={() => { const m = commit(); if (m !== false) onBack(m || undefined); }} testID="svd-save" />}
+      {canEditAny && <Button label={t('services.saveEdits')} disabled={!dirty} onPress={() => awayNames.length ? setAwayAsk(true) : saveAndBack()} testID="svd-save" />}
       {isOwner && <Button label={draft ? t('services.deleteDraft') : t('services.deleteService')} danger onPress={del} testID={draft ? 'delete-draft' : 'delete-service'} />}
     </Screen>
   );
