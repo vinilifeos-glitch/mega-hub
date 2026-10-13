@@ -189,13 +189,13 @@ export function Chip({ label, active, onPress, color, testID, icon }: { label: s
 }
 
 /** Primary = filled accent. `outline` = secondary. `danger` = destructive secondary: same shape as outline, red text + red-tinted border (implies outline). */
-export function Button({ label, onPress, color, outline, danger: dangerProp, testID }: { label: string; onPress?: () => void; color?: string; outline?: boolean; danger?: boolean; testID?: string }) {
+export function Button({ label, onPress, color, outline, danger: dangerProp, testID, disabled }: { label: string; onPress?: () => void; color?: string; outline?: boolean; danger?: boolean; testID?: string; disabled?: boolean }) {
   const colors = useColors(); const s = useStyles();
   const danger = dangerProp || color === lightColors.red || color === darkColors.red;
   const fill = (danger ? colors.red : color) ?? colors.primary;
   return (
-    <Pressable testID={testID} onPress={onPress} accessibilityRole="button" accessibilityLabel={label}
-      style={({ pressed }) => [s.btn,
+    <Pressable testID={testID} onPress={disabled ? undefined : onPress} disabled={disabled} accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled: !!disabled }} aria-disabled={!!disabled}
+      style={({ pressed }) => [s.btn, disabled ? { opacity: 0.4 } : null,
         danger
           ? { backgroundColor: pressed ? colors.redSoft : colors.card, borderColor: colors.dangerBorder }
           : outline

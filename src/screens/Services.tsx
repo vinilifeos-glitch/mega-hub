@@ -32,8 +32,8 @@ export function ServicesHome() {
   if (view) {
     const sv = data.services.find(x => x.id === view.id);
     if (!sv) { setView(null); return null; }
-    if (view.kind === 'edit') return <ServiceForm service={sv} onDeleted={m => { setMsg(m); setView(null); }} onClose={m => { setMsg(m ?? null); setView({ kind: 'detail', id: sv.id }); }} />;
-    return <ServiceDetail service={sv} msg={msg} onBack={m => { setMsg(m ?? null); setView(null); }} onEdit={() => leaveGuarded(() => setView({ kind: 'edit', id: sv.id }))} onDeleted={m => { setMsg(m); setView(null); }} />;
+    if (view.kind === 'edit') { setView({ kind: 'detail', id: sv.id }); return null; } // separate edit screen retired: details are edited inline
+    return <ServiceDetail service={sv} msg={msg} onBack={m => { setMsg(m ?? null); setView(null); }} onDeleted={m => { setMsg(m); setView(null); }} />;
   }
   const upcoming = data.services.filter(x => x.date >= todayIso()).sort((a, b) => (a.date + a.start).localeCompare(b.date + b.start));
   return (
@@ -67,24 +67,36 @@ export function ServicesHome() {
   );
 }
 
-function ServiceDetail({ service: sv, msg, onBack, onEdit, onDeleted }: { service: Service; msg: string | null; onBack: (msg?: string) => void; onEdit: () => void; onDeleted: (msg: string) => void }) {
+function ServiceDetail({ service: sv, msg, onBack, onDeleted }: { service: Service; msg: string | null; onBack: (msg?: string) => void; onDeleted: (msg: string) => void }) {
   const colors = useColors(); const s = useStyles();
-  const { data, currentUser, canManage, saveServiceEdits, canEditSetlist, deleteService, publishService, t, fmtDate, deptName, roleName } = useMe();
+  const { data, currentUser, canManage, saveServiceEdits, saveService, canEditSetlist, deleteService, publishService, t, fmtDate, deptName, roleName } = useMe();
   // Pending edits (nothing persists until Save). null = no pending change for that part (shows stored data).
   const stored = data.assignments.filter(a => a.serviceId === sv.id);
   const [pAsg, setPAsg] = useState<Assignment[] | null>(null);
   const [pSet, setPSet] = useState<SetlistItem[] | null>(null);
+  // Inline details (owner only, as before: saveService is owner-only)
+  const canDetails = currentUser.role === 'owner';
+  const storedDet = { title: sv.title, location: sv.location ?? '', date: isoToDdmm(sv.date), start: sv.start, end: sv.end };
+  const [pDet, setPDet] = useState<typeof storedDet | null>(null);
+  const det = pDet ?? storedDet;
+  const setDet = (p: Partial<typeof storedDet>) => setPDet({ ...det, ...p });
+  const detDirty = pDet !== null && JSON.stringify(pDet) !== JSON.stringify(storedDet);
   const asg = pAsg ?? stored; const setlist = pSet ?? sv.setlist ?? [];
   const norm = (l: Assignment[]) => JSON.stringify(l.map(a => [a.id, a.userId]).sort());
-  const dirty = (pAsg !== null && norm(pAsg) !== norm(stored)) || (pSet !== null && JSON.stringify(pSet) !== JSON.stringify(sv.setlist ?? []));
+  const dirty = detDirty || (pAsg !== null && norm(pAsg) !== norm(stored)) || (pSet !== null && JSON.stringify(pSet) !== JSON.stringify(sv.setlist ?? []));
   const [savedMsg, setSavedMsg] = useState<string | null>(null);
   const commit = (): string | false => {
     if (!dirty) return '';
-    const e = saveServiceEdits(sv.id, { ...(pAsg ? { assignments: pAsg } : {}), ...(pSet ? { setlist: pSet } : {}) });
-    if (e) { setErr(e); return false; }
-    setPAsg(null); setPSet(null); setErr(null); return t('services.changesSaved');
+    let iso: string | null = null;
+    if (detDirty) { // validate details first so nothing is half-saved
+      iso = toIso(det.date); const hm = /^([01]\d|2[0-3]):[0-5]\d$/;
+      const ve = !det.title.trim() ? t('errors.nameRequired') : !iso ? t('errors.dateInvalid') : !hm.test(det.start) || !hm.test(det.end) ? t('errors.timeFormat') : det.end <= det.start ? t('errors.endAfterStart') : null;
+      if (ve) { setErr(ve); return false; }
+    }
+    if (pAsg || pSet) { const e = saveServiceEdits(sv.id, { ...(pAsg ? { assignments: pAsg } : {}), ...(pSet ? { setlist: pSet } : {}) }); if (e) { setErr(e); return false; } }
+    if (detDirty && iso) { const e = saveService(sv.id, { title: det.title, location: det.location, date: iso, start: det.start, end: det.end, slots: sv.slots, ...(sv.status ? { status: sv.status } : {}) }); if (e) { setErr(e); return false; } }
+    setPAsg(null); setPSet(null); setPDet(null); setErr(null); return t('services.changesSaved');
   };
-  const discard = () => { setPAsg(null); setPSet(null); setErr(null); setOpen(null); };
   useUnsavedGuard(dirty, { save: commit, back: m => onBack(m) });
   const unassign = (id: string) => setPAsg(asg.filter(a => a.id !== id));
   const assign = (serviceId: string, departmentId: string, position: string, index: number, userId: string, mode?: 'double' | 'swap'): string | null => {
@@ -99,7 +111,7 @@ function ServiceDetail({ service: sv, msg, onBack, onEdit, onDeleted }: { servic
     if ('error' in r) return t('errors.alreadyServing', { name: u.firstName });
     setPAsg(r.assignments); return null;
   };
-  const canEditAny = data.departments.some(d => canManage(d.id) && sv.slots.some(z => z.departmentId === d.id)) || canEditSetlist(sv);
+  const canEditAny = canDetails || data.departments.some(d => canManage(d.id) && sv.slots.some(z => z.departmentId === d.id)) || canEditSetlist(sv);
   const [open, setOpen] = useState<string | null>(null); // slot key being filled
   const [err, setErr] = useState<string | null>(null);
   const [busyPick, setBusyPick] = useState<{ m: { firstName: string; username: string }; detail: string; run: (mode: 'double' | 'swap') => void } | null>(null);
@@ -113,9 +125,16 @@ function ServiceDetail({ service: sv, msg, onBack, onEdit, onDeleted }: { servic
       {msg && !savedMsg && <Notice text={msg} />}
       {savedMsg && !dirty && <Notice text={savedMsg} />}
       {pubMsg && <Notice text={pubMsg} />}
-      {dirty && <View testID="svd-dirty" style={{ marginBottom: 8 }}><StatusBadge status="draft" label={t('services.unsavedBadge')} /></View>}
       {draft && <View style={[s.row, { marginBottom: 8 }]}><StatusBadge status="draft" label={t('services.draft')} testID="draft-badge" /><Text style={[s.small, { marginLeft: 8, flex: 1 }]}>{t('services.draftHint')}</Text></View>}
-      {err && <Notice tone="error" text={err} />}
+      {canDetails && <View testID="svd-details"><Card>
+        <Field label={t('fields.name')} value={det.title} onChangeText={v => setDet({ title: v })} autoCapitalize="words" testID="sv-title" />
+        <Field label={t('fields.location')} value={det.location} onChangeText={v => setDet({ location: v })} autoCapitalize="words" placeholder={t('fields.locationPlaceholder')} testID="sv-location" />
+        <DateField label={t('fields.date')} value={det.date} onChange={v => setDet({ date: v })} testID="sv-date" />
+        <View style={[s.row, { flexWrap: 'nowrap' }]}>
+          <View style={{ flex: 1, marginRight: 8 }}><Field label={t('fields.start')} value={det.start} keyboardType="number-pad" maxLength={5} onChangeText={v => setDet({ start: formatTimeInput(v) })} testID="sv-start" /></View>
+          <View style={{ flex: 1 }}><Field label={t('fields.end')} value={det.end} keyboardType="number-pad" maxLength={5} onChangeText={v => setDet({ end: formatTimeInput(v) })} testID="sv-end" /></View>
+        </View>
+      </Card></View>}
       <Modal visible={!!busyPick} transparent animationType="fade" onRequestClose={() => setBusyPick(null)}>
         <View style={{ flex: 1, justifyContent: 'center', padding: 16, backgroundColor: 'rgba(0,0,0,0.4)' }}>
           {busyPick && <BusyChoiceSheet name={busyPick.m.username} detail={busyPick.detail} onDouble={() => busyPick.run('double')} onSwap={() => busyPick.run('swap')} onCancel={() => setBusyPick(null)}
@@ -174,12 +193,11 @@ function ServiceDetail({ service: sv, msg, onBack, onEdit, onDeleted }: { servic
         );
       })}
       <SetlistCard service={sv} list={setlist} onChange={l => setPSet(l)} />
-      {canEditAny && <Button label={t('services.saveEdits')} onPress={() => { const m = commit(); if (m) setSavedMsg(m); }} testID="svd-save" />}
-      {canEditAny && dirty && <Button label={t('services.discardEdits')} outline onPress={discard} testID="svd-discard" />}
       <View style={[s.row, { marginTop: 4, marginBottom: 4 }]}>{([['checkmark-circle-outline', t('services.legendAvailable')], ['close-circle-outline', t('services.legendAway')], ['time-outline', t('services.legendBusy')]] as const).map(([n, l]) => <View key={l} style={[s.row, { marginRight: 16, marginBottom: 4 }]}><Icon name={n} size={16} style={{ marginRight: 4 }} /><Text style={s.small}>{l}</Text></View>)}</View>
       <Text style={s.small}>{t('services.onlyHolders')}</Text>
       {isOwner && draft && <Button label={t('services.publish')} onPress={() => { publishService(sv.id); setPubMsg(t('services.published')); }} testID="publish-service" />}
-      {isOwner && <Button label={t('services.editService')} outline onPress={onEdit} testID="edit-service" />}
+      {err && <Notice tone="error" text={err} />}
+      {canEditAny && <Button label={t('services.saveEdits')} disabled={!dirty} onPress={() => { const m = commit(); if (m !== false) onBack(m || undefined); }} testID="svd-save" />}
       {isOwner && <Button label={draft ? t('services.deleteDraft') : t('services.deleteService')} danger onPress={del} testID={draft ? 'delete-draft' : 'delete-service'} />}
     </Screen>
   );
