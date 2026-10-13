@@ -1,3 +1,4 @@
+import { MUSIC_DEPT } from '../state/permissions';
 import { useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
@@ -43,7 +44,7 @@ export function SetlistCard({ service: sv, list, onChange, startEditing }: { ser
     setErr(e); if (!e) setForm(null);
   };
   return (
-    <View testID="setlist-card"><Card>
+    <View testID="setlist-card"><Card style={{ borderLeftWidth: 3, borderLeftColor: data.departments.find(d => d.id === MUSIC_DEPT)?.color ?? colors.primary }}>
       <View style={[s.row, { justifyContent: 'space-between', flexWrap: 'nowrap' }]}>
         <View style={[s.row, { flexWrap: 'nowrap', flex: 1 }]}>
           <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center', marginRight: 10 }}>
