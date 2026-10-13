@@ -89,10 +89,11 @@ await ok('admin cannot publish', async () => { await as('lucas', `update service
 await ok('owner publishes -> volunteer sees it', async () => (await allowed('owner', `update services set status='published' where id='${id(150)}'`)) && (await as('miguel', `select * from assignments where service_id=$1`, [id(150)])).rows.length === 1);
 // Setlist
 U.pedro = id(7); await db.query(`insert into auth.users values ($1,'pedro@megahub.local')`, [U.pedro]); await db.query(`insert into profiles (id, username, tier, must_change_password) values ($1,'Pedro','volunteer',false)`, [U.pedro]); // plain non-Music volunteer
-await ok('owner adds setlist item', () => allowed('owner', `insert into setlist_items (id, service_id, position, title, key) values ('so1','${id(100)}',0,'Song','G')`));
-await ok('Music admin edits setlist', async () => (await allowed('lucas', `insert into setlist_items (id, service_id, position, title) values ('so2','${id(100)}',1,'Two')`)) && allowed('lucas', `update setlist_items set position=0 where id='so2'`));
-await ok('Kids admin cannot edit setlist', async () => { await as('camila', `update setlist_items set title='x' where id='so1'`).catch(() => {}); return (await denied('camila', `insert into setlist_items (id, service_id, position, title) values ('so3','${id(100)}',2,'X')`)) && (await db.query(`select title from setlist_items where id='so1'`)).rows[0].title === 'Song'; });
-await ok('volunteer cannot edit setlist', () => denied('miguel', `insert into setlist_items (id, service_id, position, title) values ('so4','${id(100)}',2,'X')`));
+await db.query(`insert into songs (id, department_id, title) values ('sg0','d-music','Seed') on conflict do nothing`);
+await ok('owner adds setlist item', () => allowed('owner', `insert into setlist_items (id, service_id, position, title, key, song_id) values ('so1','${id(100)}',0,'Song','G','sg0')`));
+await ok('Music admin edits setlist', async () => (await allowed('lucas', `insert into setlist_items (id, service_id, position, title, song_id) values ('so2','${id(100)}',1,'Two','sg0')`)) && allowed('lucas', `update setlist_items set position=0 where id='so2'`));
+await ok('Kids admin cannot edit setlist', async () => { await as('camila', `update setlist_items set title='x' where id='so1'`).catch(() => {}); return (await denied('camila', `insert into setlist_items (id, service_id, position, title, song_id) values ('so3','${id(100)}',2,'X','sg0')`)) && (await db.query(`select title from setlist_items where id='so1'`)).rows[0].title === 'Song'; });
+await ok('volunteer cannot edit setlist', () => denied('miguel', `insert into setlist_items (id, service_id, position, title, song_id) values ('so4','${id(100)}',2,'X','sg0')`));
 await ok('STRICT: Music member + Music admin see setlist; Kids admin does not', async () => (await as('miguel', `select * from setlist_items`)).rows.length === 2 && (await as('lucas', `select * from setlist_items`)).rows.length === 2 && (await as('camila', `select * from setlist_items`)).rows.length === 0);
 await ok('unassigned non-Music volunteer cannot see setlist', async () => (await as('pedro', `select * from setlist_items`)).rows.length === 0);
 await ok('STRICT: assigned non-Music volunteer cannot see setlist', async () => { await db.query(`insert into assignments (service_id, department_id, role, idx, user_id) values ($1,'d-obreiros','Atalaia',0,$2) on conflict do nothing`, [id(100), U.pedro]); return (await as('pedro', `select * from setlist_items`)).rows.length === 0; });
@@ -112,7 +113,7 @@ await ok('other admin cannot add resource', () => denied('lucas', `insert into d
 await ok('member reads resources, non-member cannot', async () => (await as('ana', `select * from department_resources`)).rows.length === 1 && (await as('pedro', `select * from department_resources`)).rows.length === 0);
 await ok('Music admin adds song', () => allowed('lucas', `insert into songs (id, title, key, chords) values ('sg1','Grande é o Senhor','G','G D Em')`));
 await ok('Kids admin / volunteer cannot add song', async () => (await denied('camila', `insert into songs (id, title) values ('sg2','X')`)) && denied('miguel', `insert into songs (id, title) values ('sg3','X')`));
-await ok('Music member reads library; outsider cannot', async () => (await as('miguel', `select * from songs`)).rows.length === 1 && (await as('pedro', `select * from songs`)).rows.length === 0);
+await ok('Music member reads library; outsider cannot', async () => (await as('miguel', `select * from songs where id <> 'sg0'`)).rows.length === 1 && (await as('pedro', `select * from songs`)).rows.length === 0);
 await ok('STRICT: song in setlist not readable by assigned outsider; Kids admin cannot read songs', async () => { await db.query(`update setlist_items set song_id='sg1' where id='so1'`); return (await as('pedro', `select * from songs`)).rows.length === 0 && (await as('camila', `select * from songs`)).rows.length === 0; });
 await ok('deleting song nulls setlist song_id', async () => { await allowed('lucas', `delete from songs where id='sg1'`); return (await db.query(`select song_id from setlist_items where id='so1'`)).rows[0].song_id === null; });
 // Songs v2 + live
@@ -164,5 +165,19 @@ await ok('ASSEMBLY: owner can give a volunteer the Assembly role and assign it',
   await ok('DOUBLE: second main role (Kids Teacher) allowed, no one_role trigger', async () => (await ins('owner', 'd-kids', 'Teacher', 0)).affectedRows === 1 && (await db.query(`select count(*)::int n from pg_trigger where tgname='one_role_guard'`)).rows[0].n === 0);
   await ok('SAME-ROLE: two Assembly slots rejected', async () => { try { await ins('owner', 'd-music', 'Assembly', 1); return false; } catch (e) { return /role conflict/.test(e.message); } });
   await ok('SAME-ROLE: legacy duplicate (imported) kept', async () => { await db.query(`select set_config('request.jwt.claim.sub','',false)`); await db.query(`insert into assignments (service_id, department_id, role, idx, user_id) values ($1,'d-music','Assembly',1,$2)`, [SV2, U.miguel]); return (await db.query(`select count(*)::int n from assignments where service_id=$1 and user_id=$2`, [SV2, U.miguel])).rows[0].n === 5; });
+}
+// Setlist: Lead Singer of THAT service; library-only; song library owner + Music admins
+{ const L1 = id(190), L2 = id(191);
+  for (const [sid, dt] of [[L1, '2099-12-13'], [L2, '2099-12-20']]) await db.query(`insert into services (id, title, date, start_time, end_time) values ($1,'L',$2,'16:00','21:00')`, [sid, dt]);
+  await db.query(`insert into songs (id, department_id, title) values ('sgL','d-music','Lib') on conflict do nothing`);
+  await db.query(`insert into assignments (service_id, department_id, role, idx, user_id) values ($1,'d-music','Lead Singer',0,$2), ($3,'d-music','Keys',0,$2)`, [L1, U.miguel, L2]);
+  await ok('LEAD: lead singer can add a library song to their service setlist', () => allowed('miguel', `insert into setlist_items (id, service_id, position, title, song_id) values ('sl1',$1,0,'Lib','sgL')`, [L1]));
+  await ok('LEAD: lead singer can reorder/remove in their service', async () => (await allowed('miguel', `update setlist_items set position=1 where id='sl1'`)) && (await allowed('miguel', `delete from setlist_items where id='sl1'`)));
+  await ok("LEAD: lead singer cannot edit another service's setlist", () => denied('miguel', `insert into setlist_items (id, service_id, position, title, song_id) values ('sl2',$1,0,'Lib','sgL')`, [L2]));
+  await ok('LEAD: lead singer cannot edit other service fields', async () => { await as('miguel', `update services set title='hack' where id=$1`, [L1]).catch(() => {}); return (await db.query(`select title from services where id=$1`, [L1])).rows[0].title === 'L'; });
+  await ok("LEAD: Kids admin cannot edit that setlist", () => denied('camila', `insert into setlist_items (id, service_id, position, title, song_id) values ('sl3',$1,0,'Lib','sgL')`, [L1]));
+  await ok('LIBRARY: free-text (no song_id) setlist item rejected, even for owner', () => denied('owner', `insert into setlist_items (id, service_id, position, title) values ('sl4',$1,0,'Free')`, [L1]));
+  await ok('SONGS: non-admin Music member cannot create/edit songs', async () => (await denied('miguel', `insert into songs (id, department_id, title) values ('sgX','d-music','X')`)) && (await denied('miguel', `update songs set title='x' where id='sgL'`)));
+  await ok('SONGS: Kids admin cannot create songs; Music admin can', async () => (await denied('camila', `insert into songs (id, department_id, title) values ('sgY','d-music','Y')`)) && (await allowed('lucas', `insert into songs (id, department_id, title) values ('sgZ','d-music','Z')`)));
 }
 console.log(`${n} passed, ${fails} failed`); process.exit(fails ? 1 : 0);
