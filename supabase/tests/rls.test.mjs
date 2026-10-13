@@ -217,4 +217,22 @@ await ok('ASSEMBLY: owner can give a volunteer the Assembly role and assign it',
   await ok('STORAGE: Kids member reads objects; others do not', async () => (await rows('ana', `select name from storage.objects where bucket_id='lessons'`)).length === 2 && (await rows('zoe', `select name from storage.objects where bucket_id='lessons'`)).length === 0);
   await ok('STORAGE: Kids member cannot delete; Kids admin can', async () => (await denied('ana', `delete from storage.objects where name=$1`, [`d-kids/${L}/a.pdf`])) && allowed('camila', `delete from storage.objects where name=$1`, [`d-kids/${L}/a.pdf`]));
 }
+// Service lessons: read Kids viewers; write owner / Kids admins / that service's Kids Teacher; catalog-only; removed lessons kept
+{ const S1 = id(310), S2 = id(311), L1 = id(300), L2 = id(306), GONE = id(399);
+  for (const [sid, dt] of [[S1, '2099-12-06'], [S2, '2099-12-27']]) await db.query(`insert into services (id, title, date, start_time, end_time) values ($1,'K',$2,'16:00','21:00')`, [sid, dt]);
+  await db.query(`insert into assignments (service_id, department_id, role, idx, user_id) values ($1,'d-kids','Teacher',0,$2)`, [S1, U.ana]);
+  const add = (who, sid, lid, pos = 0) => as(who, `insert into service_lessons (service_id, lesson_id, position) values ($1,$2,$3)`, [sid, lid, pos]);
+  const tries = async (who, sid, lid) => { try { return (await add(who, sid, lid)).affectedRows === 1; } catch { return false; } };
+  await ok('SVL: Teacher of that service adds a catalog lesson', () => tries('ana', S1, L1));
+  await ok('SVL: Teacher cannot add to another service', async () => !(await tries('ana', S2, L1)));
+  await ok('SVL: Kids admin adds to any service', () => tries('camila', S2, L1));
+  await ok('SVL: owner adds', () => tries('owner', S1, L2));
+  await ok('SVL: Music admin cannot add', async () => !(await tries('lucas', S1, id(307))));
+  await ok('SVL: non-Teacher volunteer cannot add', async () => !(await tries('miguel', S1, id(307))));
+  await ok('SVL: non-catalog lesson rejected (even owner)', async () => !(await tries('owner', S1, GONE)));
+  await ok('SVL: Teacher reorders + removes on own service', async () => (await allowed('ana', `update service_lessons set position=5 where service_id=$1 and lesson_id=$2`, [S1, L1])) && allowed('ana', `delete from service_lessons where service_id=$1 and lesson_id=$2`, [S1, L2]));
+  await ok('SVL: Kids member reads; non-Kids volunteer and Music admin do not', async () => (await rows('ana', `select * from service_lessons`)).length === 2 && (await rows('zoe', `select * from service_lessons`)).length === 0 && (await rows('lucas', `select * from service_lessons`)).length === 0);
+  await db.exec(`reset role; select set_config('request.jwt.claim.sub', '', false);`); await db.query(`insert into service_lessons values ($1,$2,1)`, [S2, GONE]);   // e.g. imported/kept after catalog delete
+  await ok('SVL: removed-lesson rows are kept and still reorderable', () => allowed('camila', `update service_lessons set position=0 where service_id=$1 and lesson_id=$2`, [S2, GONE]));
+}
 console.log(`${n} passed, ${fails} failed`); process.exit(fails ? 1 : 0);

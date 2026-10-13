@@ -54,6 +54,8 @@ export async function runImport(data, db, { dryRun = false, log = console.log } 
   }
   // everyone signs in with a temp password first and then picks their own
   const { __lessons, ...plain } = data;
+  // service lessons point at catalog lessons by their (stable) imported uuid
+  plain.services = (plain.services ?? []).map(sv => Array.isArray(sv.lessons) ? { ...sv, lessons: sv.lessons.map(legacyUuid) } : sv);
   const imported = { ...plain, users: data.users.map(u => ({ ...u, mustChangePassword: true })) };
   const rows = M.toRows(imported, id => idMap.get(id) ?? id);
   rows.profiles = rows.profiles.map(p => ({ ...p, legacy_id: data.users.find(u => idMap.get(u.id) === p.id)?.id ?? null }));

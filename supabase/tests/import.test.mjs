@@ -1,7 +1,7 @@
 // Import + round-trip test on real Postgres (PGlite): live-shaped export -> schema -> back to AppData, nothing lost.
 import { PGlite } from '@electric-sql/pglite';
 import fs from 'fs'; import path from 'path'; import assert from 'assert'; import crypto from 'crypto';
-import { readExport, runImport, loadMapping } from '../../scripts/supabase-import-core.mjs';
+import { legacyUuid, readExport, runImport, loadMapping } from '../../scripts/supabase-import-core.mjs';
 const dir = path.dirname(new URL(import.meta.url).pathname);
 const db = new PGlite();
 await db.exec(`create role authenticated nologin; create role anon nologin; create schema auth;
@@ -22,6 +22,7 @@ const pdf = 'data:application/pdf;base64,' + Buffer.from('%PDF-1.4 test').toStri
 data.__lessons = [
   { id: 'ls-a', deptId: 'd-kids', title: 'Arca de Noé', name: 'Lição 1.pdf', mime: 'application/pdf', size: 13, dataUrl: pdf, createdAt: '2026-10-13T10:00:00Z', by: data.users[0].id },
   { id: 'ls-b', deptId: 'd-kids', title: 'Broken', name: 'x.pdf', mime: 'application/pdf', size: 1, createdAt: '2026-10-13T10:00:00Z', by: 'nobody' }];
+data.services[0].lessons = ['ls-a', 'ls-missing'];
 const adapter = {
   findLegacy: async l => (await db.query('select id from profiles where legacy_id=$1', [l])).rows[0]?.id ?? null,
   createAuthUser: async (u, _pw) => { const id = crypto.randomUUID(); await db.query('insert into auth.users values ($1,$2)', [id, u.toLowerCase() + '@megahub.local']); return id; },
@@ -43,6 +44,8 @@ ok(r1.created.every(c => c.password.length >= 10), 'temp passwords >= 10 chars')
 ok(Number((await db.query('select count(*)::int n from lessons')).rows[0].n) === 1 && r1.counts.lesson_files_skipped === 1, 'lessons: file uploaded + row created; file-less lesson skipped');
 { const l = (await db.query('select * from lessons')).rows[0]; ok(l.title === 'Arca de Noé' && l.file_name === 'Lição 1.pdf' && /^d-kids\/[0-9a-f-]{36}\/Licao_1\.pdf$/.test(l.storage_path) && l.size_bytes === 13 && l.created_by === r1.idMap.get(data.users[0].id) && uploaded[0][0] === l.storage_path && uploaded[0][2] === 'application/pdf', 'lessons: metadata + storage path + owner mapped'); }
 ok(data.users.every(u => !r1.created.some(c => c.username === u.username && (c.password.length < 6))), 'no temp password below Supabase 6-char minimum (current 4-char passwords are replaced)');
+{ const r = (await db.query('select * from service_lessons order by position')).rows; const L = (await db.query('select id from lessons')).rows[0].id;
+  ok(r.length === 2 && r[0].lesson_id === L && r[0].service_id === data.services[0].id && r[1].position === 1, 'service lessons imported in order, mapped to the imported lesson uuid (missing one kept)'); }
 const r2 = await runImport(data, adapter, { log: () => {} });
 ok(r2.created.length === 0, 're-running import is idempotent (no duplicate accounts)');
 ok(Number((await db.query('select count(*)::int n from lessons')).rows[0].n) === 1, 're-run: no duplicate lessons');
@@ -58,13 +61,13 @@ const norm = d => ({
     dob: u.dob, contact: u.contact || '', email: u.email || '', language: u.language ?? null, theme: u.theme ?? null,
     deps: [...u.departmentIds].sort(), pos: JSON.stringify(Object.fromEntries(Object.entries(u.positions ?? {}).filter(([k]) => u.departmentIds.includes(k)).map(([k, v]) => [k, [...v].sort()]).sort())),
     adminOf: u.role === 'admin' ? [...(u.adminOf ?? [])].sort() : [], unavailable: JSON.stringify((u.unavailable ?? []).map(x => ({ date: x.date, note: x.note || null })).sort((a, b) => a.date.localeCompare(b.date))) })).sort((a, b) => a.id.localeCompare(b.id)),
-  services: d.services.map(s => ({ ...s, slots: [...s.slots].sort((a, b) => (a.departmentId + a.position).localeCompare(b.departmentId + b.position)) })),
+  services: d.services.map(({ lessons, ...s }) => ({ ...s, ...(lessons ? { lessons } : {}), slots: [...s.slots].sort((a, b) => (a.departmentId + a.position).localeCompare(b.departmentId + b.position)) })),
   assignments: d.assignments.map(a => ({ ...a, userId: inv.get(a.userId) ?? a.userId })).sort((a, b) => a.id.localeCompare(b.id)),
   departments: d.departments.map(x => ({ ...x, leaderId: null })),
 });
 // app migrate() adds the Assembly role to Music on load; the DB migration does the same
 const withAsm = d => ({ ...d, departments: d.departments.map(x => x.id === "d-music" && !x.positions.includes("Assembly") ? { ...x, positions: [...x.positions, "Assembly"] } : x) });
-const A = norm(withAsm(data)), B = norm(back);
+const A = norm(withAsm({ ...data, services: data.services.map(sv => sv.lessons ? { ...sv, lessons: sv.lessons.map(legacyUuid) } : sv) })), B = norm(back);
 for (const k of Object.keys(A)) { if (JSON.stringify(A[k]) !== JSON.stringify(B[k])) { for (let i = 0; i < A[k].length; i++) if (JSON.stringify(A[k][i]) !== JSON.stringify(B[k][i])) { console.log('DIFF', k, JSON.stringify(A[k][i]), '\n    ', JSON.stringify(B[k][i])); break; } } ok(JSON.stringify(A[k]) === JSON.stringify(B[k]), `round trip: ${k} identical`); }
 ok(back.users.every(u => u.mustChangePassword), 'all imported users must change password on first sign-in');
 // diff writer: unchanged data -> no writes; one change -> one upsert
