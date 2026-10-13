@@ -39,8 +39,14 @@ export function visibleServiceData<D extends { services: { id: string; status?: 
 
 export const MUSIC_DEPT = 'd-music';
 /** Owner, or an admin of Music, may edit setlists. */
-export const canEditSetlistRule = (actor: { role: Tier; adminOf?: string[] } | null | undefined) =>
+/** Song library create/edit/delete: owner + Music admins (by role, not name). Also the base for setlist editing. */
+export const canEditSongsRule = (actor: { role: Tier; adminOf?: string[] } | null | undefined) =>
   !!actor && (actor.role === 'owner' || (actor.role === 'admin' && (actor.adminOf ?? []).includes(MUSIC_DEPT)));
+export const canEditSetlistRule = canEditSongsRule;
+export const LEAD_SINGER = 'Lead Singer';
+/** A service's setlist: owner, Music admins, or the person assigned as Music Lead Singer in THAT service (no serviceId = create form). */
+export const canEditServiceSetlistRule = (actor: { id: string; role: Tier; adminOf?: string[] } | null | undefined, serviceId: string | undefined, assignments: { serviceId: string; userId: string; departmentId: string; position: string }[]) =>
+  canEditSongsRule(actor) || (!!actor && !!serviceId && assignments.some(a => a.serviceId === serviceId && a.userId === actor.id && a.departmentId === MUSIC_DEPT && a.position === LEAD_SINGER));
 /** Owner, admins, Music members, or anyone assigned on that service may see its setlist. */
 /** STRICT scoping: owner sees all; admins/volunteers see a department only if they administer it or are a member. */
 export const canViewDeptRule = (actor: { role: Tier; adminOf?: string[]; departmentIds?: string[] } | null | undefined, deptId: string) =>

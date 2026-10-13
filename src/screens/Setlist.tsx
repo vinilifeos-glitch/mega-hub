@@ -87,12 +87,8 @@ export function SetlistCard({ service: sv, list, onChange, startEditing }: { ser
         </View>
       ))}
       </View>
-      {form && form.id === null && editor_()}
       {editing && !form && <View style={[s.row, { justifyContent: 'space-between', borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 8, marginTop: 4 }]}>
-        <Pressable testID="add-song" accessibilityRole="button" onPress={() => open()} style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', minHeight: 44, paddingHorizontal: 12, borderRadius: 12, backgroundColor: pressed ? colors.soft : 'transparent' })}>
-          <Icon name="add" size={18} color={colors.primaryText} style={{ marginRight: 6 }} />
-          <Text style={{ color: colors.primaryText, fontWeight: '700', fontSize: 15 }}>{t('ui.addSong')}</Text>
-        </Pressable>
+        <View />
         <Pressable testID="setlist-done" accessibilityRole="button" onPress={() => setEditing(false)} style={({ pressed }) => ({ minHeight: 40, paddingHorizontal: 18, borderRadius: 999, backgroundColor: colors.primary, justifyContent: 'center', opacity: pressed ? 0.85 : 1 })}>
           <Text style={{ color: colors.onPrimary, fontWeight: '700' }}>{t('setlist.done')}</Text>
         </Pressable>
@@ -118,7 +114,7 @@ export function SetlistCard({ service: sv, list, onChange, startEditing }: { ser
   function editor_() {
     return (
       <View style={{ marginTop: 10, padding: 14, borderRadius: 14, backgroundColor: colors.soft, borderWidth: 1, borderColor: colors.border }} testID="song-editor">
-        <Field label={t('setlist.songTitle')} value={form!.title} onChangeText={v => setForm(f => f && { ...f, title: v })} testID="song-title" />
+        <Text style={{ color: colors.text, fontWeight: '700', fontSize: 15, marginBottom: 6 }} testID="song-title">{form!.title}</Text>
         <Text style={s.label}>{t('setlist.key')}</Text>
         <View style={[s.row, { marginVertical: 6 }]}>{KEYS.map(k => <Chip key={k} label={k} active={form!.key === k} testID={`song-keychip-${k}`} onPress={() => setForm(f => f && { ...f, key: f.key === k ? '' : k })} />)}</View>
         <Field label={t('setlist.customKey')} value={form!.key} maxLength={8} onChangeText={v => setForm(f => f && { ...f, key: v })} testID="song-key" />
