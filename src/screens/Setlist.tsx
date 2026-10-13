@@ -7,21 +7,39 @@ import { Service, SetlistItem } from '../types';
 
 const KEYS = ['C', 'D', 'E', 'F', 'G', 'A', 'B', 'Bb', 'Eb', 'Ab'];
 
-/** Service setlist card (detail screen). Visible only if AppContext left `setlist` on the service (or the viewer can edit). */
-export function SetlistCard({ service: sv }: { service: Service }) {
+const cleanItem = (p: { key?: string; notes?: string; songId?: string | null }) => {
+  const o: Partial<SetlistItem> = {}; const k = p.key?.trim().slice(0, 8); const n = p.notes?.trim().slice(0, 200);
+  if (k) o.key = k; if (n) o.notes = n; if (p.songId) o.songId = p.songId; return o;
+};
+/** Pure setlist edits (pending state; persisted by the screen's Save). */
+export const setlistOps = {
+  add: (l: SetlistItem[], song: { title: string; key?: string; notes?: string; songId?: string | null }): SetlistItem[] =>
+    [...l, { id: `so-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`, title: song.title.trim(), ...cleanItem(song) }],
+  update: (l: SetlistItem[], id: string, p: { title: string; key?: string; notes?: string }): SetlistItem[] =>
+    l.map(x => x.id === id ? { id: x.id, title: p.title.trim(), ...cleanItem({ ...p, songId: x.songId }) } : x),
+  remove: (l: SetlistItem[], id: string) => l.filter(x => x.id !== id),
+  move: (l: SetlistItem[], id: string, dir: 'up' | 'down') => { const i = l.findIndex(x => x.id === id); const j = dir === 'up' ? i - 1 : i + 1; if (i < 0 || j < 0 || j >= l.length) return l; const n = [...l]; [n[i], n[j]] = [n[j], n[i]]; return n; },
+};
+
+/** Service setlist card. Controlled: `list` is the pending setlist, `onChange` updates it (nothing persists until the screen's Save). */
+export function SetlistCard({ service: sv, list, onChange, startEditing }: { service?: Service; list: SetlistItem[]; onChange: (l: SetlistItem[]) => void; startEditing?: boolean }) {
   const colors = useColors(); const s = useStyles();
-  const { data, t, canLive, canEditSetlist, addSong, updateSong, removeSong, moveSong } = useMe();
+  const { data, t, canEditSetlist } = useMe();
   const editor = canEditSetlist(sv);
-  const list = sv.setlist ?? [];
-  const [editing, setEditing] = useState(false);
+  const addSong = (_: unknown, song: Parameters<typeof setlistOps.add>[1]) => { if (!song.title.trim()) return t('errors.songTitle'); onChange(setlistOps.add(list, song)); return null; };
+  const updateSong = (_: unknown, id: string, p: { title: string; key?: string; notes?: string }) => { if (!p.title.trim()) return t('errors.songTitle'); onChange(setlistOps.update(list, id, p)); return null; };
+  const removeSong = (_: unknown, id: string) => onChange(setlistOps.remove(list, id));
+  const moveSong = (_: unknown, id: string, dir: 'up' | 'down') => onChange(setlistOps.move(list, id, dir));
+  const svId = sv?.id;
+  const [editing, setEditing] = useState(!!startEditing);
   const [form, setForm] = useState<{ id: string | null; title: string; key: string; notes: string } | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [pick, setPick] = useState<string | null>(null);
-  if (!editor && !sv.setlist) return null;
+  if (!editor && !sv?.setlist) return null;
   const open = (x?: SetlistItem) => { setErr(null); setForm({ id: x?.id ?? null, title: x?.title ?? '', key: x?.key ?? '', notes: x?.notes ?? '' }); };
   const submit = () => {
     if (!form) return;
-    const e = form.id ? updateSong(sv.id, form.id, { title: form.title, key: form.key, notes: form.notes }) : addSong(sv.id, { title: form.title, key: form.key, notes: form.notes });
+    const e = form.id ? updateSong(svId, form.id, { title: form.title, key: form.key, notes: form.notes }) : addSong(svId, { title: form.title, key: form.key, notes: form.notes });
     setErr(e); if (!e) setForm(null);
   };
   return (
@@ -60,9 +78,9 @@ export function SetlistCard({ service: sv }: { service: Service }) {
             </View> : null}
             {x.songId && (data.songs ?? []).some(z => z.id === x.songId) ? <Pressable testID={`song-chords-${x.id}`} accessibilityLabel={x.title} onPress={() => router.push((x.key ? `/song/${x.songId}?key=${encodeURIComponent(x.key)}` : `/song/${x.songId}`) as any)} hitSlop={8} style={{ marginLeft: 8 }}><Icon name="musical-notes-outline" size={20} /></Pressable> : null}
             {editing && <View style={[s.row, { flexWrap: 'nowrap', marginLeft: 4 }]}>
-              <IconButton testID={`song-up-${x.id}`} icon="chevron-up" color={colors.muted} label={t('setlist.up', { title: x.title })} onPress={() => moveSong(sv.id, x.id, 'up')} />
-              <IconButton testID={`song-down-${x.id}`} icon="chevron-down" color={colors.muted} label={t('setlist.down', { title: x.title })} onPress={() => moveSong(sv.id, x.id, 'down')} />
-              <IconButton testID={`song-rm-${x.id}`} icon="remove-circle-outline" color={colors.red} label={t('setlist.remove', { title: x.title })} onPress={() => removeSong(sv.id, x.id)} />
+              <IconButton testID={`song-up-${x.id}`} icon="chevron-up" color={colors.muted} label={t('setlist.up', { title: x.title })} onPress={() => moveSong(svId, x.id, 'up')} />
+              <IconButton testID={`song-down-${x.id}`} icon="chevron-down" color={colors.muted} label={t('setlist.down', { title: x.title })} onPress={() => moveSong(svId, x.id, 'down')} />
+              <IconButton testID={`song-rm-${x.id}`} icon="remove-circle-outline" color={colors.red} label={t('setlist.remove', { title: x.title })} onPress={() => removeSong(svId, x.id)} />
             </View>}
           </View>
           {form?.id === x.id && editor_()}
@@ -84,7 +102,7 @@ export function SetlistCard({ service: sv }: { service: Service }) {
           <CardHeader icon="library-outline" title={t('song.pick')} />
           <SearchField value={pick} onChangeText={setPick} placeholder={t('dept.search')} testID="pick-search" />
           {(data.songs ?? []).filter(z => !pick.trim() || (z.title + ' ' + (z.composer ?? z.artist ?? '')).toLowerCase().includes(pick.trim().toLowerCase())).sort((a, b) => a.title.localeCompare(b.title)).map(z => (
-            <Pressable key={z.id} testID={`pick-${z.id}`} accessibilityRole="button" onPress={() => { addSong(sv.id, { title: z.title, key: z.key, songId: z.id }); setPick(null); }}
+            <Pressable key={z.id} testID={`pick-${z.id}`} accessibilityRole="button" onPress={() => { addSong(svId, { title: z.title, key: z.key, songId: z.id }); setPick(null); }}
               style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', minHeight: 48, paddingHorizontal: 10, borderRadius: 10, backgroundColor: pressed ? colors.border : 'transparent' })}>
               <Icon name="add-circle-outline" size={18} color={colors.primaryText} style={{ marginRight: 10 }} />
               <View style={{ flex: 1 }}><Text style={{ color: colors.text, fontWeight: '600' }} numberOfLines={1}>{z.title}</Text>{(z.composer ?? z.artist) ? <Text style={s.small} numberOfLines={1}>{z.composer ?? z.artist}</Text> : null}</View>

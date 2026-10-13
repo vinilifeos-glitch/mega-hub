@@ -41,7 +41,9 @@ export const en = {
     currentPassword: 'Current password', temporaryPassword: 'Temporary password', newPassword: 'New password (min 4 characters)',
     confirmPassword: 'Confirm new password', savePassword: 'Save password', passwordsDontMatch: "New passwords don't match.", passwordChanged: 'Password changed.',
   },
+  unsaved: { title: 'Save changes?', msg: 'You have unsaved changes to this service.', save: 'Save', cancel: 'Cancel' },
   services: {
+    saveEdits: 'Save', discardEdits: 'Discard changes', unsavedBadge: 'Unsaved changes', changesSaved: 'Changes saved.',
     title: 'Services', greeting: 'Hi {name}. Upcoming services and who\'s serving.', newService: 'New service', editService: 'Edit service',
 draft: 'Draft', saveDraft: 'Save draft', publish: 'Publish', published: 'Service published.', draftSaved: 'Draft saved.', deleteDraft: 'Delete draft', deleteDraftConfirm: 'Delete draft {title} on {date}? Its assignments will be removed too.', draftDeleted: 'Draft deleted.', draftHint: 'Draft — only the owner and admins can see it.',
     alreadyInRole: 'Already in this role', deleteService: 'Delete service', deleteConfirmTitle: 'Delete service?', deleteConfirm: 'Delete {title} on {date}?', backToServices: 'Back to services',

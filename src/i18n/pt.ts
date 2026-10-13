@@ -43,7 +43,9 @@ export const pt: Dict = {
     currentPassword: 'Senha atual', temporaryPassword: 'Senha temporária', newPassword: 'Nova senha (mín. 4 caracteres)',
     confirmPassword: 'Confirme a nova senha', savePassword: 'Salvar senha', passwordsDontMatch: 'As novas senhas não coincidem.', passwordChanged: 'Senha alterada.',
   },
+  unsaved: { title: 'Salvar alterações?', msg: 'Você tem alterações não salvas neste culto.', save: 'Salvar', cancel: 'Cancelar' },
   services: {
+    saveEdits: 'Salvar', discardEdits: 'Descartar alterações', unsavedBadge: 'Alterações não salvas', changesSaved: 'Alterações salvas.',
     title: 'Cultos', greeting: 'Olá, {name}. Próximos cultos e quem vai servir.', newService: 'Novo culto', editService: 'Editar culto',
 draft: 'Rascunho', saveDraft: 'Salvar rascunho', publish: 'Publicar', published: 'Culto publicado.', draftSaved: 'Rascunho salvo.', deleteDraft: 'Excluir rascunho', deleteDraftConfirm: 'Excluir o rascunho {title} em {date}? As escalas também serão removidas.', draftDeleted: 'Rascunho excluído.', draftHint: 'Rascunho — só o dono e os admins podem ver.',
     alreadyInRole: 'Já está nesta função', deleteService: 'Excluir culto', deleteConfirmTitle: 'Excluir culto?', deleteConfirm: 'Excluir {title} em {date}?', backToServices: 'Voltar aos cultos',

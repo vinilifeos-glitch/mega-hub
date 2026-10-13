@@ -1,17 +1,18 @@
 import { useTabReset } from '../tabReset';
 import { useLocalSearchParams, router } from 'expo-router';
 import { SetlistCard } from './Setlist';
+import { leaveGuarded, useUnsavedGuard } from '../unsaved';
 import { displayName } from '../display';
 import { DateField } from '../components/DateField';
 import { useEffect, useState } from 'react';
 import { Alert, Modal, Platform, Pressable, Text, View } from 'react-native';
 import { confirmAsk } from '../components/confirm';
 import { PickerRow, PickerSectionLabel, BusyChoiceSheet } from '../components/rota';
-import { pickStatus, sameRoleSlot, roleIdx } from '../data/rota';
+import { pickStatus, sameRoleSlot, roleIdx, planAssign } from '../data/rota';
 import { formatDobInput, useMe } from '../state/AppContext';
 import { awayOn, noteOn } from '../data/unavailability';
 import { Badge, DeptBadge, StatusBadge, Button, DeptTitle, Icon, IconButton, deptIcon, Card, Chip, Empty, Field, Screen, Notice, useColors, useStyles } from '../components/ui';
-import { Service, Slot } from '../types';
+import { Assignment, Service, SetlistItem, Slot } from '../types';
 import { formatTimeInput, isoToDdmm, toIso, todayIso, upcomingSundayIso } from '../data/dates';
 
 
@@ -32,7 +33,7 @@ export function ServicesHome() {
     const sv = data.services.find(x => x.id === view.id);
     if (!sv) { setView(null); return null; }
     if (view.kind === 'edit') return <ServiceForm service={sv} onDeleted={m => { setMsg(m); setView(null); }} onClose={m => { setMsg(m ?? null); setView({ kind: 'detail', id: sv.id }); }} />;
-    return <ServiceDetail service={sv} msg={msg} onBack={() => { setMsg(null); setView(null); }} onEdit={() => setView({ kind: 'edit', id: sv.id })} onDeleted={m => { setMsg(m); setView(null); }} />;
+    return <ServiceDetail service={sv} msg={msg} onBack={m => { setMsg(m ?? null); setView(null); }} onEdit={() => leaveGuarded(() => setView({ kind: 'edit', id: sv.id }))} onDeleted={m => { setMsg(m); setView(null); }} />;
   }
   const upcoming = data.services.filter(x => x.date >= todayIso()).sort((a, b) => (a.date + a.start).localeCompare(b.date + b.start));
   return (
@@ -66,9 +67,39 @@ export function ServicesHome() {
   );
 }
 
-function ServiceDetail({ service: sv, msg, onBack, onEdit, onDeleted }: { service: Service; msg: string | null; onBack: () => void; onEdit: () => void; onDeleted: (msg: string) => void }) {
+function ServiceDetail({ service: sv, msg, onBack, onEdit, onDeleted }: { service: Service; msg: string | null; onBack: (msg?: string) => void; onEdit: () => void; onDeleted: (msg: string) => void }) {
   const colors = useColors(); const s = useStyles();
-  const { data, currentUser, canManage, assign, unassign, whyBlocked, deleteService, publishService, t, fmtDate, deptName, roleName } = useMe();
+  const { data, currentUser, canManage, saveServiceEdits, canEditSetlist, deleteService, publishService, t, fmtDate, deptName, roleName } = useMe();
+  // Pending edits (nothing persists until Save). null = no pending change for that part (shows stored data).
+  const stored = data.assignments.filter(a => a.serviceId === sv.id);
+  const [pAsg, setPAsg] = useState<Assignment[] | null>(null);
+  const [pSet, setPSet] = useState<SetlistItem[] | null>(null);
+  const asg = pAsg ?? stored; const setlist = pSet ?? sv.setlist ?? [];
+  const norm = (l: Assignment[]) => JSON.stringify(l.map(a => [a.id, a.userId]).sort());
+  const dirty = (pAsg !== null && norm(pAsg) !== norm(stored)) || (pSet !== null && JSON.stringify(pSet) !== JSON.stringify(sv.setlist ?? []));
+  const [savedMsg, setSavedMsg] = useState<string | null>(null);
+  const commit = (): string | false => {
+    if (!dirty) return '';
+    const e = saveServiceEdits(sv.id, { ...(pAsg ? { assignments: pAsg } : {}), ...(pSet ? { setlist: pSet } : {}) });
+    if (e) { setErr(e); return false; }
+    setPAsg(null); setPSet(null); setErr(null); return t('services.changesSaved');
+  };
+  const discard = () => { setPAsg(null); setPSet(null); setErr(null); setOpen(null); };
+  useUnsavedGuard(dirty, { save: commit, back: m => onBack(m) });
+  const unassign = (id: string) => setPAsg(asg.filter(a => a.id !== id));
+  const assign = (serviceId: string, departmentId: string, position: string, index: number, userId: string, mode?: 'double' | 'swap'): string | null => {
+    if (!canManage(departmentId)) return t('errors.slotScope');
+    const u = data.users.find(x => x.id === userId); if (!u || !u.active) return t('errors.notFound');
+    if (!(u.positions?.[departmentId] ?? []).includes(position)) return t('errors.doesntHoldRole', { name: u.firstName, role: position });
+    if (awayOn(u, sv.date)) return t('errors.unavailableThatDay', { name: u.firstName });
+    const tgt = `${serviceId}:${departmentId}:${position}:${index}`;
+    if (sameRoleSlot(asg, userId, departmentId, position, tgt)) return t('errors.sameRole', { name: u.firstName, role: roleName(departmentId, position) });
+    if (mode === 'swap' && asg.some(a => a.userId === userId && a.id !== tgt && !canManage(a.departmentId))) return t('errors.slotScope');
+    const r = planAssign(asg, { serviceId, departmentId, position, index, userId }, mode);
+    if ('error' in r) return t('errors.alreadyServing', { name: u.firstName });
+    setPAsg(r.assignments); return null;
+  };
+  const canEditAny = data.departments.some(d => canManage(d.id) && sv.slots.some(z => z.departmentId === d.id)) || canEditSetlist(sv);
   const [open, setOpen] = useState<string | null>(null); // slot key being filled
   const [err, setErr] = useState<string | null>(null);
   const [busyPick, setBusyPick] = useState<{ m: { firstName: string; username: string }; detail: string; run: (mode: 'double' | 'swap') => void } | null>(null);
@@ -78,9 +109,11 @@ function ServiceDetail({ service: sv, msg, onBack, onEdit, onDeleted }: { servic
     t('common.delete'), t('common.cancel'), () => { deleteService(sv.id); onDeleted(draft ? t('services.draftDeleted') : t('services.deleted')); });
   const [pubMsg, setPubMsg] = useState<string | null>(null);
   return (
-    <Screen title={sv.title} subtitle={`${fmtDate(sv.date)} · ${isoToDdmm(sv.date)} · ${sv.start}–${sv.end}${sv.location ? ` · ${sv.location}` : ''}`} backTo={{ label: t('services.title'), onPress: onBack }}>
-      {msg && <Notice text={msg} />}
+    <Screen title={sv.title} subtitle={`${fmtDate(sv.date)} · ${isoToDdmm(sv.date)} · ${sv.start}–${sv.end}${sv.location ? ` · ${sv.location}` : ''}`} backTo={{ label: t('services.title'), onPress: () => leaveGuarded(m => onBack(m)) }}>
+      {msg && !savedMsg && <Notice text={msg} />}
+      {savedMsg && !dirty && <Notice text={savedMsg} />}
       {pubMsg && <Notice text={pubMsg} />}
+      {dirty && <View testID="svd-dirty" style={{ marginBottom: 8 }}><StatusBadge status="draft" label={t('services.unsavedBadge')} /></View>}
       {draft && <View style={[s.row, { marginBottom: 8 }]}><StatusBadge status="draft" label={t('services.draft')} testID="draft-badge" /><Text style={[s.small, { marginLeft: 8, flex: 1 }]}>{t('services.draftHint')}</Text></View>}
       {err && <Notice tone="error" text={err} />}
       <Modal visible={!!busyPick} transparent animationType="fade" onRequestClose={() => setBusyPick(null)}>
@@ -100,7 +133,7 @@ function ServiceDetail({ service: sv, msg, onBack, onEdit, onDeleted }: { servic
             {!manage && <Text style={s.small}>{t('common.viewOnly')}</Text>}
             {slots.flatMap(sl => Array.from({ length: sl.count }, (_, i) => {
               const key = `${sv.id}:${d.id}:${sl.position}:${i}`;
-              const a = data.assignments.find(x => x.id === key);
+              const a = asg.find(x => x.id === key);
               const who = data.users.find(u => u.id === a?.userId);
               const me = who?.id === currentUser.id;
               const holders = members.filter(m => (m.positions?.[d.id] ?? []).includes(sl.position));
@@ -115,8 +148,8 @@ function ServiceDetail({ service: sv, msg, onBack, onEdit, onDeleted }: { servic
                   </View>
                   {open === key && (() => {
                     const rows = holders.filter(m => m.id !== who?.id).map(m => {
-                      const away = awayOn(m, sv.date); const same = sameRoleSlot(data.assignments.filter(z => z.serviceId === sv.id), m.id, d.id, sl.position, key);
-                      const st = away ? 'away' as const : same ? 'same' as const : pickStatus(data.assignments, sv.id, m.id, key, away);
+                      const away = awayOn(m, sv.date); const same = sameRoleSlot(asg, m.id, d.id, sl.position, key);
+                      const st = away ? 'away' as const : same ? 'same' as const : pickStatus(asg, sv.id, m.id, key, away);
                       const detail = st === 'same' ? t('services.alreadyInRole') : st === 'away' ? (noteOn(m, sv.date) ?? t('rota.away')) : undefined;
                       return { m, st, detail };
                     });
@@ -129,7 +162,7 @@ function ServiceDetail({ service: sv, msg, onBack, onEdit, onDeleted }: { servic
                           <View key={k} testID={`pick-section-${k}`}>
                             {k !== 'same' && <PickerSectionLabel kind={k} count={g.length} />}
                             {g.map(r => <PickerRow key={r.m.id} name={displayName(r.m).replace(/^@/, '')} status={k === 'same' ? 'away' : k} detail={r.detail} testID={`pick-${k}-${r.m.username}`}
-                              onPress={k === 'free' ? () => pick(r.m) : k === 'busy' ? () => setBusyPick({ m: r.m, detail: data.assignments.filter(z => z.serviceId === sv.id && z.userId === r.m.id && z.id !== key).map(z => roleName(z.departmentId, z.position)).join(', '), run: (mode: 'double' | 'swap') => pick(r.m, mode) }) : undefined} />)}
+                              onPress={k === 'free' ? () => pick(r.m) : k === 'busy' ? () => setBusyPick({ m: r.m, detail: asg.filter(z => z.userId === r.m.id && z.id !== key).map(z => roleName(z.departmentId, z.position)).join(', '), run: (mode: 'double' | 'swap') => pick(r.m, mode) }) : undefined} />)}
                           </View>); })}
                       </View>
                     );
@@ -140,7 +173,9 @@ function ServiceDetail({ service: sv, msg, onBack, onEdit, onDeleted }: { servic
           </Card>
         );
       })}
-      <SetlistCard service={sv} />
+      <SetlistCard service={sv} list={setlist} onChange={l => setPSet(l)} />
+      {canEditAny && <Button label={t('services.saveEdits')} onPress={() => { const m = commit(); if (m) setSavedMsg(m); }} testID="svd-save" />}
+      {canEditAny && dirty && <Button label={t('services.discardEdits')} outline onPress={discard} testID="svd-discard" />}
       <View style={[s.row, { marginTop: 4, marginBottom: 4 }]}>{([['checkmark-circle-outline', t('services.legendAvailable')], ['close-circle-outline', t('services.legendAway')], ['time-outline', t('services.legendBusy')]] as const).map(([n, l]) => <View key={l} style={[s.row, { marginRight: 16, marginBottom: 4 }]}><Icon name={n} size={16} style={{ marginRight: 4 }} /><Text style={s.small}>{l}</Text></View>)}</View>
       <Text style={s.small}>{t('services.onlyHolders')}</Text>
       {isOwner && draft && <Button label={t('services.publish')} onPress={() => { publishService(sv.id); setPubMsg(t('services.published')); }} testID="publish-service" />}
@@ -156,7 +191,8 @@ const newRowId = () => `r${++rowSeq}`;
 
 function ServiceForm({ service, onClose, onDeleted }: { service?: Service; onClose: (msg?: string, id?: string) => void; onDeleted?: (msg: string) => void }) {
   const colors = useColors(); const s = useStyles();
-  const { data, saveService, deleteService, canManage, t, deptName, roleName } = useMe();
+  const { data, saveService, deleteService, canManage, canEditSetlist, t, deptName, roleName } = useMe();
+  const [setlist, setSetlist] = useState<SetlistItem[]>(service?.setlist ?? []);
   const [title, setTitle] = useState(service?.title ?? t('services.defaultName'));
   const [location, setLocation] = useState(service?.location ?? DEFAULT_LOCATION);
   const [date, setDate] = useState(isoToDdmm(service?.date ?? upcomingSundayIso()));
@@ -196,9 +232,14 @@ function ServiceForm({ service, onClose, onDeleted }: { service?: Service; onClo
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [iso]);
   const isDraftSv = service?.status === 'draft';
-  const save = (status: 'draft' | 'published') => {
-    if (!iso) return setErr(t('errors.dateInvalid'));
-    if (!service && iso < todayIso()) return setErr(t('errors.datePast'));
+  const snap = () => JSON.stringify([title, location, date, start, end, data.departments.map(d => rows.filter(x => x.dep === d.id).sort((a, b) => roleIdx(data, d.id, a.role) - roleIdx(data, d.id, b.role)).map(x => [x.role, x.assigneeId ?? ''])), setlist]);
+  const [initial] = useState(snap);
+  const [done, setDone] = useState(false);
+  const dirty = !done && snap() !== initial;
+  /** Validate + persist. Returns the success message, or false (error shown). Never navigates. */
+  const persist = (status: 'draft' | 'published'): string | false => {
+    if (!iso) { setErr(t('errors.dateInvalid')); return false; }
+    if (!service && iso < todayIso()) { setErr(t('errors.datePast')); return false; }
     const slots: Slot[] = []; const pk: { departmentId: string; position: string; index: number; userId: string }[] = [];
     for (const d of data.departments) for (const p of [...d.positions, ...rows.filter(x => x.dep === d.id && !d.positions.includes(x.role)).map(x => x.role)].filter((v, i, a) => a.indexOf(v) === i)) {
       const rs = rows.filter(x => x.dep === d.id && x.role === p);
@@ -206,12 +247,17 @@ function ServiceForm({ service, onClose, onDeleted }: { service?: Service; onClo
       slots.push({ departmentId: d.id, position: p, count: rs.length });
       rs.forEach((x, i) => { if (x.assigneeId) pk.push({ departmentId: d.id, position: p, index: i, userId: x.assigneeId }); });
     }
-    const e = saveService(service?.id ?? null, { title, location, date: iso, start, end, slots, status }, pk);
-    if (e) return setErr(e);
-    onClose(status === 'draft' ? t('services.draftSaved') : isDraftSv ? t('services.published') : service ? t('services.updated') : t('services.created'));
+    const withSet = canEditSetlist(service) && (setlist.length || service?.setlist) ? { setlist } : {};
+    const e = saveService(service?.id ?? null, { title, location, date: iso, start, end, slots, status, ...withSet }, pk);
+    if (e) { setErr(e); return false; }
+    setDone(true);
+    return status === 'draft' ? t('services.draftSaved') : isDraftSv ? t('services.published') : service ? t('services.updated') : t('services.created');
   };
+  const save = (status: 'draft' | 'published') => { const m = persist(status); if (m !== false) onClose(m); };
+  useUnsavedGuard(dirty, { save: () => persist(service && !isDraftSv ? 'published' : isDraftSv ? 'draft' : 'published'), back: m => onClose(m) });
+  const leave = () => leaveGuarded(m => onClose(m));
   return (
-    <Screen title={service ? t('services.editService') : t('services.newService')} subtitle={t('services.formSubtitle')}>
+    <Screen title={service ? t('services.editService') : t('services.newService')} subtitle={t('services.formSubtitle')} backTo={{ label: service ? service.title : t('services.title'), onPress: leave }}>
       <Modal visible={!!formBusy} transparent animationType="fade" onRequestClose={() => setFormBusy(null)}>
         <View style={{ flex: 1, justifyContent: 'center', padding: 16, backgroundColor: 'rgba(0,0,0,0.4)' }}>
           {formBusy && <BusyChoiceSheet name={formBusy.u.username} detail={formBusy.detail} onDouble={() => formBusy.run('double')} onSwap={() => formBusy.run('swap')} onCancel={() => setFormBusy(null)}
@@ -292,11 +338,12 @@ function ServiceForm({ service, onClose, onDeleted }: { service?: Service; onClo
           </Card>
         );
       })}
+      {canEditSetlist(service) && <SetlistCard service={service} list={setlist} onChange={setSetlist} startEditing={!service} />}
       {err && <Notice tone="error" text={err} />}
       <Button label={!service ? t('services.createService') : isDraftSv ? t('services.publish') : t('services.saveService')} onPress={() => save('published')} testID="sv-save" />
       {(!service || isDraftSv) && <Button label={t('services.saveDraft')} outline onPress={() => save('draft')} testID="sv-save-draft" />}
       {isDraftSv && <Button label={t('services.deleteDraft')} danger testID="sv-delete-draft" onPress={() => confirmAsk(t('services.deleteDraft'), t('services.deleteDraftConfirm', { title: service!.title, date: isoToDdmm(service!.date) }), t('common.delete'), t('common.cancel'), () => { deleteService(service!.id); onDeleted?.(t('services.draftDeleted')); })} />}
-      <Button label={t('common.cancel')} outline onPress={() => onClose()} />
+      <Button label={t('common.cancel')} outline onPress={leave} testID="sv-cancel" />
     </Screen>
   );
 }
