@@ -2,6 +2,8 @@ import { useTabReset } from '../../src/tabReset';
 import { DateField } from '../../src/components/DateField';
 import { useState } from 'react';
 import { router } from 'expo-router';
+import { Platform } from 'react-native';
+import { downloadExport } from '../../src/data/export';
 import { Text } from 'react-native';
 import { formatDobInput, useMe } from '../../src/state/AppContext';
 import { Button, Card, Field, LanguagePicker, ThemeToggle, Screen, Notice, useColors, useStyles } from '../../src/components/ui';
@@ -10,7 +12,7 @@ import { ChangePasswordScreen } from '../../src/screens/Auth';
 
 export default function MyProfile() {
   const colors = useColors(); const s = useStyles();
-  const { currentUser: me, saveMyProfile, signOut, t, language, setLanguage, theme, setTheme, canManageAccounts } = useMe();
+  const { currentUser: me, saveMyProfile, signOut, t, language, setLanguage, theme, setTheme, canManageAccounts, data } = useMe();
   const [mode, setMode] = useState<'view' | 'edit' | 'password'>('view');
   useTabReset(() => setMode('view'));
   const init = () => ({ firstName: me.firstName, middleNames: me.middleNames, lastName: me.lastName, dob: me.dob, contact: me.contact ?? '', email: me.email ?? '' });
@@ -50,6 +52,10 @@ export default function MyProfile() {
       {canManageAccounts && <>
         <Text style={s.section}>{t('more.admin')}</Text>
         <Button label={t('more.accounts')} outline onPress={() => router.navigate('/accounts' as any)} testID="profile-accounts" />
+        {me.role === 'owner' && Platform.OS === 'web' && <>
+          <Button label={t('more.exportData')} outline onPress={() => { try { setMsg(t('more.exported', { file: downloadExport(me, data) })); } catch { setMsg(t('more.exportFailed')); } }} testID="export-data" />
+          <Text style={[s.small, { marginBottom: 8 }]}>{t('more.exportHint')}</Text>
+        </>}
       </>}
       <Text style={s.section}>{t('profile.accountSection')}</Text>
       <Button label={t('profile.editDetails')} onPress={() => { setMsg(null); setF(init()); setMode('edit'); }} testID="edit-me" />

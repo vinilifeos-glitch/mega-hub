@@ -126,7 +126,7 @@ draft: 'Draft', saveDraft: 'Save draft', publish: 'Publish', published: 'Service
   more: {
     title: 'More', subtitle: 'Your profile, settings and admin tools.', back: 'Back to More',
     profile: 'My profile', profileHint: 'Personal details, language and appearance', team: 'My team', teamHint: 'People in the departments you administer',
-    accounts: 'Accounts', ownerOnlyField: 'Only the owner can change name and contact details.', accountsHint: "Create and manage everyone's sign-in", settings: 'Settings', admin: 'Admin tools',
+    accounts: 'Accounts', ownerOnlyField: 'Only the owner can change name and contact details.', accountsHint: "Create and manage everyone's sign-in", settings: 'Settings', admin: 'Admin tools', exportData: 'Export data', exportHint: 'Downloads all app data and Kids lesson files as one JSON file (for the move to the online database). Keep it private.', exported: 'Saved {file}', exportFailed: 'Export failed.',
   },
   ui: { noDeptSection: 'Not in a department yet', rolesLabel: 'Roles', assignPlaceholder: 'Assign', addRole: 'Add role', addSong: 'Add song', textSmaller: 'Smaller text', textBigger: 'Bigger text' },
   rota: { available: 'Available', servingElsewhere: 'Serving elsewhere', unavailable: 'Unavailable', rolesAssigned: 'Roles already assigned: {roles}', swap: 'Reassign', doubleBook: 'Double book', cancel: 'Cancel', yourRole: 'Your role', yourTeam: 'Your team', unfilled: 'Unfilled', live: 'Start Live mode', free: 'Free', away: 'Away' },
