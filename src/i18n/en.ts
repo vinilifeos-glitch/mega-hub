@@ -70,7 +70,7 @@ draft: 'Draft', saveDraft: 'Save draft', publish: 'Publish', published: 'Service
   myRota: { view: 'View details', yourRoles: 'Your roles', team: 'Team on this service', you: 'you', notFound: 'This service is not on your rota.', title: 'My Rota', subtitle: "Services you're scheduled to serve.", empty: "You're not on any rota yet. Keep your unavailable dates up to date so admins can plan." },
   departmentsScreen: {
     title: 'Departments', subtitle: 'Where you serve and the roles you hold.', mine: 'My departments & roles', all: 'All departments',
-    assignedBy: 'Departments and roles are assigned by {owner} (the owner).', admins: 'Admins: {names}', noAdmins: 'No admins yet. The owner ({owner}) manages this department.',
+    assignedBy: 'Departments and roles are assigned by {owner} (the owner).', manageInAccounts: 'To see and manage every department, open Profile → Accounts.', admins: 'Admins: {names}', noAdmins: 'No admins yet. The owner ({owner}) manages this department.',
     roles: 'Roles: {roles}', people: '{count} people: {names}', member: '1 member: {names}', members: '{count} members: {names}', noMembers: 'No members yet', notAssigned: 'Not assigned to any department yet.', noRoles: 'No roles assigned yet.', adminSuffix: ' · Admin',
   },
   team: {
@@ -87,7 +87,7 @@ draft: 'Draft', saveDraft: 'Save draft', publish: 'Publish', published: 'Service
   },
   accounts: {
     exportData: 'Export data (JSON)', exported: 'Export downloaded. Keep it private: it contains contact details.',
-    title: 'Accounts', subtitle: '{count} active accounts', listSubtitle: 'Everyone who can sign in to Mega Hub.', ownerOnlySubtitle: "Create and manage everyone's sign-in.", editTitle: 'Edit {name}', editA11y: 'Edit {name}', newAccount: 'New account', newSubtitle: 'Set up a sign-in for a new person.',
+    title: 'Accounts', subtitle: '{count} active accounts', listSubtitle: 'Everyone who can sign in to Mega Hub.', ownerOnlySubtitle: "Create and manage everyone's sign-in.", editTitle: 'Edit {name}', editA11y: 'Edit {name}', allDepartments: 'All departments', allDepartmentsHint: 'Open a department to edit its page, team, songs or lessons.', newAccount: 'New account', newSubtitle: 'Set up a sign-in for a new person.',
     ownerOnly: 'Only the owner can manage accounts.', noMatch: 'No accounts match.', department: 'Department', noDepartment: 'No department',
     roleIn: 'Role in {dept}', clearFilters: 'Clear filters', adminOf: 'Admin of: {depts}', noneYet: 'none yet', noDeptYet: 'No department yet',
     signIn: 'Sign-in', access: 'Access', administers: 'Administers departments', setPassword: 'Set new password (leave blank to keep current)',
