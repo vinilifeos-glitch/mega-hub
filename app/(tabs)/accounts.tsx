@@ -1,11 +1,13 @@
+import { displayName } from '../../src/display';
 import { sortRoles } from '../../src/data/rota';
 import { UnavailEditor } from '../../src/components/UnavailEditor';
 import { useTabReset } from '../../src/tabReset';
 import { DateField } from '../../src/components/DateField';
 import { useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
+import { router } from 'expo-router';
 import { AccountInput, formatDobInput, useMe, validContact, validDob, validEmail } from '../../src/state/AppContext';
-import { Badge, RoleBadge, Button, Icon, deptIcon, Card, Chip, Empty, Field, Screen, Notice, useColors, useStyles } from '../../src/components/ui';
+import { Badge, RoleBadge, Button, DeptTitle, Icon, deptIcon, Card, Chip, Empty, Field, Screen, Notice, useColors, useStyles } from '../../src/components/ui';
 import { Role, Unavailability, User } from '../../src/types';
 import { NOTE_MAX } from '../../src/data/unavailability';
 import { toIso, todayIso } from '../../src/data/dates';
@@ -15,7 +17,7 @@ const fold = (x: string) => x.normalize('NFD').replace(/[\u0300-\u036f]/g, '').t
 
 export default function Accounts() {
   const colors = useColors(); const s = useStyles();
-  const { data, canManageAccounts, currentUser, t, deptName, roleName, tierName } = useMe();
+  const { data, canManage, canManageAccounts, currentUser, t, deptName, roleName, tierName, ownerName } = useMe();
   const [mode, setMode] = useState<{ kind: 'new' } | { kind: 'edit'; id: string } | null>(null);
   useTabReset(() => setMode(null));
   const [notice, setNotice] = useState<string | null>(null);
@@ -42,6 +44,26 @@ export default function Accounts() {
   return (
     <Screen title={t('accounts.title')} subtitle={t('accounts.listSubtitle')}>
       <Button label={t('accounts.newAccount')} onPress={() => { setNotice(null); setMode({ kind: 'new' }); }} testID="newaccount" />
+      <Text style={s.section} testID="acc-depts-section">{t('accounts.allDepartments')}</Text>
+      <Text style={[s.small, { marginBottom: 8 }]}>{t('accounts.allDepartmentsHint')}</Text>
+      {data.departments.map(d => {
+        const admins = data.users.filter(u => u.active && u.role === 'admin' && (u.adminOf ?? []).includes(d.id));
+        const members = data.users.filter(u => u.active && u.departmentIds.includes(d.id));
+        return (
+          <Pressable key={d.id} testID={`acc-dept-${d.id}`} accessibilityRole="button" accessibilityLabel={t('dept.openA11y', { dept: deptName(d.id) })} onPress={() => router.push(`/dept/${d.id}` as any)}><Card style={{ borderLeftWidth: 3, borderLeftColor: d.color }}>
+            <View style={[s.row, { justifyContent: 'space-between', flexWrap: 'nowrap' }]}>
+              <View style={{ flex: 1 }}><DeptTitle dep={d} /></View>
+              {canManage(d.id) && <Badge tone="accent" icon="shield-checkmark" label={t('common.youManage')} />}
+              <Icon name="chevron-forward" size={18} color={colors.subtle} style={{ marginLeft: 8 }} />
+            </View>
+            <Text style={[s.small, { marginTop: 4 }]}>{admins.length ? t('departmentsScreen.admins', { names: admins.map(displayName).join(', ') }) : t('departmentsScreen.noAdmins', { owner: ownerName })}</Text>
+            <Text style={[s.label, { marginTop: 10, marginBottom: 6 }]}>{t('ui.rolesLabel')}</Text>
+            <View style={s.row}>{d.positions.map(p => <Badge key={p} label={roleName(d.id, p)} />)}</View>
+            <Text style={{ marginTop: 6, color: colors.text }}>{members.length ? t(members.length === 1 ? 'departmentsScreen.member' : 'departmentsScreen.members', { count: members.length, names: members.map(displayName).join(', ') }) : t('departmentsScreen.noMembers')}</Text>
+          </Card></Pressable>
+        );
+      })}
+
       {notice && <Card style={{ backgroundColor: colors.greenSoft, borderColor: colors.greenSoft, marginTop: 12 }}><Text selectable style={{ color: colors.text }}>{notice}</Text></Card>}
       <Card style={{ marginTop: 12 }}>
         <Field label={t('fields.search')} value={q} onChangeText={setQ} placeholder={t('fields.searchPlaceholder')} testID="acc-search" />

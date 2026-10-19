@@ -7,33 +7,33 @@ import { RolesView } from '../../src/screens/Profile';
 
 export default function Departments() {
   const colors = useColors(); const s = useStyles();
-  const { data, canManage, canViewDept, currentUser, t, ownerName, roleName, deptName } = useMe();
-  const seesAll = currentUser.role !== 'volunteer';
+  const { data, canManage, canManageAccounts, currentUser, t, ownerName, roleName, deptName } = useMe();
+  // Membership cards only (RolesView). Dept admins also see departments they administer even if not listed as members.
+  const mine = new Set([...(currentUser.departmentIds ?? []), ...((currentUser.role === 'admin' ? currentUser.adminOf : undefined) ?? [])]);
+  const extra = data.departments.filter(d => mine.has(d.id) && !currentUser.departmentIds.includes(d.id));
   return (
     <Screen title={t('departmentsScreen.title')} subtitle={t('departmentsScreen.subtitle')}>
       <Text style={s.section}>{t('departmentsScreen.mine')}</Text>
-      <RolesView user={currentUser} linkTestId={id => seesAll ? `my-dept-${id}` : `open-dept-${id}`} />
+      <RolesView user={currentUser} linkTestId={id => `open-dept-${id}`} />
+      {extra.map(d => {
+        const admins = data.users.filter(u => u.active && u.role === 'admin' && (u.adminOf ?? []).includes(d.id));
+        const members = data.users.filter(u => u.active && u.departmentIds.includes(d.id));
+        return (
+          <Pressable key={d.id} testID={`open-dept-${d.id}`} accessibilityRole="button" accessibilityLabel={t('dept.openA11y', { dept: deptName(d.id) })} onPress={() => router.push(`/dept/${d.id}` as any)}><Card style={{ borderLeftWidth: 3, borderLeftColor: d.color }}>
+            <View style={[s.row, { justifyContent: 'space-between', flexWrap: 'nowrap' }]}>
+              <View style={{ flex: 1 }}><DeptTitle dep={d} /></View>
+              {canManage(d.id) && <Badge tone="accent" icon="shield-checkmark" label={t('common.youManage')} />}
+              <Icon name="chevron-forward" size={18} color={colors.subtle} style={{ marginLeft: 8 }} />
+            </View>
+            <Text style={[s.small, { marginTop: 4 }]}>{admins.length ? t('departmentsScreen.admins', { names: admins.map(displayName).join(', ') }) : t('departmentsScreen.noAdmins', { owner: ownerName })}</Text>
+            <Text style={[s.label, { marginTop: 10, marginBottom: 6 }]}>{t('ui.rolesLabel')}</Text>
+            <View style={s.row}>{d.positions.map(p => <Badge key={p} label={roleName(d.id, p)} />)}</View>
+            <Text style={{ marginTop: 6, color: colors.text }}>{members.length ? t(members.length === 1 ? 'departmentsScreen.member' : 'departmentsScreen.members', { count: members.length, names: members.map(displayName).join(', ') }) : t('departmentsScreen.noMembers')}</Text>
+          </Card></Pressable>
+        );
+      })}
       {currentUser.role !== 'owner' && <Text style={[s.small, { marginBottom: 8 }]}>{t('departmentsScreen.assignedBy', { owner: ownerName })}</Text>}
-      {seesAll && <>
-        <Text style={s.section}>{t('departmentsScreen.all')}</Text>
-        {data.departments.filter(d => canViewDept(d.id)).map(d => {
-          const admins = data.users.filter(u => u.active && u.role === 'admin' && (u.adminOf ?? []).includes(d.id));
-          const members = data.users.filter(u => u.active && u.departmentIds.includes(d.id));
-          return (
-            <Pressable key={d.id} testID={`open-dept-${d.id}`} accessibilityRole="button" accessibilityLabel={t('dept.openA11y', { dept: deptName(d.id) })} onPress={() => router.push(`/dept/${d.id}` as any)}><Card style={{ borderLeftWidth: 3, borderLeftColor: d.color }}>
-              <View style={[s.row, { justifyContent: 'space-between', flexWrap: 'nowrap' }]}>
-                <View style={{ flex: 1 }}><DeptTitle dep={d} /></View>
-                {canManage(d.id) && <Badge tone="accent" icon="shield-checkmark" label={t('common.youManage')} />}
-                <Icon name="chevron-forward" size={18} color={colors.subtle} style={{ marginLeft: 8 }} />
-              </View>
-              <Text style={[s.small, { marginTop: 4 }]}>{admins.length ? t('departmentsScreen.admins', { names: admins.map(displayName).join(', ') }) : t('departmentsScreen.noAdmins', { owner: ownerName })}</Text>
-              <Text style={[s.label, { marginTop: 10, marginBottom: 6 }]}>{t('ui.rolesLabel')}</Text>
-              <View style={s.row}>{d.positions.map(p => <Badge key={p} label={roleName(d.id, p)} />)}</View>
-              <Text style={{ marginTop: 6, color: colors.text }}>{members.length ? t(members.length === 1 ? 'departmentsScreen.member' : 'departmentsScreen.members', { count: members.length, names: members.map(displayName).join(', ') }) : t('departmentsScreen.noMembers')}</Text>
-            </Card></Pressable>
-          );
-        })}
-      </>}
+      {canManageAccounts && <Text style={[s.small, { marginTop: 4 }]} testID="depts-manage-hint">{t('departmentsScreen.manageInAccounts')}</Text>}
     </Screen>
   );
 }

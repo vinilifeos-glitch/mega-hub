@@ -72,7 +72,7 @@ draft: 'Rascunho', saveDraft: 'Salvar rascunho', publish: 'Publicar', published:
   myRota: { view: 'Ver detalhes', yourRoles: 'Suas funções', team: 'Equipe neste culto', you: 'você', notFound: 'Este culto não está na sua escala.', title: 'Minha Escala', subtitle: 'Cultos em que você está escalado.', empty: 'Você ainda não está em nenhuma escala. Mantenha suas datas indisponíveis atualizadas para os administradores planejarem.' },
   departmentsScreen: {
     title: 'Departamentos', subtitle: 'Onde você serve e suas funções.', mine: 'Meus departamentos e funções', all: 'Todos os departamentos',
-    assignedBy: 'Departamentos e funções são definidos por {owner} (proprietário).', admins: 'Administradores: {names}', noAdmins: 'Nenhum administrador ainda. O proprietário ({owner}) cuida deste departamento.',
+    assignedBy: 'Departamentos e funções são definidos por {owner} (proprietário).', manageInAccounts: 'Para ver e gerenciar todos os departamentos, abra Perfil → Contas.', admins: 'Administradores: {names}', noAdmins: 'Nenhum administrador ainda. O proprietário ({owner}) cuida deste departamento.',
     roles: 'Funções: {roles}', people: '{count} pessoas: {names}', member: '1 membro: {names}', members: '{count} membros: {names}', noMembers: 'Nenhum membro ainda', notAssigned: 'Ainda não está em nenhum departamento.', noRoles: 'Nenhuma função atribuída ainda.', adminSuffix: ' · Administrador',
   },
   team: {
@@ -88,7 +88,7 @@ draft: 'Rascunho', saveDraft: 'Salvar rascunho', publish: 'Publicar', published:
     editProfile: 'Editar perfil', saveProfile: 'Salvar perfil', savedFor: 'Perfil de {name} salvo.',
   },
   accounts: {
-    title: 'Contas', subtitle: '{count} contas ativas', listSubtitle: 'Todos que podem entrar no Mega Hub.', ownerOnlySubtitle: 'Crie e gerencie o acesso de todos.', editTitle: 'Editar {name}', editA11y: 'Editar {name}', newAccount: 'Nova conta', newSubtitle: 'Crie um acesso para uma nova pessoa.',
+    title: 'Contas', subtitle: '{count} contas ativas', listSubtitle: 'Todos que podem entrar no Mega Hub.', ownerOnlySubtitle: 'Crie e gerencie o acesso de todos.', editTitle: 'Editar {name}', editA11y: 'Editar {name}', allDepartments: 'Todos os departamentos', allDepartmentsHint: 'Abra um departamento para editar a página, equipe, músicas ou lições.', newAccount: 'Nova conta', newSubtitle: 'Crie um acesso para uma nova pessoa.',
     ownerOnly: 'Só o proprietário pode gerenciar contas.', noMatch: 'Nenhuma conta encontrada.', department: 'Departamento', noDepartment: 'Sem departamento',
     roleIn: 'Função em {dept}', clearFilters: 'Limpar filtros', adminOf: 'Administra: {depts}', noneYet: 'nenhum ainda', noDeptYet: 'Ainda sem departamento',
     signIn: 'Acesso', access: 'Permissões', administers: 'Departamentos que administra', setPassword: 'Nova senha (deixe em branco para manter a atual)',
