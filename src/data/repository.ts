@@ -43,7 +43,9 @@ export function migrate(d0: AppData): AppData {
   const keep = new Set(services.map(s => s.id));
   const asg = assignments.filter(a => keep.has(a.serviceId) && typeof a.index === 'number');
   // service Kids lessons (additive): keep an ordered list of unique catalog ids; anything else is dropped
-  const services2 = services.map(s => s.lessons === undefined ? s : Array.isArray(s.lessons) ? { ...s, lessons: s.lessons.filter((x, i, a) => typeof x === 'string' && a.indexOf(x) === i) } : (({ lessons, ...r }) => r)(s) as typeof s);
+  const services1 = services.map(s => s.lessons === undefined ? s : Array.isArray(s.lessons) ? { ...s, lessons: s.lessons.filter((x, i, a) => typeof x === 'string' && a.indexOf(x) === i) } : (({ lessons, ...r }) => r)(s) as typeof s);
+  // assembly note (additive): missing = empty; a non-string value is dropped
+  const services2 = services1.map(s => s.assemblyNote === undefined || typeof s.assemblyNote === 'string' ? s : (({ assemblyNote, ...r }) => r)(s) as typeof s);
   return { ...d, users, services: services2, departments: departments.map(x => ({ ...x, leaderId: null })), assignments: asg };
 }
 

@@ -98,3 +98,9 @@ ok(visibleDeptPages(owner, DP) === DP, 'owner sees all dept pages');
 ok(visibleSongs(camilaT, { songs: [{ id: 'g', deptId: 'd-music' }] }).songs.length === 0 && !canEditSetlistRule(camilaT), 'Camila cannot view or create Music songs');
 ok(!canLiveRule(camilaT, 's1', [{ serviceId: 's1', userId: 'c' }]), 'Camila cannot open Live even if assigned');
 ok(!canEditDeptRule(lucasT, 'd-kids') && canEditDeptRule(lucasT, 'd-music'), 'edit only administered depts');
+// Assembly note: admin-level+ (owner, any tier-admin incl. dept admins) edit; volunteers never. Mirrors AppContext.saveService/saveServiceEdits.
+{ const P = await import('data:text/javascript,' + encodeURIComponent(js));
+  ok(P.canEditAssemblyNoteRule(owner) && P.canEditAssemblyNoteRule(admin) && P.canEditAssemblyNoteRule({ role: 'admin', adminOf: [] }), 'assembly note: owner + admins (dept or hub) edit');
+  ok(!P.canEditAssemblyNoteRule(vol) && !P.canEditAssemblyNoteRule(null), 'assembly note: volunteers / signed-out cannot edit');
+  ok(P.cleanAssemblyNote('a\nb  \n') === 'a\nb' && P.cleanAssemblyNote(5) === '' && P.cleanAssemblyNote('x'.repeat(3000)).length === P.ASSEMBLY_NOTE_MAX, 'assembly note: trailing space trimmed, non-string empty, capped');
+  console.log(n, 'passed'); }

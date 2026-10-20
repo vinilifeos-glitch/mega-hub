@@ -2,6 +2,7 @@ import React from 'react';
 import { useTabReset } from '../tabReset';
 import { useLocalSearchParams, router } from 'expo-router';
 import { SetlistCard } from './Setlist';
+import { AssemblyNoteCard } from './AssemblyNote';
 import { ServiceLessonsCard } from './ServiceLessons';
 import { leaveGuarded, useUnsavedGuard } from '../unsaved';
 import { displayName } from '../display';
@@ -71,12 +72,13 @@ export function ServicesHome() {
 
 function ServiceDetail({ service: sv, msg, onBack, onDeleted }: { service: Service; msg: string | null; onBack: (msg?: string) => void; onDeleted: (msg: string) => void }) {
   const colors = useColors(); const s = useStyles();
-  const { data, currentUser, canManage, saveServiceEdits, saveService, canEditSetlist, canEditServiceLessons, deleteService, publishService, t, fmtDate, deptName, roleName } = useMe();
+  const { data, currentUser, canManage, saveServiceEdits, saveService, canEditSetlist, canEditServiceLessons, canEditAssemblyNote, deleteService, publishService, t, fmtDate, deptName, roleName } = useMe();
   // Pending edits (nothing persists until Save). null = no pending change for that part (shows stored data).
   const stored = data.assignments.filter(a => a.serviceId === sv.id);
   const [pAsg, setPAsg] = useState<Assignment[] | null>(null);
   const [pSet, setPSet] = useState<SetlistItem[] | null>(null);
   const [pLes, setPLes] = useState<string[] | null>(null);
+  const [pNote, setPNote] = useState<string | null>(null);
   // Inline details (owner only, as before: saveService is owner-only)
   const canDetails = currentUser.role === 'owner';
   const storedDet = { title: sv.title, location: sv.location ?? '', date: isoToDdmm(sv.date), start: sv.start, end: sv.end };
@@ -86,9 +88,9 @@ function ServiceDetail({ service: sv, msg, onBack, onDeleted }: { service: Servi
   const detDirty = pDet !== null && JSON.stringify(pDet) !== JSON.stringify(storedDet);
   const newIso = detDirty ? toIso(det.date) : null;
   const [awayAsk, setAwayAsk] = useState(false);
-  const asg = pAsg ?? stored; const setlist = pSet ?? sv.setlist ?? []; const lessons = pLes ?? sv.lessons ?? [];
+  const asg = pAsg ?? stored; const setlist = pSet ?? sv.setlist ?? []; const lessons = pLes ?? sv.lessons ?? []; const note = pNote ?? sv.assemblyNote ?? '';
   const norm = (l: Assignment[]) => JSON.stringify(l.map(a => [a.id, a.userId]).sort());
-  const dirty = detDirty || (pAsg !== null && norm(pAsg) !== norm(stored)) || (pSet !== null && JSON.stringify(pSet) !== JSON.stringify(sv.setlist ?? [])) || (pLes !== null && JSON.stringify(pLes) !== JSON.stringify(sv.lessons ?? []));
+  const dirty = detDirty || (pAsg !== null && norm(pAsg) !== norm(stored)) || (pSet !== null && JSON.stringify(pSet) !== JSON.stringify(sv.setlist ?? [])) || (pLes !== null && JSON.stringify(pLes) !== JSON.stringify(sv.lessons ?? [])) || (pNote !== null && pNote.replace(/\s+$/, '') !== (sv.assemblyNote ?? ''));
   const [savedMsg, setSavedMsg] = useState<string | null>(null);
   const commit = (): string | false => {
     if (!dirty) return '';
@@ -98,9 +100,9 @@ function ServiceDetail({ service: sv, msg, onBack, onDeleted }: { service: Servi
       const ve = !det.title.trim() ? t('errors.nameRequired') : !iso ? t('errors.dateInvalid') : !hm.test(det.start) || !hm.test(det.end) ? t('errors.timeFormat') : det.end <= det.start ? t('errors.endAfterStart') : null;
       if (ve) { setErr(ve); return false; }
     }
-    if (pAsg || pSet || pLes) { const e = saveServiceEdits(sv.id, { ...(pAsg ? { assignments: pAsg } : {}), ...(pSet ? { setlist: pSet } : {}), ...(pLes ? { lessons: pLes } : {}) }); if (e) { setErr(e); return false; } }
+    if (pAsg || pSet || pLes || pNote !== null) { const e = saveServiceEdits(sv.id, { ...(pAsg ? { assignments: pAsg } : {}), ...(pSet ? { setlist: pSet } : {}), ...(pLes ? { lessons: pLes } : {}), ...(pNote !== null ? { assemblyNote: pNote } : {}) }); if (e) { setErr(e); return false; } }
     if (detDirty && iso) { const e = saveService(sv.id, { title: det.title, location: det.location, date: iso, start: det.start, end: det.end, slots: sv.slots, ...(sv.status ? { status: sv.status } : {}) }); if (e) { setErr(e); return false; } }
-    setPAsg(null); setPSet(null); setPLes(null); setPDet(null); setErr(null); return t('services.changesSaved');
+    setPAsg(null); setPSet(null); setPLes(null); setPNote(null); setPDet(null); setErr(null); return t('services.changesSaved');
   };
   useUnsavedGuard(dirty, { save: commit, back: m => onBack(m) });
   const unassign = (id: string) => setPAsg(asg.filter(a => a.id !== id));
@@ -119,7 +121,7 @@ function ServiceDetail({ service: sv, msg, onBack, onDeleted }: { service: Servi
   // People who would be dropped because they're away on the new (unsaved) date
   const awayNames = newIso && newIso !== sv.date ? asg.flatMap(a => { const u = data.users.find(x => x.id === a.userId); return u && awayOn(u, newIso) ? [`${displayName(u)} (${roleName(a.departmentId, a.position)})`] : []; }) : [];
   const saveAndBack = () => { const m = commit(); if (m !== false) onBack(m || undefined); };
-  const canEditAny = canDetails || data.departments.some(d => canManage(d.id) && sv.slots.some(z => z.departmentId === d.id)) || canEditSetlist(sv) || canEditServiceLessons(sv);
+  const canEditAny = canDetails || data.departments.some(d => canManage(d.id) && sv.slots.some(z => z.departmentId === d.id)) || canEditSetlist(sv) || canEditServiceLessons(sv) || canEditAssemblyNote;
   const [open, setOpen] = useState<string | null>(null); // slot key being filled
   const [err, setErr] = useState<string | null>(null);
   const [busyPick, setBusyPick] = useState<{ m: { firstName: string; username: string }; detail: string; run: (mode: 'double' | 'swap') => void } | null>(null);
@@ -144,6 +146,7 @@ function ServiceDetail({ service: sv, msg, onBack, onDeleted }: { service: Servi
         </View>
         {awayNames.length > 0 && <View testID="svd-away-notice" style={{ backgroundColor: colors.amberSoft, borderRadius: 12, padding: 12, marginTop: 4 }}><Text style={{ color: colors.text }}>{t('services.awayWillRemove', { names: awayNames.join(', ') })}</Text></View>}
       </Card></View>}
+      {(canEditAssemblyNote || note.trim().length > 0) && <AssemblyNoteCard value={note} onChange={v => setPNote(v)} editable={canEditAssemblyNote} />}
       <Modal visible={awayAsk} transparent animationType="fade" onRequestClose={() => setAwayAsk(false)}>
         <View style={{ flex: 1, justifyContent: 'center', padding: 24, backgroundColor: 'rgba(0,0,0,0.45)' }}>
           <View testID="away-sheet" accessibilityRole="alert" style={{ backgroundColor: colors.card, borderRadius: 16, padding: 20, maxWidth: 420, width: '100%', alignSelf: 'center' }}>
@@ -233,9 +236,10 @@ const newRowId = () => `r${++rowSeq}`;
 
 function ServiceForm({ service, onClose, onDeleted }: { service?: Service; onClose: (msg?: string, id?: string) => void; onDeleted?: (msg: string) => void }) {
   const colors = useColors(); const s = useStyles();
-  const { data, saveService, deleteService, canManage, canEditSetlist, canEditServiceLessons, t, deptName, roleName } = useMe();
+  const { data, saveService, deleteService, canManage, canEditSetlist, canEditServiceLessons, canEditAssemblyNote, t, deptName, roleName } = useMe();
   const [setlist, setSetlist] = useState<SetlistItem[]>(service?.setlist ?? []);
   const [lessons, setLessons] = useState<string[]>(service?.lessons ?? []);
+  const [assemblyNote, setAssemblyNote] = useState<string>(service?.assemblyNote ?? '');
   const [title, setTitle] = useState(service?.title ?? t('services.defaultName'));
   const [location, setLocation] = useState(service?.location ?? DEFAULT_LOCATION);
   const [date, setDate] = useState(isoToDdmm(service?.date ?? upcomingSundayIso()));
@@ -275,7 +279,7 @@ function ServiceForm({ service, onClose, onDeleted }: { service?: Service; onClo
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [iso]);
   const isDraftSv = service?.status === 'draft';
-  const snap = () => JSON.stringify([title, location, date, start, end, data.departments.map(d => rows.filter(x => x.dep === d.id).sort((a, b) => roleIdx(data, d.id, a.role) - roleIdx(data, d.id, b.role)).map(x => [x.role, x.assigneeId ?? ''])), setlist, lessons]);
+  const snap = () => JSON.stringify([title, location, date, start, end, data.departments.map(d => rows.filter(x => x.dep === d.id).sort((a, b) => roleIdx(data, d.id, a.role) - roleIdx(data, d.id, b.role)).map(x => [x.role, x.assigneeId ?? ''])), setlist, lessons, assemblyNote.replace(/\s+$/, '')]);
   const [initial] = useState(snap);
   const [done, setDone] = useState(false);
   const dirty = !done && snap() !== initial;
@@ -292,7 +296,8 @@ function ServiceForm({ service, onClose, onDeleted }: { service?: Service; onClo
     }
     const withSet = canEditSetlist(service) && (setlist.length || service?.setlist) ? { setlist } : {};
     const withLes = canEditServiceLessons(service) && (lessons.length || service?.lessons) ? { lessons } : {};
-    const e = saveService(service?.id ?? null, { title, location, date: iso, start, end, slots, status, ...withSet, ...withLes }, pk);
+    const withNote = canEditAssemblyNote && (assemblyNote.trim() || service?.assemblyNote) ? { assemblyNote } : {};
+    const e = saveService(service?.id ?? null, { title, location, date: iso, start, end, slots, status, ...withSet, ...withLes, ...withNote }, pk);
     if (e) { setErr(e); return false; }
     setDone(true);
     return status === 'draft' ? t('services.draftSaved') : isDraftSv ? t('services.published') : service ? t('services.updated') : t('services.created');
@@ -317,6 +322,7 @@ function ServiceForm({ service, onClose, onDeleted }: { service?: Service; onClo
           <View style={{ flex: 1 }}><Field label={t('fields.end')} value={end} keyboardType="number-pad" maxLength={5} onChangeText={v => setEnd(formatTimeInput(v))} testID="sv-end" /></View>
         </View>
       </Card>
+      {canEditAssemblyNote && <AssemblyNoteCard value={assemblyNote} onChange={setAssemblyNote} editable />}
       <Text style={s.section}>{t('services.slotsAndPeople')}</Text>
       {notice && <Card style={{ backgroundColor: colors.amberSoft, borderColor: colors.amberSoft }}><Text testID="sv-notice" style={{ color: colors.text }}>{notice}</Text></Card>}
       {(() => { const setCard = canEditSetlist(service) ? <SetlistCard key="setlist" service={service} list={setlist} onChange={setSetlist} startEditing={!service} /> : null;

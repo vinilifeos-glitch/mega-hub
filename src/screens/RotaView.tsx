@@ -3,6 +3,7 @@ import { router } from 'expo-router';
 import { useMe } from '../state/AppContext';
 import { SetlistPreview } from './Setlist';
 import { ServiceLessonsCard } from './ServiceLessons';
+import { AssemblyNoteCard } from './AssemblyNote';
 import { Card, Empty, Icon, Screen, useColors, useStyles } from '../components/ui';
 import { LiveButton, RotaRoleCard, RotaTeamCard } from '../components/rota';
 import { isoToDdmm } from '../data/dates';
@@ -33,6 +34,7 @@ export function RotaView({ serviceId }: { serviceId: string }) {
           {sv.location ? <View style={{ flexDirection: 'row', alignItems: 'center' }}><Icon name="location-outline" size={18} style={{ marginRight: 8 }} /><Text testID="rota-location" style={[B, { flexShrink: 1 }]}>{sv.location}</Text></View> : null}
         </Card>
         <RotaRoleCard title={t('myRota.yourRoles')} roles={mine.flatMap(a => { const dep = data.departments.find(d => d.id === a.departmentId); return dep ? [{ dep, role: roleName(a.departmentId, a.position), testID: `rota-myrole-${a.id}` }] : []; })} />
+        {(sv.assemblyNote ?? '').trim() ? <AssemblyNoteCard value={sv.assemblyNote!} /> : null}
         {mine.filter(a => !data.departments.some(d => d.id === a.departmentId)).map(a => <View key={a.id} testID={`rota-myrole-${a.id}`}><Text style={s.label}>{roleName(a.departmentId, a.position)}</Text></View>)}
         {team.map(g => (
           <RotaTeamCard key={g.departmentId} testID={`rota-team-${g.departmentId}`} title={`${t('myRota.team')} · ${deptName(g.departmentId)}`}
