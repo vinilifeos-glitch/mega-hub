@@ -97,3 +97,9 @@ export function cleanUrl(v: string): string | null {
 /** Live mode: owner, Music admins, or Music members assigned on that service. */
 export const canLiveRule = (actor: { id: string; role: Tier; adminOf?: string[]; departmentIds?: string[] } | null | undefined, serviceId: string, assignments: { serviceId: string; userId: string }[]) =>
   !!actor && (canEditSetlistRule(actor) || ((actor.departmentIds ?? []).includes(MUSIC_DEPT) && assignments.some(a => a.serviceId === serviceId && a.userId === actor.id)));
+
+/** Assembly note: admin-level and above (owner, hub admins, department admins: tier owner/admin). */
+export const canEditAssemblyNoteRule = (actor: { role: Tier } | null | undefined) => !!actor && (actor.role === 'owner' || actor.role === 'admin');
+export const ASSEMBLY_NOTE_MAX = 2000;
+/** Stored form: trailing whitespace trimmed, capped; '' means "no note". */
+export const cleanAssemblyNote = (v: unknown): string => typeof v === 'string' ? v.replace(/\s+$/, '').slice(0, ASSEMBLY_NOTE_MAX) : '';

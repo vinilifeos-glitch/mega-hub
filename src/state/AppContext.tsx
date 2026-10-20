@@ -5,7 +5,7 @@ import { NOTE_MAX, awayOn, covers, getUnavailableFor, rangeError } from '../data
 import { todayIso as todayIsoFn } from '../data/dates';
 import { repository, newerFromOtherTab, DATA_STORAGE_KEY } from '../data/repository';
 import { hashPassword, newSalt } from '../data/auth';
-import { canEditServiceLessonsRule, visibleServiceLessons } from './permissions';
+import { canEditServiceLessonsRule, visibleServiceLessons, canEditAssemblyNoteRule, cleanAssemblyNote } from './permissions';
 import { lessonCatalog } from '../data/files';
 import { canEditMemberRule, canEditPersonal, changedProtected, pickPref, visibleServiceData, visibleSetlists, canEditSetlistRule, canEditSongsRule, canEditServiceSetlistRule, canEditDeptRule, visibleSongs, cleanUrl, canLiveRule, canViewDeptRule, visibleDeptPages } from './permissions';
 import { keyLabel, parseKey } from '../data/music';
@@ -72,7 +72,9 @@ interface Ctx {
   whyBlocked: (serviceId: string, userId: string) => string | null;
   saveService: (id: string | null, s: Omit<Service, 'id'>, picks?: { departmentId: string; position: string; index: number; userId: string }[]) => string | null;
   /** Service page Save: commit pending assignments (only the caller's departments) and/or setlist in one go. */
-  saveServiceEdits: (serviceId: string, edits: { assignments?: Assignment[]; setlist?: SetlistItem[]; lessons?: string[] }) => string | null;
+  saveServiceEdits: (serviceId: string, edits: { assignments?: Assignment[]; setlist?: SetlistItem[]; lessons?: string[]; assemblyNote?: string }) => string | null;
+  /** Owner + admins (tier admin-level and above). */
+  canEditAssemblyNote: boolean;
   /** Owner, Kids admins, or that service's Kids Teacher (no service = create form). */
   canEditServiceLessons: (service?: Service) => boolean;
   deleteService: (id: string) => void;
@@ -405,8 +407,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const slots = sv.slots.filter(sl => sl.count > 0);
         { const prevS = id ? x0().services.find(s => s.id === id) : undefined;
           if (sv.lessons && JSON.stringify(sv.lessons) !== JSON.stringify(prevS?.lessons ?? [])) { if (!canEditServiceLessonsRule(currentUser, id ?? undefined, x0().assignments)) return t('errors.lessonsScope'); if (!catalogOnly(sv.lessons, prevS?.lessons)) return t('errors.lessonCatalogOnly'); }
+          if (sv.assemblyNote !== undefined && cleanAssemblyNote(sv.assemblyNote) !== (prevS?.assemblyNote ?? '') && !canEditAssemblyNoteRule(currentUser)) return t('errors.assemblyScope');
           if (sv.setlist && JSON.stringify(sv.setlist) !== JSON.stringify(prevS?.setlist ?? [])) { if (!canEditServiceSetlistRule(currentUser, id ?? undefined, x0().assignments)) return t('errors.setlistScope'); if (!libOnly(sv.setlist, prevS?.setlist)) return t('errors.libraryOnly'); } }
         const clean: Omit<Service, 'id'> = { ...sv, title: sv.title.trim(), location: sv.location.trim(), slots };
+        if (sv.assemblyNote !== undefined) clean.assemblyNote = cleanAssemblyNote(sv.assemblyNote);
         const prevSv = id ? x0().services.find(s => s.id === id) : undefined;
         if (prevSv && prevSv.status !== 'draft') { if (prevSv.status) clean.status = prevSv.status; else delete clean.status; } // published stays published
         else if (clean.status !== 'draft') clean.status = 'published';
@@ -418,7 +422,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
         update(x => ({
           ...x,
-          services: id ? x.services.map(s => s.id === id ? { ...s, ...clean, id } : s) : [...x.services, { id: sid, ...clean }],
+          services: (id ? x.services.map(s => s.id === id ? { ...s, ...clean, id } : s) : [...x.services, { id: sid, ...clean }]).map(s => s.id === sid && !s.assemblyNote && 'assemblyNote' in s ? (({ assemblyNote, ...r }) => r)(s) as typeof s : s),
           // drop assignments for removed / shrunk slots, or people now unavailable on a moved date
           assignments: picks ? [
             ...x.assignments.filter(a => a.serviceId !== sid),
@@ -468,14 +472,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           if (!catalogOnly(edits.lessons, sv.lessons)) return t('errors.lessonCatalogOnly');
           les = [...edits.lessons];
         }
+        let note: string | null = null;
+        if (edits.assemblyNote !== undefined && cleanAssemblyNote(edits.assemblyNote) !== (sv.assemblyNote ?? '')) {
+          if (!canEditAssemblyNoteRule(currentUser)) return t('errors.assemblyScope');
+          note = cleanAssemblyNote(edits.assemblyNote);
+        }
         const m = mine;
+        const withNote = (s: Service): Service => note === null ? s : note ? { ...s, assemblyNote: note } : (({ assemblyNote, ...r }) => r)(s) as Service;
         update(x => ({ ...x,
           assignments: m ? [...x.assignments.filter(a => a.serviceId !== sid || !canManage(a.departmentId)), ...m] : x.assignments,
-          services: list || les ? x.services.map(s => s.id === sid ? { ...s, ...(list ? { setlist: list } : {}), ...(les ? { lessons: les } : {}) } : s) : x.services }));
+          services: list || les || note !== null ? x.services.map(s => s.id === sid ? withNote({ ...s, ...(list ? { setlist: list } : {}), ...(les ? { lessons: les } : {}) }) : s) : x.services }));
         return null;
       },
       canEditSetlist: sv => canEditServiceSetlistRule(currentUser, sv?.id, d.assignments),
       canEditServiceLessons: sv => canEditServiceLessonsRule(currentUser, sv?.id, d.assignments),
+      canEditAssemblyNote: canEditAssemblyNoteRule(currentUser),
       addSong: (sid, song) => {
         if (!canEditServiceSetlistRule(currentUser, sid, d.assignments)) return t('errors.setlistScope');
         const title = song.title.trim(); if (!title) return t('errors.songTitle');
