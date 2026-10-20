@@ -14,7 +14,7 @@ import { PickerRow, PickerSectionLabel, BusyChoiceSheet } from '../components/ro
 import { pickStatus, sameRoleSlot, roleIdx, planAssign } from '../data/rota';
 import { formatDobInput, useMe } from '../state/AppContext';
 import { awayOn, noteOn } from '../data/unavailability';
-import { Badge, DeptBadge, StatusBadge, Button, DeptTitle, Icon, IconButton, deptIcon, Card, Chip, Empty, Field, Screen, Notice, useColors, useStyles } from '../components/ui';
+import { Badge, CollapsibleCard, DeptBadge, StatusBadge, Button, DeptTitle, Icon, IconButton, deptIcon, Card, Chip, Empty, Field, Screen, Notice, useColors, useStyles } from '../components/ui';
 import { Assignment, Service, SetlistItem, Slot } from '../types';
 import { formatTimeInput, isoToDdmm, toIso, todayIso, upcomingSundayIso } from '../data/dates';
 
@@ -130,13 +130,18 @@ function ServiceDetail({ service: sv, msg, onBack, onDeleted }: { service: Servi
   const del = () => confirmAsk(draft ? t('services.deleteDraft') : t('services.deleteConfirmTitle'), t(draft ? 'services.deleteDraftConfirm' : 'services.deleteConfirm', { title: sv.title, date: isoToDdmm(sv.date) }),
     t('common.delete'), t('common.cancel'), () => { deleteService(sv.id); onDeleted(draft ? t('services.draftDeleted') : t('services.deleted')); });
   const [pubMsg, setPubMsg] = useState<string | null>(null);
+  // Collapsible sections: department cards start expanded; the Assembly note starts collapsed. State lives on this screen.
+  const [secOpen, setSecOpen] = useState<Record<string, boolean>>({});
+  const [noteOpen, setNoteOpen] = useState(false);
+  const showNote = canEditAssemblyNote || note.trim().length > 0;
+  const noteCard = (nested: boolean) => showNote ? <AssemblyNoteCard key="note" nested={nested} value={note} onChange={v => setPNote(v)} editable={canEditAssemblyNote} open={noteOpen} onToggle={setNoteOpen} /> : null;
   return (
     <Screen title={sv.title} subtitle={`${fmtDate(sv.date)} · ${isoToDdmm(sv.date)} · ${sv.start}–${sv.end}${sv.location ? ` · ${sv.location}` : ''}`} backTo={{ label: t('services.title'), onPress: () => leaveGuarded(m => onBack(m)) }}>
       {msg && !savedMsg && <Notice text={msg} />}
       {savedMsg && !dirty && <Notice text={savedMsg} />}
       {pubMsg && <Notice text={pubMsg} />}
       {draft && <View style={[s.row, { marginBottom: 8 }]}><StatusBadge status="draft" label={t('services.draft')} testID="draft-badge" /><Text style={[s.small, { marginLeft: 8, flex: 1 }]}>{t('services.draftHint')}</Text></View>}
-      {canDetails && <View testID="svd-details"><Card>
+      {canDetails && <View testID="svd-details"><CollapsibleCard toggleID="svd-details-toggle" icon="information-circle-outline" title={t('services.detailsTitle')}>
         <Field label={t('fields.name')} value={det.title} onChangeText={v => setDet({ title: v })} autoCapitalize="words" testID="sv-title" />
         <Field label={t('fields.location')} value={det.location} onChangeText={v => setDet({ location: v })} autoCapitalize="words" placeholder={t('fields.locationPlaceholder')} testID="sv-location" />
         <DateField label={t('fields.date')} value={det.date} onChange={v => setDet({ date: v })} testID="sv-date" />
@@ -145,8 +150,7 @@ function ServiceDetail({ service: sv, msg, onBack, onDeleted }: { service: Servi
           <View style={{ flex: 1 }}><Field label={t('fields.end')} value={det.end} keyboardType="number-pad" maxLength={5} onChangeText={v => setDet({ end: formatTimeInput(v) })} testID="sv-end" /></View>
         </View>
         {awayNames.length > 0 && <View testID="svd-away-notice" style={{ backgroundColor: colors.amberSoft, borderRadius: 12, padding: 12, marginTop: 4 }}><Text style={{ color: colors.text }}>{t('services.awayWillRemove', { names: awayNames.join(', ') })}</Text></View>}
-      </Card></View>}
-      {(canEditAssemblyNote || note.trim().length > 0) && <AssemblyNoteCard value={note} onChange={v => setPNote(v)} editable={canEditAssemblyNote} />}
+      </CollapsibleCard></View>}
       <Modal visible={awayAsk} transparent animationType="fade" onRequestClose={() => setAwayAsk(false)}>
         <View style={{ flex: 1, justifyContent: 'center', padding: 24, backgroundColor: 'rgba(0,0,0,0.45)' }}>
           <View testID="away-sheet" accessibilityRole="alert" style={{ backgroundColor: colors.card, borderRadius: 16, padding: 20, maxWidth: 420, width: '100%', alignSelf: 'center' }}>
@@ -168,16 +172,16 @@ function ServiceDetail({ service: sv, msg, onBack, onDeleted }: { service: Servi
         const musicShown = sv.slots.some(z => z.departmentId === 'd-music');
         const lesCard = <ServiceLessonsCard key="lessons" service={sv} list={lessons} onChange={l => setPLes(l)} editable={canEditServiceLessons(sv)} />;
         const kidsShown = sv.slots.some(z => z.departmentId === 'd-kids');
-        return <>{data.departments.map(d => {
+        return <>{!musicShown && noteCard(false)}{data.departments.map(d => {
         const slots = sv.slots.filter(z => z.departmentId === d.id).sort((a, b) => roleIdx(data, d.id, a.position) - roleIdx(data, d.id, b.position));
         if (!slots.length) return null;
         const after = d.id === 'd-music' ? setCard : d.id === 'd-kids' ? lesCard : null;
         const manage = canManage(d.id);
         const members = data.users.filter(u => u.active && u.departmentIds.includes(d.id));
         return (<React.Fragment key={d.id}>
-          <Card style={{ borderLeftWidth: 3, borderLeftColor: d.color }}>
-            <DeptTitle dep={d} />
-            {!manage && <Text style={s.small}>{t('common.viewOnly')}</Text>}
+          <CollapsibleCard toggleID={`svd-dept-toggle-${d.id}`} testID={`svd-dept-${d.id}`} style={{ borderLeftWidth: 3, borderLeftColor: d.color }} a11yLabel={t('services.slotsA11y', { dept: deptName(d.id) })}
+            open={secOpen[d.id] ?? true} onToggle={o => setSecOpen(m => ({ ...m, [d.id]: o }))}
+            header={<View><DeptTitle dep={d} />{!manage && <Text style={[s.small, { marginLeft: 42 }]}>{t('common.viewOnly')}</Text>}</View>}>
             {slots.flatMap(sl => Array.from({ length: sl.count }, (_, i) => {
               const key = `${sv.id}:${d.id}:${sl.position}:${i}`;
               const a = asg.find(x => x.id === key);
@@ -190,7 +194,7 @@ function ServiceDetail({ service: sv, msg, onBack, onDeleted }: { service: Servi
                     <Text style={{ fontWeight: '600', color: colors.text }}>{roleName(d.id, sl.position)}{sl.count > 1 ? ` ${i + 1}` : ''}</Text>
                     <View style={s.row}>
                       {who ? <View style={[s.row, { flexWrap: 'nowrap', flexShrink: 1 }]}><Icon name="checkmark-circle" size={16} color={me ? colors.primary : colors.green} style={{ marginRight: 4 }} /><Text style={{ color: me ? colors.primary : colors.text, fontWeight: me ? '800' : '600', flexShrink: 1 }}>{`${displayName(who)}${me ? ` ${t('common.you')}` : ''}`}</Text></View> : null}
-                      {manage && <Pressable testID={`slot-${d.id}-${sl.position}-${i}`} onPress={() => { setErr(null); setOpen(open === key ? null : key); }}><Text style={{ color: colors.primary, fontWeight: '700', marginLeft: 10 }}>{who ? t('common.change') : t('common.fill')}</Text></Pressable>}
+                      {manage && <Pressable testID={`slot-${d.id}-${sl.position}-${i}`} hitSlop={8} onPress={() => { setErr(null); setOpen(open === key ? null : key); }}><Text style={{ color: colors.primary, fontWeight: '700', marginLeft: 10 }}>{who ? t('common.change') : t('common.fill')}</Text></Pressable>}
                     </View>
                   </View>
                   {open === key && (() => {
@@ -217,7 +221,8 @@ function ServiceDetail({ service: sv, msg, onBack, onDeleted }: { service: Servi
                 </View>
               );
             }))}
-          </Card>{after}</React.Fragment>
+            {d.id === 'd-music' && noteCard(true)}
+          </CollapsibleCard>{after}</React.Fragment>
         );
       })}{!musicShown && setCard}{!kidsShown && lesCard}</>; })()}
       <View style={[s.row, { marginTop: 4, marginBottom: 4 }]}>{([['checkmark-circle-outline', t('services.legendAvailable')], ['close-circle-outline', t('services.legendAway')], ['time-outline', t('services.legendBusy')]] as const).map(([n, l]) => <View key={l} style={[s.row, { marginRight: 16, marginBottom: 4 }]}><Icon name={n} size={16} style={{ marginRight: 4 }} /><Text style={s.small}>{l}</Text></View>)}</View>
@@ -256,7 +261,9 @@ function ServiceForm({ service, onClose, onDeleted }: { service?: Service; onClo
   const [notice, setNotice] = useState<string | null>(null);
   const [openPick, setOpenPick] = useState<string | null>(null);
   const [openAdd, setOpenAdd] = useState<string | null>(null);
-  const [openDept, setOpenDept] = useState<string | null>(null);
+  // Collapsible sections (state per screen): department cards start expanded so creating a service is quick; the Assembly note starts collapsed.
+  const [deptOpen, setDeptOpen] = useState<Record<string, boolean>>({});
+  const [noteOpen, setNoteOpen] = useState(false);
   const iso = toIso(date);
   const userById = (id: string) => data.users.find(u => u.id === id);
   const addSlot = (dep: string, role: string) => { if (canManage(dep)) setRows(r => [...r, { id: newRowId(), dep, role }]); };
@@ -313,7 +320,7 @@ function ServiceForm({ service, onClose, onDeleted }: { service?: Service; onClo
             testIDs={{ root: 'busy-sheet', double: 'busy-double', swap: 'busy-swap', cancel: 'busy-cancel' }} />}
         </View>
       </Modal>
-      <Card>
+      <CollapsibleCard toggleID="sv-details-toggle" testID="sv-details" icon="information-circle-outline" title={t('services.detailsTitle')}>
         <Field label={t('fields.name')} value={title} onChangeText={setTitle} autoCapitalize="words" testID="sv-title" />
         <Field label={t('fields.location')} value={location} onChangeText={setLocation} autoCapitalize="words" placeholder={t('fields.locationPlaceholder')} testID="sv-location" />
         <DateField label={t('fields.date')} limit={service ? undefined : 'future'} value={date} onChange={setDate} testID="sv-date" />
@@ -321,42 +328,42 @@ function ServiceForm({ service, onClose, onDeleted }: { service?: Service; onClo
           <View style={{ flex: 1, marginRight: 8 }}><Field label={t('fields.start')} value={start} keyboardType="number-pad" maxLength={5} onChangeText={v => setStart(formatTimeInput(v))} testID="sv-start" /></View>
           <View style={{ flex: 1 }}><Field label={t('fields.end')} value={end} keyboardType="number-pad" maxLength={5} onChangeText={v => setEnd(formatTimeInput(v))} testID="sv-end" /></View>
         </View>
-      </Card>
-      {canEditAssemblyNote && <AssemblyNoteCard value={assemblyNote} onChange={setAssemblyNote} editable />}
+      </CollapsibleCard>
       <Text style={s.section}>{t('services.slotsAndPeople')}</Text>
       {notice && <Card style={{ backgroundColor: colors.amberSoft, borderColor: colors.amberSoft }}><Text testID="sv-notice" style={{ color: colors.text }}>{notice}</Text></Card>}
       {(() => { const setCard = canEditSetlist(service) ? <SetlistCard key="setlist" service={service} list={setlist} onChange={setSetlist} startEditing={!service} /> : null;
         const musicShown = data.departments.some(d => d.id === 'd-music');
         const lesCard = canEditServiceLessons(service) ? <ServiceLessonsCard key="lessons" service={service} list={lessons} onChange={setLessons} editable startEditing={!service} /> : null;
         const kidsShown = data.departments.some(d => d.id === 'd-kids');
-        return <>{data.departments.map(d => {
+        const noteCard = (nested: boolean) => canEditAssemblyNote ? <AssemblyNoteCard key="note" nested={nested} value={assemblyNote} onChange={setAssemblyNote} editable open={noteOpen} onToggle={setNoteOpen} /> : null;
+        return <>{!musicShown && noteCard(false)}{data.departments.map(d => {
         const mine = rows.filter(x => x.dep === d.id).sort((a, b) => roleIdx(data, d.id, a.role) - roleIdx(data, d.id, b.role));
         const manage = canManage(d.id);
-        const open = openDept === d.id;
+        const open = deptOpen[d.id] ?? true;
         return (<React.Fragment key={d.id}>
-          <Card style={{ borderLeftWidth: 3, borderLeftColor: d.color, opacity: manage ? 1 : 0.6 }}>
-            <Pressable testID={`dept-toggle-${d.id}`} accessibilityRole="button" accessibilityState={{ expanded: open }} accessibilityLabel={t('services.slotsA11y', { dept: deptName(d.id) })} onPress={() => setOpenDept(open ? null : d.id)} style={[s.row, { justifyContent: 'space-between', flexWrap: 'nowrap', minHeight: 44 }]}>
-              <View style={{ flex: 1, marginRight: 8 }}>
+          <CollapsibleCard toggleID={`dept-toggle-${d.id}`} testID={`dept-card-${d.id}`} style={{ borderLeftWidth: 3, borderLeftColor: d.color }} a11yLabel={t('services.slotsA11y', { dept: deptName(d.id) })}
+            open={open} onToggle={o => setDeptOpen(m => ({ ...m, [d.id]: o }))}
+            header={
+              <View style={{ opacity: manage ? 1 : 0.6 }}>
                 <DeptTitle dep={d} />
                 <View style={{ marginTop: 8, marginLeft: 42 }} testID={`dept-status-${d.id}`}>
                   <Badge tone={mine.length && mine.every(x => x.assigneeId) ? 'success' : mine.some(x => x.assigneeId) ? 'warning' : 'neutral'} icon={mine.length && mine.every(x => x.assigneeId) ? 'checkmark-circle' : 'ellipse-outline'}
                     label={`${mine.length ? t('services.assignedCount', { n: mine.filter(x => x.assigneeId).length, total: mine.length }) : t('services.noSlots')}${manage ? '' : ` · ${t('common.viewOnly')}`}`} />
                 </View>
-              </View>
-              <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.soft, alignItems: 'center', justifyContent: 'center' }}><Icon name={open ? 'chevron-up' : 'chevron-down'} size={18} /></View>
-            </Pressable>
-            {open && mine.map(x => {
+              </View>}>
+            <View style={{ opacity: manage ? 1 : 0.6 }}>
+            {mine.map(x => {
               const same = mine.filter(y => y.role === x.role); const n = same.indexOf(x);
               const who = x.assigneeId ? userById(x.assigneeId) : undefined;
               const opts = eligibleFor(x.id);
               return (
-                <View key={x.id} testID={`row-${d.id}-${x.role}-${n}`} style={{ borderTopWidth: 1, borderTopColor: colors.border, paddingVertical: 6, minHeight: 56, justifyContent: 'center' }}>
+                <View key={x.id} testID={`row-${d.id}-${x.role}-${n}`} style={{ borderTopWidth: 1, borderTopColor: colors.border, paddingVertical: 6, minHeight: 48, justifyContent: 'center' }}>
                   <View style={[s.row, { flexWrap: 'nowrap', alignItems: 'center' }]}>
                     <Text style={{ flex: 1, fontSize: 15, fontWeight: '600', color: colors.text, marginRight: 8 }} numberOfLines={2}>{roleName(d.id, x.role)}{same.length > 1 ? ` ${n + 1}` : ''}</Text>
-                    <Pressable testID={`fp-${d.id}-${x.role}-${n}`} disabled={!manage} onPress={() => setOpenPick(openPick === x.id ? null : x.id)}
+                    <Pressable testID={`fp-${d.id}-${x.role}-${n}`} disabled={!manage} onPress={() => setOpenPick(openPick === x.id ? null : x.id)} hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
                       accessibilityRole="button" accessibilityState={{ expanded: openPick === x.id }} accessibilityLabel={`${roleName(d.id, x.role)}: ${who ? displayName(who) : t('ui.assignPlaceholder')}`}
-                      style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', minHeight: 40, maxWidth: '55%', borderWidth: 1, borderColor: who ? colors.primary : colors.border, backgroundColor: openPick === x.id || pressed ? colors.soft : who ? colors.primarySoft : colors.card, borderRadius: 999, paddingLeft: 14, paddingRight: 10 })}>
-                      <Text numberOfLines={1} style={{ flexShrink: 1, color: who ? colors.primaryText : colors.muted, fontWeight: who ? '700' : '500', fontSize: 14 }}>{who ? displayName(who) : t('ui.assignPlaceholder')}</Text>
+                      style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', height: 32, maxWidth: '55%', borderWidth: 1, borderColor: who ? colors.primary : colors.border, backgroundColor: openPick === x.id || pressed ? colors.soft : who ? colors.primarySoft : colors.card, borderRadius: 999, paddingLeft: 12, paddingRight: 8 })}>
+                      <Text numberOfLines={1} style={{ flexShrink: 1, color: who ? colors.primaryText : colors.muted, fontWeight: who ? '700' : '600', fontSize: 13.5, lineHeight: 18 }}>{who ? displayName(who) : t('ui.assignPlaceholder')}</Text>
                       <Icon name={openPick === x.id ? 'chevron-up' : 'chevron-down'} size={14} color={who ? colors.primaryText : colors.muted} style={{ marginLeft: 6 }} />
                     </Pressable>
                     {manage && <IconButton testID={`rm-${d.id}-${x.role}-${n}`} icon="remove-circle-outline" label={t('services.removeSlot')} color={colors.red} onPress={() => removeSlot(x.id)} style={{ marginLeft: 4 }} />}
@@ -379,7 +386,7 @@ function ServiceForm({ service, onClose, onDeleted }: { service?: Service; onClo
                 </View>
               );
             })}
-            {open && manage && <>
+            {manage && <>
               <View style={{ borderTopWidth: 1, borderTopColor: colors.border, marginTop: 2, paddingTop: 8 }}>
                 <Pressable testID={`add-role-${d.id}`} accessibilityRole="button" accessibilityState={{ expanded: openAdd === d.id }} onPress={() => setOpenAdd(openAdd === d.id ? null : d.id)}
                   style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', minHeight: 44, paddingHorizontal: 12, borderRadius: 12, backgroundColor: pressed ? colors.soft : 'transparent' })}>
@@ -389,7 +396,9 @@ function ServiceForm({ service, onClose, onDeleted }: { service?: Service; onClo
               </View>
               {openAdd === d.id && <View style={[s.row, { marginTop: 6 }]}>{d.positions.map(p => <Chip key={p} testID={`sl-add-${d.id}-${p}`} label={`+ ${roleName(d.id, p)}`} color={d.color} onPress={() => { addSlot(d.id, p); setOpenAdd(null); }} />)}</View>}
             </>}
-          </Card>{d.id === 'd-music' && setCard}{d.id === 'd-kids' && lesCard}</React.Fragment>
+            </View>
+            {d.id === 'd-music' && noteCard(true)}
+          </CollapsibleCard>{d.id === 'd-music' && setCard}{d.id === 'd-kids' && lesCard}</React.Fragment>
         );
       })}{!musicShown && setCard}{!kidsShown && lesCard}</>; })()}
       {err && <Notice tone="error" text={err} />}

@@ -19,6 +19,9 @@ export function RotaView({ serviceId }: { serviceId: string }) {
   if (!sv || sv.status === 'draft' || mine.length === 0) return <Screen title={t('myRota.title')} backTo={back}><View testID="rota-view-missing"><Empty text={t('myRota.notFound')} /></View></Screen>;
   const team = teamFor(data, sv.id);
   const hasSetlist = (sv.setlist ?? []).length > 0;
+  // Assembly note (read-only, hidden when empty): nested in the Music team section when that section is shown, otherwise its own card.
+  const hasNote = (sv.assemblyNote ?? '').trim().length > 0;
+  const musicTeam = team.some(g => g.departmentId === 'd-music');
   return (
     <Screen title={sv.title} backTo={back}>
       <View testID={`rota-detail-${sv.id}`}>
@@ -34,11 +37,13 @@ export function RotaView({ serviceId }: { serviceId: string }) {
           {sv.location ? <View style={{ flexDirection: 'row', alignItems: 'center' }}><Icon name="location-outline" size={18} style={{ marginRight: 8 }} /><Text testID="rota-location" style={[B, { flexShrink: 1 }]}>{sv.location}</Text></View> : null}
         </Card>
         <RotaRoleCard title={t('myRota.yourRoles')} roles={mine.flatMap(a => { const dep = data.departments.find(d => d.id === a.departmentId); return dep ? [{ dep, role: roleName(a.departmentId, a.position), testID: `rota-myrole-${a.id}` }] : []; })} />
-        {(sv.assemblyNote ?? '').trim() ? <AssemblyNoteCard value={sv.assemblyNote!} /> : null}
+        {hasNote && !musicTeam ? <AssemblyNoteCard value={sv.assemblyNote!} /> : null}
         {mine.filter(a => !data.departments.some(d => d.id === a.departmentId)).map(a => <View key={a.id} testID={`rota-myrole-${a.id}`}><Text style={s.label}>{roleName(a.departmentId, a.position)}</Text></View>)}
         {team.map(g => (
           <RotaTeamCard key={g.departmentId} testID={`rota-team-${g.departmentId}`} title={`${t('myRota.team')} · ${deptName(g.departmentId)}`}
-            rows={g.members.map(m => ({ role: roleName(g.departmentId, m.position), name: displayName({ username: m.username }).replace(/^@/, ''), suffix: m.userId === currentUser.id ? `(${t('myRota.you')})` : undefined, testID: `rota-member-${m.assignmentId}` }))} />))}
+            rows={g.members.map(m => ({ role: roleName(g.departmentId, m.position), name: displayName({ username: m.username }).replace(/^@/, ''), suffix: m.userId === currentUser.id ? `(${t('myRota.you')})` : undefined, testID: `rota-member-${m.assignmentId}` }))}>
+            {g.departmentId === 'd-music' && hasNote ? <AssemblyNoteCard nested value={sv.assemblyNote!} /> : null}
+          </RotaTeamCard>))}
         {hasSetlist && <SetlistPreview service={sv} onOpen={() => router.navigate({ pathname: '/', params: { svc: sv.id } })} />}
         <ServiceLessonsCard service={sv} list={sv.lessons ?? []} readOnly />
         {hasSetlist && canLive(sv.id) && <LiveButton label={t('live.open')} onPress={() => router.push(`/live/${sv.id}` as any)} testID="rota-live-open" />}

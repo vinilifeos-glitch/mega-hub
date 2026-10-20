@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
 import { useMe } from '../state/AppContext';
-import { CardHeader, GhostButton, SearchField, Badge, Button, Card, Chip, Field, Icon, IconButton, Notice, useColors, useStyles } from '../components/ui';
+import { CollapsibleCard, CardHeader, GhostButton, SearchField, Badge, Button, Card, Chip, Field, Icon, IconButton, Notice, useColors, useStyles } from '../components/ui';
 import { Service, SetlistItem } from '../types';
 
 const KEYS = ['C', 'D', 'E', 'F', 'G', 'A', 'B', 'Bb', 'Eb', 'Ab'];
@@ -44,26 +44,18 @@ export function SetlistCard({ service: sv, list, onChange, startEditing }: { ser
     setErr(e); if (!e) setForm(null);
   };
   return (
-    <View testID="setlist-card"><Card style={{ borderLeftWidth: 3, borderLeftColor: data.departments.find(d => d.id === MUSIC_DEPT)?.color ?? colors.primary }}>
-      <View style={[s.row, { justifyContent: 'space-between', flexWrap: 'nowrap' }]}>
-        <View style={[s.row, { flexWrap: 'nowrap', flex: 1 }]}>
-          <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center', marginRight: 10 }}>
-            <Icon name="musical-notes" size={18} color={colors.primaryText} />
-          </View>
-          <Text style={[s.h2, { marginRight: 8 }]}>{t('setlist.title')}</Text>
-          <Badge label={t('setlist.count', { n: list.length })} testID="setlist-count" />
-        </View>
-        {editor && !editing && <Pressable testID="setlist-edit" accessibilityRole="button" onPress={() => setEditing(true)} hitSlop={8}
-          style={{ flexDirection: 'row', alignItems: 'center', minHeight: 44, paddingHorizontal: 8 }}>
+    <View testID="setlist-card"><CollapsibleCard toggleID="setlist-toggle" icon="musical-notes" title={t('setlist.title')} badge={<Badge label={t('setlist.count', { n: list.length })} testID="setlist-count" />}
+      style={{ borderLeftWidth: 3, borderLeftColor: data.departments.find(d => d.id === MUSIC_DEPT)?.color ?? colors.primary }}
+      right={editor && !editing ? <Pressable testID="setlist-edit" accessibilityRole="button" onPress={() => setEditing(true)} hitSlop={8}
+          style={{ flexDirection: 'row', alignItems: 'center', minHeight: 40, paddingHorizontal: 8 }}>
           <Icon name="create-outline" size={16} color={colors.primaryText} style={{ marginRight: 4 }} />
           <Text style={{ color: colors.primaryText, fontWeight: '700' }}>{t('setlist.edit')}</Text>
-        </Pressable>}
-      </View>
+        </Pressable> : null}>
       {list.length === 0 && <View style={{ alignItems: 'center', paddingVertical: 20 }}>
         <Icon name="musical-note-outline" size={28} color={colors.subtle} style={{ marginBottom: 6 }} />
         <Text style={[s.small, { textAlign: 'center' }]} testID="setlist-empty">{t('setlist.empty')}</Text>
       </View>}
-      <View style={{ marginTop: 8 }}>
+      <View>
       {list.map((x, i) => (
         <View key={x.id} style={{ borderTopWidth: i ? 1 : 0, borderTopColor: colors.border, paddingVertical: 10 }}>
           <View style={[s.row, { flexWrap: 'nowrap', alignItems: 'center' }]}>
@@ -110,7 +102,7 @@ export function SetlistCard({ service: sv, list, onChange, startEditing }: { ser
           <GhostButton icon="close" color={colors.muted} label={t('setlist.cancel')} onPress={() => setPick(null)} />
         </View>}
       </View>}
-    </Card></View>
+    </CollapsibleCard></View>
   );
   function editor_() {
     return (

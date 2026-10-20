@@ -152,6 +152,43 @@ export function Card({ children, style }: { children: React.ReactNode; style?: V
   return <View style={[s.card, style]}>{children}</View>;
 }
 
+/* ── Collapsible card ────────────────────────────────────────
+   One shared style for every section on the service screens: header (tap to toggle) + the same round chevron
+   on the right. `nested` = card-within-a-card (soft fill, smaller). Controlled (open/onToggle) or uncontrolled (defaultOpen). */
+export function Chevron({ open, small }: { open: boolean; small?: boolean }) {
+  const c = useColors(); const d = small ? 28 : 32;
+  return <View style={{ width: d, height: d, borderRadius: d / 2, backgroundColor: c.soft, alignItems: 'center', justifyContent: 'center' }}><Icon name={open ? 'chevron-up' : 'chevron-down'} size={small ? 16 : 18} color={c.muted} /></View>;
+}
+export function CollapsibleCard({ toggleID, testID, icon, title, badge, header, right, open: openP, onToggle, defaultOpen = true, nested, style, a11yLabel, children }: {
+  toggleID: string; testID?: string; icon?: IconName; title?: string; badge?: React.ReactNode; header?: React.ReactNode; right?: React.ReactNode;
+  open?: boolean; onToggle?: (open: boolean) => void; defaultOpen?: boolean; nested?: boolean; style?: ViewStyle; a11yLabel?: string; children?: React.ReactNode;
+}) {
+  const c = useColors(); const s = useStyles();
+  const [own, setOwn] = React.useState(defaultOpen);
+  const open = openP ?? own;
+  const toggle = () => { const n = !open; if (openP === undefined) setOwn(n); onToggle?.(n); };
+  const head = header ?? (
+    <View style={{ flexDirection: 'row', alignItems: 'center', flexShrink: 1 }}>
+      {icon ? <View style={{ width: nested ? 28 : 32, height: nested ? 28 : 32, borderRadius: nested ? 8 : 10, backgroundColor: c.primarySoft, alignItems: 'center', justifyContent: 'center', marginRight: 10 }}><Icon name={icon} size={nested ? 16 : 18} color={c.primaryText} /></View> : null}
+      <Text style={[s.h2, { flexShrink: 1, marginRight: 8 }, nested ? { fontSize: 15 } : null]} numberOfLines={2}>{title}</Text>
+      {badge}
+    </View>);
+  const body = (
+    <View testID={testID}>
+      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <Pressable testID={toggleID} accessibilityRole="button" accessibilityState={{ expanded: open }} aria-expanded={open} accessibilityLabel={a11yLabel ?? title} onPress={toggle}
+          style={{ flex: 1, minHeight: nested ? 36 : 40, justifyContent: 'center', marginRight: 6 }}>{head}</Pressable>
+        {open && right}
+        <Pressable testID={`${toggleID}-chev`} accessibilityRole="button" accessibilityState={{ expanded: open }} aria-expanded={open} accessibilityLabel={a11yLabel ?? title} onPress={toggle} hitSlop={8}>
+          <Chevron open={open} small={nested} />
+        </Pressable>
+      </View>
+      {open && children ? <View style={{ marginTop: nested ? 6 : 8 }}>{children}</View> : null}
+    </View>);
+  if (nested) return <View style={[{ backgroundColor: c.bg, borderRadius: radius.md, borderWidth: 1, borderColor: c.border, paddingHorizontal: 12, paddingVertical: 8, marginTop: 10 }, style]}>{body}</View>;
+  return <Card style={style}>{body}</Card>;
+}
+
 /* ── Badges ─────────────────────────────────────────────────── */
 export type BadgeTone = 'accent' | 'neutral' | 'success' | 'warning' | 'danger';
 /** One pill badge for roles, departments and status. Pass `color` for a department tint. */
