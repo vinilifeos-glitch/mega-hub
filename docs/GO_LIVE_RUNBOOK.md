@@ -44,6 +44,22 @@ SUPABASE_URL=https://<ref>.supabase.co SUPABASE_SERVICE_ROLE_KEY=… node script
 - Redeploy the previous `main` build. Devices still hold their old `megahub:data:v4` and `megahub:files:v1`, because Supabase mode doesn't delete them.
 - Supabase data stays in place for a retry.
 
+## Hosted project (Phase 1, 2026-10-20)
+- Project `mega-hub`, ref `guudlszblkjdioyekxjb`, https://guudlszblkjdioyekxjb.supabase.co, eu-west-2, free plan. It was created via the Management API. The DB password and keys are kept in a chmod-600 file on the box only.
+- **This box can only reach the internet over HTTPS** (Postgres 5432/6543 time out), so `supabase link` / `db push` / `db dump` can't connect. Instead:
+  - Migrations went through the Management API SQL endpoint (`POST /v1/projects/<ref>/database/query`), each one in a transaction together with its `supabase_migrations.schema_migrations` row. `db push` from a normal machine will see them as applied.
+  - The function was deployed with `npx supabase functions deploy admin-users --project-ref <ref> --use-api` (no Docker).
+  - The auth settings were applied via `PATCH /v1/projects/<ref>/config/auth`: signup off, email confirm off (autoconfirm), anonymous users off, minimum length 6, site URL / redirect = the Pages URL.
+  - The import (`scripts/supabase-import.mjs`) uses REST/Auth/Storage over HTTPS, so it works from here.
+  - For weekly backups use `pg_dump` from a machine with Postgres access (or the dashboard), not this box.
+- **New migration `20261020100000_hosted_grants`:** hosted Supabase gives `anon` ALL on public tables/views by default, and `authenticated` TRUNCATE/REFERENCES/TRIGGER. Most importantly, the owner-run `unavailable_days` view was readable with the public anon key. The migration revokes all of that. New RLS test: anon can't touch any table or view.
+- **Results against the hosted project:**
+  - RLS 148/148
+  - import 17/17 (real Storage upload)
+  - Playwright 84/84 (iPhone 13 + Pixel 7, supabase-mode preview build served locally, real import of the rehearsal export)
+  - `admin-users` 14/14
+- All test data was then removed (auth users, Storage objects, app rows). Only the migration seed rows remain: settings, 3 departments, 15 roles.
+
 ## Rehearsal results (local)
 - **Database:** all 12 migrations applied with `supabase start` and `db reset`. RLS 126/126 and import 15/15 (PGlite).
 - **Import of a live-shaped export:** 19 users / 19 temp passwords (10 chars), plus a lesson file in Storage. It verifies counts and a re-run creates nothing.

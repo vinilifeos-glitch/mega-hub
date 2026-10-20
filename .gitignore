@@ -39,3 +39,7 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# go-live: personal data / temp passwords must never be committed
+megahub-temp-passwords.csv
+megahub-export-*.json
