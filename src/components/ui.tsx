@@ -18,68 +18,79 @@ const DEPT_ICONS: Record<string, IconName> = { 'd-music': 'musical-notes-outline
 export const deptIcon = (id: string): IconName => DEPT_ICONS[id] ?? 'grid-outline';
 /** Department heading: tinted icon tile in the department colour + name. */
 export function DeptTitle({ dep, suffix, style }: { dep: { id: string; name: string; color: string }; suffix?: string; style?: any }) {
-  const { deptName } = useApp(); const s = useStyles(); const dc = useDeptColor();
+  const { deptName } = useApp(); const s = useStyles(); const accent = useDeptAccent()(dep);
   return (
     <View style={[{ flexDirection: 'row', alignItems: 'center', flexShrink: 1 }, style]}>
-      <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: tint(dep.color), alignItems: 'center', justifyContent: 'center', marginRight: 10 }}>
-        <Icon name={deptIcon(dep.id)} size={18} color={dc(dep.color)} />
+      <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: tint(accent), alignItems: 'center', justifyContent: 'center', marginRight: 10 }}>
+        <Icon name={deptIcon(dep.id)} size={18} color={accent} />
       </View>
       <Text style={[s.h2, { flexShrink: 1 }]}>{deptName(dep.id)}{suffix ?? ''}</Text>
     </View>
   );
 }
 
+export type ThemeMode = 'light' | 'dark';
 /* ── Design tokens ─────────────────────────────────────────────
-   Deep ink neutrals + one fresh teal accent, in a light and a dark
-   palette with identical keys. Components read them via useColors(). */
+   Serious, modern palette: deep navy / near-black slate for the header and text, cool greys for
+   backgrounds and borders, white cards, and ONE restrained deep-indigo accent. Light and dark palettes
+   have identical keys (all text/button pairs meet WCAG AA). Components read them via useColors().
+   Department accents are muted tokens too (see deptAccent), so the stored department colours never change. */
 export const lightColors = {
-  bg: '#EDF3F1',        // soft teal-tinted background
+  bg: '#F1F4F8',        // cool grey background
   card: '#FFFFFF',
-  text: '#0F172A',      // ink
+  text: '#0F172A',      // near-black slate ink
   muted: '#475569',
-  subtle: '#94A3B8',
-  border: '#D9E3E0',
-  soft: '#E4ECE9',
-  primary: '#0F766E',   // teal 700 (white text AA)
+  subtle: '#8592A6',
+  border: '#DDE3EB',
+  soft: '#EDF1F6',
+  primary: '#1E3A8A',   // deep indigo (white text 10.4:1)
   onPrimary: '#FFFFFF',
-  primarySoft: '#CCFBF1',
-  primaryText: '#115E59',
-  header: '#0F172A',    // dark header band
+  primarySoft: '#E3E9F6',
+  primaryText: '#1E3A8A',
+  header: '#0B1220',    // deep navy header band
   onHeader: '#F8FAFC',
-  onHeaderMuted: '#A5B4C8',
+  onHeaderMuted: '#A7B3C6',
   tabBar: '#FFFFFF',
-  green: '#15803D', greenSoft: '#DCFCE7',
-  amber: '#B45309', amberSoft: '#FEF3C7',
-  red: '#DC2626', redSoft: '#FEE2E2', dangerBorder: '#FCA5A5',
-  statusTintAmber: '#FFFBEB', statusTextAmber: '#92400E',
-  statusTintRed: '#FEF2F2', statusTextRed: '#991B1B',
+  green: '#2F6B4F', greenSoft: '#E4EFE8',
+  amber: '#8A5A12', amberSoft: '#F5EBDA',
+  red: '#B42318', redSoft: '#FBEAE8', dangerBorder: '#E7B3AD',
+  statusTintAmber: '#FBF6EC', statusTextAmber: '#7A4B0C',
+  statusTintRed: '#FCF2F1', statusTextRed: '#8F1D14',
+  scrim: 'rgba(11, 18, 32, 0.55)',
   shadow: '#0F172A',
 };
 export type Palette = typeof lightColors;
 export const darkColors: Palette = {
-  bg: '#0B1220',
-  card: '#151F31',
-  text: '#F1F5F9',
-  muted: '#A6B3C7',
-  subtle: '#64748B',
-  border: '#26344B',
-  soft: '#1D2A40',
-  primary: '#2DD4BF',   // teal 400 (ink text AA)
-  onPrimary: '#042F2E',
-  primarySoft: '#123A3A',
-  primaryText: '#5EEAD4',
-  header: '#060B16',
-  onHeader: '#F8FAFC',
-  onHeaderMuted: '#94A3B8',
-  tabBar: '#0F1829',
-  green: '#4ADE80', greenSoft: '#12301F',
-  amber: '#FBBF24', amberSoft: '#3A2A0A',
-  red: '#F87171', redSoft: '#3B1414', dangerBorder: '#7F1D1D',
-  statusTintAmber: '#2A2110', statusTextAmber: '#FCD34D',
-  statusTintRed: '#2A1416', statusTextRed: '#FCA5A5',
+  bg: '#0A0F1A',
+  card: '#131B2B',
+  text: '#E8EDF5',
+  muted: '#A5B0C2',
+  subtle: '#6B778B',
+  border: '#243048',
+  soft: '#1A2437',
+  primary: '#93A9E8',   // soft indigo (ink text 8.6:1)
+  onPrimary: '#0B1430',
+  primarySoft: '#1D2947',
+  primaryText: '#B3C3F0',
+  header: '#060A12',
+  onHeader: '#F1F5F9',
+  onHeaderMuted: '#98A5B9',
+  tabBar: '#0E1524',
+  green: '#86C7A3', greenSoft: '#15281E',
+  amber: '#E2B46E', amberSoft: '#30240F',
+  red: '#F09287', redSoft: '#371719', dangerBorder: '#6B2A25',
+  statusTintAmber: '#261F12', statusTextAmber: '#EBC98E',
+  statusTintRed: '#2A1719', statusTextRed: '#F3ABA3',
+  scrim: 'rgba(0, 0, 0, 0.65)',
   shadow: '#000000',
 };
-export type ThemeMode = 'light' | 'dark';
+/** Muted department accents (left strips, tiles, chips, badges), per mode. Keyed by department id. */
+export const deptAccents: Record<ThemeMode, Record<string, string>> = {
+  light: { 'd-music': '#5B4A8B', 'd-kids': '#36665A', 'd-obreiros': '#7A5A26' },
+  dark: { 'd-music': '#A99AD8', 'd-kids': '#8DC0B2', 'd-obreiros': '#D3B27C' },
+};
+/** Fixed high-contrast stage palette for Live mode (black stage, warm chord colour), independent of light/dark. */
+export const stageColors = { bg: '#000000', text: '#FFFFFF', muted: '#B8C0CC', chord: '#FFD54A', border: '#3A4150', card: '#11151C', btn: '#1F2633' };
 const ThemeCtx = React.createContext<{ mode: ThemeMode; colors: Palette; setMode: (m: ThemeMode) => void }>({ mode: 'light', colors: lightColors, setMode: () => {} });
 /** Supplies the palette for `mode`. `setMode` lets the Profile toggle drive it. */
 export function ThemeProvider({ mode, setMode, children }: { mode: ThemeMode; setMode?: (m: ThemeMode) => void; children: React.ReactNode }) {
@@ -88,11 +99,14 @@ export function ThemeProvider({ mode, setMode, children }: { mode: ThemeMode; se
 }
 export const useColors = () => React.useContext(ThemeCtx).colors;
 export const useThemeMode = () => { const c = React.useContext(ThemeCtx); return { mode: c.mode, setMode: c.setMode }; };
-/** Department colour as a translucent tint (works on light and dark). */
-/** Lighten a colour toward white (used for department colours on dark surfaces). */
-export const lighten = (hex: string, amt = 0.45) => { const n = parseInt(hex.replace('#', ''), 16); const f = (v: number) => Math.round(v + (255 - v) * amt); return `rgb(${f((n >> 16) & 255)}, ${f((n >> 8) & 255)}, ${f(n & 255)})`; };
-/** Department colour readable on the current surface. */
-export function useDeptColor() { const { mode } = useThemeMode(); return (hex: string) => (mode === 'dark' ? lighten(hex) : hex); }
+const hexRgb = (hex: string) => { const n = parseInt(hex.replace('#', ''), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
+const toHex = (r: number, g: number, b: number) => '#' + [r, g, b].map(v => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, '0')).join('');
+/** Desaturate (toward grey) and, for dark mode, lighten an arbitrary colour: fallback accent for departments without a token. */
+export const muteColor = (hex: string, mode: ThemeMode) => { const [r, g, b] = hexRgb(hex); const y = 0.3 * r + 0.59 * g + 0.11 * b; const m = (v: number) => v + (y - v) * 0.45;
+  const [R, G, B] = [m(r), m(g), m(b)]; return mode === 'dark' ? toHex(R + (255 - R) * 0.45, G + (255 - G) * 0.45, B + (255 - B) * 0.45) : toHex(R * 0.85, G * 0.85, B * 0.85); };
+/** Department accent for the current theme (token by id, else a muted version of its stored colour). */
+export const deptAccent = (dep: { id: string; color?: string }, mode: ThemeMode) => deptAccents[mode][dep.id] ?? muteColor(dep.color ?? '#64748B', mode);
+export function useDeptAccent() { const { mode } = useThemeMode(); return (dep: { id: string; color?: string }) => deptAccent(dep, mode); }
 export const tint = (hex: string, alpha = 0.16) => { const n = parseInt(hex.replace('#', ''), 16); return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`; };
 
 export const space = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 };
@@ -197,8 +211,7 @@ export function Badge({ label, tone = 'neutral', color, icon, testID }: { label:
   const map: Record<BadgeTone, [string, string]> = {
     accent: [c.primarySoft, c.primaryText], neutral: [c.soft, c.muted], success: [c.greenSoft, c.green], warning: [c.amberSoft, c.amber], danger: [c.redSoft, c.red],
   };
-  const dc = useDeptColor();
-  const [bg, fg] = color ? [tint(color, 0.18), dc(color)] : map[tone];
+  const [bg, fg] = color ? [tint(color, 0.18), color] : map[tone];
   return (
     <View testID={testID} style={{ flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', backgroundColor: bg, borderRadius: radius.pill, paddingHorizontal: 10, paddingVertical: 4, marginRight: 6, marginBottom: 4, maxWidth: '100%' }}>
       {icon ? <Ionicons name={icon} size={13} color={fg} style={{ marginRight: 4 }} /> : null}
@@ -212,8 +225,8 @@ export function RoleBadge({ role }: { role: 'owner' | 'admin' | 'volunteer' }) {
   return <Badge label={t(`tiers.${role}`)} tone={tone} icon={icon} />;
 }
 export function DeptBadge({ dep, label }: { dep: { id: string; color: string }; label?: string }) {
-  const { deptName } = useApp();
-  return <Badge label={label ?? deptName(dep.id)} color={dep.color} icon={deptIcon(dep.id)} />;
+  const { deptName } = useApp(); const accent = useDeptAccent();
+  return <Badge label={label ?? deptName(dep.id)} color={accent(dep)} icon={deptIcon(dep.id)} />;
 }
 const STATUS_BADGE: Record<'assigned' | 'open' | 'away' | 'draft', [BadgeTone, IconName]> = { assigned: ['success', 'checkmark-circle'], open: ['neutral', 'ellipse-outline'], away: ['danger', 'airplane'], draft: ['warning', 'create-outline'] };
 export function StatusBadge({ status, label, testID }: { status: 'assigned' | 'open' | 'away' | 'draft'; label?: string; testID?: string }) {

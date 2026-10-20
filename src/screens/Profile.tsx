@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { formatDobInput, fullName, ProfileInput, useMe } from '../state/AppContext';
-import { RoleBadge, Button, DeptTitle, deptIcon, Card, Chip, Field, Icon, Screen, Notice, useColors, useStyles } from '../components/ui';
+import { RoleBadge, Button, DeptTitle, deptIcon, Card, Chip, Field, Icon, Screen, Notice, useColors, useStyles, useDeptAccent } from '../components/ui';
 import { User } from '../types';
 
 
@@ -34,6 +34,7 @@ export function PersonalInfo({ user, title }: { user: User; title?: string }) {
 
 /** One card per department: name, the user's roles. With `linkTestId`, the whole card opens the department page when the viewer may (canViewDept). */
 export function RolesView({ user, linkTestId }: { user: User; linkTestId?: (depId: string) => string }) {
+  const deptAcc = useDeptAccent();
   const colors = useColors(); const s = useStyles();
   const { data, t, roleName, canViewDept, deptName } = useMe();
   const deps = data.departments.filter(d => user.departmentIds.includes(d.id));
@@ -44,12 +45,12 @@ export function RolesView({ user, linkTestId }: { user: User; linkTestId?: (depI
         const roles = sortRoles(data, d.id, user.positions?.[d.id] ?? []);
         const link = !!linkTestId && canViewDept(d.id);
         const card = (
-          <Card style={{ borderLeftWidth: 3, borderLeftColor: d.color }}>
+          <Card style={{ borderLeftWidth: 3, borderLeftColor: deptAcc(d) }}>
             <View style={[s.row, { flexWrap: 'nowrap', alignItems: 'center' }]}>
               <View style={{ flex: 1 }}>
                 <DeptTitle dep={d} suffix={(user.role === 'admin' && (user.adminOf ?? []).includes(d.id)) || user.role === 'owner' ? t('departmentsScreen.adminSuffix') : ''} />
                 <View style={[s.row, { marginTop: 8 }]}>
-                  {roles.length ? roles.map(r => <Chip key={r} label={roleName(d.id, r)} color={d.color} active />) : <Text style={s.small}>{t('departmentsScreen.noRoles')}</Text>}
+                  {roles.length ? roles.map(r => <Chip key={r} label={roleName(d.id, r)} color={deptAcc(d)} active />) : <Text style={s.small}>{t('departmentsScreen.noRoles')}</Text>}
                 </View>
               </View>
               {link && <Icon name="chevron-forward" size={18} color={colors.subtle} style={{ marginLeft: 8 }} />}
@@ -70,6 +71,7 @@ export function ProfileView({ user, title }: { user: User; title?: string }) {
 }
 
 export function ProfileEditor({ user, onClose }: { user: User; onClose: (msg?: string) => void }) {
+  const deptAcc = useDeptAccent();
   const colors = useColors(); const s = useStyles();
   const { data, saveProfile, t, deptName, roleName } = useMe();
   const [f, setF] = useState<ProfileInput>({
@@ -98,13 +100,13 @@ export function ProfileEditor({ user, onClose }: { user: User; onClose: (msg?: s
       {data.departments.map(d => {
         const inDep = f.departmentIds.includes(d.id);
         return (
-          <Card key={d.id} style={{ borderLeftWidth: 3, borderLeftColor: inDep ? d.color : colors.border }}>
-            <Chip testID={`dep-${d.id}`} icon={inDep ? 'checkmark' : deptIcon(d.id)} label={deptName(d.id)} color={d.color} active={inDep} onPress={() => toggleDep(d.id)} />
+          <Card key={d.id} style={{ borderLeftWidth: 3, borderLeftColor: inDep ? deptAcc(d) : colors.border }}>
+            <Chip testID={`dep-${d.id}`} icon={inDep ? 'checkmark' : deptIcon(d.id)} label={deptName(d.id)} color={deptAcc(d)} active={inDep} onPress={() => toggleDep(d.id)} />
             {inDep && (
               <>
                 <Text style={[s.small, { marginBottom: 6 }]}>{t('profile.rolesHint', { dept: deptName(d.id) })}</Text>
                 <View style={s.row}>
-                  {d.positions.map(r => <Chip key={r} testID={`role-${d.id}-${r}`} label={roleName(d.id, r)} color={d.color} active={(f.positions[d.id] ?? []).includes(r)} onPress={() => toggleRole(d.id, r)} />)}
+                  {d.positions.map(r => <Chip key={r} testID={`role-${d.id}-${r}`} label={roleName(d.id, r)} color={deptAcc(d)} active={(f.positions[d.id] ?? []).includes(r)} onPress={() => toggleRole(d.id, r)} />)}
                 </View>
               </>
             )}

@@ -5,9 +5,10 @@ import { useMe } from '../state/AppContext';
 import { goBack } from './DeptPage';
 import { SongSheet, SheetPalette } from './SongSheet';
 import { Ionicons } from '@expo/vector-icons';
+import { stageColors } from '../components/ui';
 
-// Fixed high-contrast palette (independent of theme).
-const P: SheetPalette & { bg: string; btn: string } = { bg: '#000000', text: '#FFFFFF', muted: '#B8C0CC', chord: '#FFD54A', border: '#3A4150', card: '#11151C', btn: '#1F2633' };
+// Fixed high-contrast stage palette (independent of theme), from the central tokens.
+const P: SheetPalette & { bg: string; btn: string } = stageColors;
 
 /** Keep the screen on: Web Wake Lock API when present; silently no-op elsewhere / if unsupported. */
 function useKeepAwake() {

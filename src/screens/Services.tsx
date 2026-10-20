@@ -14,7 +14,7 @@ import { PickerRow, PickerSectionLabel, BusyChoiceSheet } from '../components/ro
 import { pickStatus, sameRoleSlot, roleIdx, planAssign } from '../data/rota';
 import { formatDobInput, useMe } from '../state/AppContext';
 import { awayOn, noteOn } from '../data/unavailability';
-import { Badge, CollapsibleCard, DeptBadge, StatusBadge, Button, DeptTitle, Icon, IconButton, deptIcon, Card, Chip, Empty, Field, Screen, Notice, useColors, useStyles } from '../components/ui';
+import { Badge, CollapsibleCard, DeptBadge, StatusBadge, Button, DeptTitle, Icon, IconButton, deptIcon, Card, Chip, Empty, Field, Screen, Notice, useColors, useStyles, useDeptAccent } from '../components/ui';
 import { Assignment, Service, SetlistItem, Slot } from '../types';
 import { formatTimeInput, isoToDdmm, toIso, todayIso, upcomingSundayIso } from '../data/dates';
 
@@ -71,6 +71,7 @@ export function ServicesHome() {
 }
 
 function ServiceDetail({ service: sv, msg, onBack, onDeleted }: { service: Service; msg: string | null; onBack: (msg?: string) => void; onDeleted: (msg: string) => void }) {
+  const deptAcc = useDeptAccent();
   const colors = useColors(); const s = useStyles();
   const { data, currentUser, canManage, saveServiceEdits, saveService, canEditSetlist, canEditServiceLessons, canEditAssemblyNote, deleteService, publishService, t, fmtDate, deptName, roleName } = useMe();
   // Pending edits (nothing persists until Save). null = no pending change for that part (shows stored data).
@@ -152,7 +153,7 @@ function ServiceDetail({ service: sv, msg, onBack, onDeleted }: { service: Servi
         {awayNames.length > 0 && <View testID="svd-away-notice" style={{ backgroundColor: colors.amberSoft, borderRadius: 12, padding: 12, marginTop: 4 }}><Text style={{ color: colors.text }}>{t('services.awayWillRemove', { names: awayNames.join(', ') })}</Text></View>}
       </CollapsibleCard></View>}
       <Modal visible={awayAsk} transparent animationType="fade" onRequestClose={() => setAwayAsk(false)}>
-        <View style={{ flex: 1, justifyContent: 'center', padding: 24, backgroundColor: 'rgba(0,0,0,0.45)' }}>
+        <View style={{ flex: 1, justifyContent: 'center', padding: 24, backgroundColor: colors.scrim }}>
           <View testID="away-sheet" accessibilityRole="alert" style={{ backgroundColor: colors.card, borderRadius: 16, padding: 20, maxWidth: 420, width: '100%', alignSelf: 'center' }}>
             <Text style={{ fontSize: 18, fontWeight: '800', color: colors.text, marginBottom: 8 }}>{t('services.awayConfirmTitle')}</Text>
             <Text style={{ fontSize: 15, color: colors.muted, marginBottom: 12 }}>{t('services.awayWillRemove', { names: awayNames.join(', ') })}</Text>
@@ -162,7 +163,7 @@ function ServiceDetail({ service: sv, msg, onBack, onDeleted }: { service: Servi
         </View>
       </Modal>
       <Modal visible={!!busyPick} transparent animationType="fade" onRequestClose={() => setBusyPick(null)}>
-        <View style={{ flex: 1, justifyContent: 'center', padding: 16, backgroundColor: 'rgba(0,0,0,0.4)' }}>
+        <View style={{ flex: 1, justifyContent: 'center', padding: 16, backgroundColor: colors.scrim }}>
           {busyPick && <BusyChoiceSheet name={busyPick.m.username} detail={busyPick.detail} onDouble={() => busyPick.run('double')} onSwap={() => busyPick.run('swap')} onCancel={() => setBusyPick(null)}
             testIDs={{ root: 'busy-sheet', double: 'busy-double', swap: 'busy-swap', cancel: 'busy-cancel' }} />}
         </View>
@@ -179,7 +180,7 @@ function ServiceDetail({ service: sv, msg, onBack, onDeleted }: { service: Servi
         const manage = canManage(d.id);
         const members = data.users.filter(u => u.active && u.departmentIds.includes(d.id));
         return (<React.Fragment key={d.id}>
-          <CollapsibleCard toggleID={`svd-dept-toggle-${d.id}`} testID={`svd-dept-${d.id}`} style={{ borderLeftWidth: 3, borderLeftColor: d.color }} a11yLabel={t('services.slotsA11y', { dept: deptName(d.id) })}
+          <CollapsibleCard toggleID={`svd-dept-toggle-${d.id}`} testID={`svd-dept-${d.id}`} style={{ borderLeftWidth: 3, borderLeftColor: deptAcc(d) }} a11yLabel={t('services.slotsA11y', { dept: deptName(d.id) })}
             open={secOpen[d.id] ?? true} onToggle={o => setSecOpen(m => ({ ...m, [d.id]: o }))}
             header={<View><DeptTitle dep={d} />{!manage && <Text style={[s.small, { marginLeft: 42 }]}>{t('common.viewOnly')}</Text>}</View>}>
             {slots.flatMap(sl => Array.from({ length: sl.count }, (_, i) => {
@@ -208,7 +209,7 @@ function ServiceDetail({ service: sv, msg, onBack, onDeleted }: { service: Servi
                     return (
                       <View testID={`picker-${key}`} style={{ marginTop: 8 }}>
                         {holders.length === 0 && <Text style={s.small}>{t('services.nobodyHoldsDept', { dept: deptName(d.id), role: roleName(d.id, sl.position) })}</Text>}
-                        {a && (() => { const cu = holders.find(h => h.id === a.userId) ?? data.users.find(u => u.id === a.userId); return cu ? <View style={{ marginBottom: 6 }}><Chip testID={`pick-current-${cu.username}`} label={displayName(cu)} color={d.color} active icon="checkmark-circle" onPress={() => { unassign(a.id); setOpen(null); }} /></View> : null; })()}
+                        {a && (() => { const cu = holders.find(h => h.id === a.userId) ?? data.users.find(u => u.id === a.userId); return cu ? <View style={{ marginBottom: 6 }}><Chip testID={`pick-current-${cu.username}`} label={displayName(cu)} color={deptAcc(d)} active icon="checkmark-circle" onPress={() => { unassign(a.id); setOpen(null); }} /></View> : null; })()}
                         {(['free', 'busy', 'away', 'same'] as const).map(k => { const g = rows.filter(r => r.st === k && r.m.id !== a?.userId); if (!g.length) return null; return (
                           <View key={k} testID={`pick-section-${k}`}>
                             {k !== 'same' && <PickerSectionLabel kind={k} count={g.length} />}
@@ -240,6 +241,7 @@ let rowSeq = 0;
 const newRowId = () => `r${++rowSeq}`;
 
 function ServiceForm({ service, onClose, onDeleted }: { service?: Service; onClose: (msg?: string, id?: string) => void; onDeleted?: (msg: string) => void }) {
+  const deptAcc = useDeptAccent();
   const colors = useColors(); const s = useStyles();
   const { data, saveService, deleteService, canManage, canEditSetlist, canEditServiceLessons, canEditAssemblyNote, t, deptName, roleName } = useMe();
   const [setlist, setSetlist] = useState<SetlistItem[]>(service?.setlist ?? []);
@@ -315,7 +317,7 @@ function ServiceForm({ service, onClose, onDeleted }: { service?: Service; onClo
   return (
     <Screen title={service ? t('services.editService') : t('services.newService')} subtitle={t('services.formSubtitle')} backTo={{ label: service ? service.title : t('services.title'), onPress: leave }}>
       <Modal visible={!!formBusy} transparent animationType="fade" onRequestClose={() => setFormBusy(null)}>
-        <View style={{ flex: 1, justifyContent: 'center', padding: 16, backgroundColor: 'rgba(0,0,0,0.4)' }}>
+        <View style={{ flex: 1, justifyContent: 'center', padding: 16, backgroundColor: colors.scrim }}>
           {formBusy && <BusyChoiceSheet name={formBusy.u.username} detail={formBusy.detail} onDouble={() => formBusy.run('double')} onSwap={() => formBusy.run('swap')} onCancel={() => setFormBusy(null)}
             testIDs={{ root: 'busy-sheet', double: 'busy-double', swap: 'busy-swap', cancel: 'busy-cancel' }} />}
         </View>
@@ -341,7 +343,7 @@ function ServiceForm({ service, onClose, onDeleted }: { service?: Service; onClo
         const manage = canManage(d.id);
         const open = deptOpen[d.id] ?? true;
         return (<React.Fragment key={d.id}>
-          <CollapsibleCard toggleID={`dept-toggle-${d.id}`} testID={`dept-card-${d.id}`} style={{ borderLeftWidth: 3, borderLeftColor: d.color }} a11yLabel={t('services.slotsA11y', { dept: deptName(d.id) })}
+          <CollapsibleCard toggleID={`dept-toggle-${d.id}`} testID={`dept-card-${d.id}`} style={{ borderLeftWidth: 3, borderLeftColor: deptAcc(d) }} a11yLabel={t('services.slotsA11y', { dept: deptName(d.id) })}
             open={open} onToggle={o => setDeptOpen(m => ({ ...m, [d.id]: o }))}
             header={
               <View style={{ opacity: manage ? 1 : 0.6 }}>
@@ -371,7 +373,7 @@ function ServiceForm({ service, onClose, onDeleted }: { service?: Service; onClo
                   {openPick === x.id && manage && <View style={[s.row, { marginTop: 8 }]}>
                     {opts.length === 0 && <Text style={s.small}>{t('services.noneAvailable')}</Text>}
                     {opts.map(u => {
-                      if (u.id === who?.id) return <Chip key={u.id} testID={`fpick-current-${u.username}`} label={displayName(u)} color={d.color} active icon="checkmark-circle"
+                      if (u.id === who?.id) return <Chip key={u.id} testID={`fpick-current-${u.username}`} label={displayName(u)} color={deptAcc(d)} active icon="checkmark-circle"
                         onPress={() => { assign(x.id, null); setOpenPick(null); }} />;
                       const others = u.id === who?.id ? [] : rows.filter(r => r.id !== x.id && r.assigneeId === u.id);
                       const sameR = others.find(r => r.dep === x.dep && r.role === x.role);
@@ -379,7 +381,7 @@ function ServiceForm({ service, onClose, onDeleted }: { service?: Service; onClo
                       if (others.length) { const detail = others.map(r => `${deptName(r.dep)} · ${roleName(r.dep, r.role)}`).join(', ');
                         return <Chip key={u.id} testID={`fpick-busy-${u.username}`} label={displayName(u)} color={colors.amber} icon="time-outline"
                           onPress={() => setFormBusy({ u, detail: others.map(r => roleName(r.dep, r.role)).join(', '), run: mode => { setRows(r => r.map(z => z.id === x.id && canManage(z.dep) ? { ...z, assigneeId: u.id } : mode === 'swap' && z.assigneeId === u.id && z.id !== x.id ? { ...z, assigneeId: undefined } : z)); setFormBusy(null); setOpenPick(null); setNotice(null); } })} />; }
-                      return <Chip key={u.id} testID={`fpick-${u.username}`} label={displayName(u)} color={d.color} active={who?.id === u.id}
+                      return <Chip key={u.id} testID={`fpick-${u.username}`} label={displayName(u)} color={deptAcc(d)} active={who?.id === u.id}
                         onPress={() => { assign(x.id, u.id); setOpenPick(null); setNotice(null); }} />; })}
                     {awayHolders(x.id).map(u => <Chip key={u.id} testID={`fpick-away-${u.username}`} label={`${displayName(u)} · ${(iso ? noteOn(u, iso) : null) ?? t('rota.away')}`} color={colors.red} icon="close-circle-outline" />)}
                   </View>}
@@ -394,7 +396,7 @@ function ServiceForm({ service, onClose, onDeleted }: { service?: Service; onClo
                   <Text style={{ color: colors.primaryText, fontWeight: '700', fontSize: 15 }}>{t('ui.addRole')}</Text>
                 </Pressable>
               </View>
-              {openAdd === d.id && <View style={[s.row, { marginTop: 6 }]}>{d.positions.map(p => <Chip key={p} testID={`sl-add-${d.id}-${p}`} label={`+ ${roleName(d.id, p)}`} color={d.color} onPress={() => { addSlot(d.id, p); setOpenAdd(null); }} />)}</View>}
+              {openAdd === d.id && <View style={[s.row, { marginTop: 6 }]}>{d.positions.map(p => <Chip key={p} testID={`sl-add-${d.id}-${p}`} label={`+ ${roleName(d.id, p)}`} color={deptAcc(d)} onPress={() => { addSlot(d.id, p); setOpenAdd(null); }} />)}</View>}
             </>}
             </View>
             {d.id === 'd-music' && noteCard(true)}

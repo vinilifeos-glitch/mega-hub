@@ -2,12 +2,13 @@ import { Pressable, Text, View } from 'react-native';
 import { useMe } from '../../src/state/AppContext';
 import { router } from 'expo-router';
 import { SetlistPreview } from '../../src/screens/Setlist';
-import { Button, DeptBadge, StatusBadge, Card, Icon, Empty, Screen, useStyles } from '../../src/components/ui';
+import { Button, DeptBadge, StatusBadge, Card, Icon, Empty, Screen, useStyles, useDeptAccent } from '../../src/components/ui';
 import { isoToDdmm, todayIso } from '../../src/data/dates';
 import { byCanon } from '../../src/data/rota';
 
 /** One card per service; lists every role the person holds in it (canonical department + role order). */
 export default function MyRota() {
+  const deptAcc = useDeptAccent();
   const s = useStyles();
   const { data, currentUser, t, fmtDate, roleName } = useMe();
   const today = todayIso();
@@ -24,7 +25,7 @@ export default function MyRota() {
         const first = data.departments.find(d => d.id === roles[0].departmentId)!;
         const open = () => router.push(`/rota/${sv.id}` as any);
         return (
-          <Card key={sv.id} style={{ borderLeftWidth: 3, borderLeftColor: first.color }}>
+          <Card key={sv.id} style={{ borderLeftWidth: 3, borderLeftColor: deptAcc(first) }}>
             <Pressable testID={`rota-card-${sv.id}`} accessibilityRole="button" accessibilityLabel={`${sv.title} · ${t('myRota.view')}`} onPress={open}>
               <Text style={s.h2}>{sv.title}</Text>
               <Text style={s.small}>{fmtDate(sv.date)} · {isoToDdmm(sv.date)} · {sv.start}–{sv.end}</Text>

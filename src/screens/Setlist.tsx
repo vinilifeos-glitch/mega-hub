@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
 import { useMe } from '../state/AppContext';
-import { CollapsibleCard, CardHeader, GhostButton, SearchField, Badge, Button, Card, Chip, Field, Icon, IconButton, Notice, useColors, useStyles } from '../components/ui';
+import { CollapsibleCard, CardHeader, GhostButton, SearchField, Badge, Button, Card, Chip, Field, Icon, IconButton, Notice, useColors, useStyles, useDeptAccent } from '../components/ui';
 import { Service, SetlistItem } from '../types';
 
 const KEYS = ['C', 'D', 'E', 'F', 'G', 'A', 'B', 'Bb', 'Eb', 'Ab'];
@@ -27,6 +27,7 @@ export function SetlistCard({ service: sv, list, onChange, startEditing }: { ser
   const colors = useColors(); const s = useStyles();
   const { data, t, canEditSetlist } = useMe();
   const editor = canEditSetlist(sv);
+  const deptAcc = useDeptAccent();
   const addSong = (_: unknown, song: Parameters<typeof setlistOps.add>[1]) => { if (!song.title.trim()) return t('errors.songTitle'); onChange(setlistOps.add(list, song)); return null; };
   const updateSong = (_: unknown, id: string, p: { title: string; key?: string; notes?: string }) => { if (!p.title.trim()) return t('errors.songTitle'); onChange(setlistOps.update(list, id, p)); return null; };
   const removeSong = (_: unknown, id: string) => onChange(setlistOps.remove(list, id));
@@ -45,7 +46,7 @@ export function SetlistCard({ service: sv, list, onChange, startEditing }: { ser
   };
   return (
     <View testID="setlist-card"><CollapsibleCard toggleID="setlist-toggle" icon="musical-notes" title={t('setlist.title')} badge={<Badge label={t('setlist.count', { n: list.length })} testID="setlist-count" />}
-      style={{ borderLeftWidth: 3, borderLeftColor: data.departments.find(d => d.id === MUSIC_DEPT)?.color ?? colors.primary }}
+      style={{ borderLeftWidth: 3, borderLeftColor: deptAcc(data.departments.find(d => d.id === MUSIC_DEPT) ?? { id: MUSIC_DEPT }) }}
       right={editor && !editing ? <Pressable testID="setlist-edit" accessibilityRole="button" onPress={() => setEditing(true)} hitSlop={8}
           style={{ flexDirection: 'row', alignItems: 'center', minHeight: 40, paddingHorizontal: 8 }}>
           <Icon name="create-outline" size={16} color={colors.primaryText} style={{ marginRight: 4 }} />
