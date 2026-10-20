@@ -1,3 +1,5 @@
+// Password minimum shown in labels/errors: Supabase Auth requires 6; local device mode keeps 4.
+const PW_MIN = process.env.EXPO_PUBLIC_BACKEND === 'supabase' ? 6 : 4;
 /** English dictionary. This file defines the key structure; pt.ts must match it exactly (enforced by tsc via `Dict`). */
 export const en = {
   common: {
@@ -38,7 +40,7 @@ export const en = {
     noAccount: 'No account? Ask your department admin or {owner} to create one for you.',
     choosePassword: 'Choose a new password', changePassword: 'Change password', changeYourPassword: 'Change your password',
     tempIntro: 'Your password is temporary. Please set your own before continuing.',
-    currentPassword: 'Current password', temporaryPassword: 'Temporary password', newPassword: 'New password (min 4 characters)',
+    currentPassword: 'Current password', temporaryPassword: 'Temporary password', newPassword: `New password (min ${PW_MIN} characters)`,
     confirmPassword: 'Confirm new password', savePassword: 'Save password', passwordsDontMatch: "New passwords don't match.", passwordChanged: 'Password changed.',
   },
   unsaved: { title: 'Save changes?', msg: 'You have unsaved changes to this service.', save: 'Save', cancel: 'Cancel' },
@@ -110,7 +112,7 @@ draft: 'Draft', saveDraft: 'Save draft', publish: 'Publish', published: 'Service
     deptScope: 'Only the owner and this department\'s admins can edit this page.', resTitle: 'Title is required.', urlInvalid: 'Enter a valid web link (https://…).',
     setlistScope: 'Only the owner and Music admins can edit the setlist.', songTitle: 'Song title is required.',
     wrongCredentials: 'Wrong username or password.', deactivated: 'This account has been deactivated. Ask an admin.', notSignedIn: 'Not signed in.',
-    currentPasswordWrong: 'Current password is incorrect.', passwordTooShort: 'Password must be at least 4 characters.',
+    currentPasswordWrong: 'Current password is incorrect.', passwordTooShort: `Password must be at least ${PW_MIN} characters.`,
     samePassword: 'Choose a different password from the temporary one.', ownerOnlyAccounts: 'Only the owner can manage accounts.',
     firstNameUsernameRequired: 'First name and username are required.', usernameFormat: 'Username: 2–30 letters, numbers, . _ -',
     usernameTaken: 'That username is already taken.', roleNotAllowed: 'You are not allowed to give that role.', editNotAllowed: 'You are not allowed to edit this account.',

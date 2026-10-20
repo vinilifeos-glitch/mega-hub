@@ -50,10 +50,16 @@ export class SupabaseRepository implements Repository {
     const next = toRows(data);
     for (const { table, upsert, remove } of diffRows(this.snapshot, next)) {
       if (table === 'profiles' || table === 'profile_private') {
-        // created/deleted by the edge function only; here just column updates
+        // created/deleted by the edge function only; here just the columns that actually changed.
+        // must_change_password is never written from here (edge function sets it, change-password clears it):
+        // a stale copy in someone else's app (e.g. the owner editing a name) must not re-force a password change.
+        const k = KEYS[table][0];
+        const prev = new Map(((this.snapshot as any)[table] as any[]).map(r => [r[k], r]));
         for (const row of upsert) {
-          const k = KEYS[table][0];
-          const { error } = await this.sb.from(table).update(row).eq(k, (row as any)[k]);
+          const old = prev.get((row as any)[k]) ?? {};
+          const patch = Object.fromEntries(Object.entries(row as any).filter(([c, v]) => c !== k && c !== 'must_change_password' && JSON.stringify(v) !== JSON.stringify(old[c])));
+          if (!Object.keys(patch).length) continue;
+          const { error } = await this.sb.from(table).update(patch).eq(k, (row as any)[k]);
           if (error) throw error;
         }
         continue;

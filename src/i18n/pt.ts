@@ -1,3 +1,5 @@
+// Password minimum shown in labels/errors: Supabase Auth requires 6; local device mode keeps 4.
+const PW_MIN = process.env.EXPO_PUBLIC_BACKEND === 'supabase' ? 6 : 4;
 import type { Dict } from './index';
 
 /** Portuguese (Brazil) dictionary. Must have exactly the same keys as en.ts. */
@@ -40,7 +42,7 @@ export const pt: Dict = {
     noAccount: 'Não tem conta? Peça ao administrador do seu departamento ou a {owner} para criar uma para você.',
     choosePassword: 'Escolha uma nova senha', changePassword: 'Alterar senha', changeYourPassword: 'Altere sua senha',
     tempIntro: 'Sua senha é temporária. Defina a sua própria antes de continuar.',
-    currentPassword: 'Senha atual', temporaryPassword: 'Senha temporária', newPassword: 'Nova senha (mín. 4 caracteres)',
+    currentPassword: 'Senha atual', temporaryPassword: 'Senha temporária', newPassword: `Nova senha (mín. ${PW_MIN} caracteres)`,
     confirmPassword: 'Confirme a nova senha', savePassword: 'Salvar senha', passwordsDontMatch: 'As novas senhas não coincidem.', passwordChanged: 'Senha alterada.',
   },
   unsaved: { title: 'Salvar alterações?', msg: 'Você tem alterações não salvas neste culto.', save: 'Salvar', cancel: 'Cancelar' },
@@ -112,7 +114,7 @@ draft: 'Rascunho', saveDraft: 'Salvar rascunho', publish: 'Publicar', published:
     deptScope: 'Só o dono e os admins deste departamento podem editar esta página.', resTitle: 'O título é obrigatório.', urlInvalid: 'Digite um link válido (https://…).',
     setlistScope: 'Só o dono e os admins do Louvor podem editar o repertório.', songTitle: 'O título da música é obrigatório.',
     wrongCredentials: 'Usuário ou senha incorretos.', deactivated: 'Esta conta foi desativada. Fale com um administrador.', notSignedIn: 'Você não está conectado.',
-    currentPasswordWrong: 'A senha atual está incorreta.', passwordTooShort: 'A senha deve ter pelo menos 4 caracteres.',
+    currentPasswordWrong: 'A senha atual está incorreta.', passwordTooShort: `A senha deve ter pelo menos ${PW_MIN} caracteres.`,
     samePassword: 'Escolha uma senha diferente da temporária.', ownerOnlyAccounts: 'Só o proprietário pode gerenciar contas.',
     firstNameUsernameRequired: 'Nome e usuário são obrigatórios.', usernameFormat: 'Usuário: 2–30 letras, números, . _ -',
     usernameTaken: 'Esse usuário já está em uso.', roleNotAllowed: 'Você não pode atribuir esse nível.', editNotAllowed: 'Você não pode editar esta conta.',
