@@ -7,7 +7,7 @@ import { useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { AccountInput, formatDobInput, useMe, validContact, validDob, validEmail } from '../../src/state/AppContext';
-import { Badge, RoleBadge, Button, DeptTitle, Icon, deptIcon, Card, Chip, Empty, Field, Screen, Notice, useColors, useStyles, useDeptAccent } from '../../src/components/ui';
+import { Badge, PersonName, RoleBadge, Button, DeptTitle, Icon, deptIcon, Card, Chip, Empty, Field, Screen, Notice, useColors, useStyles, useDeptAccent, withNames, NAMES_SLOT } from '../../src/components/ui';
 import { Role, Unavailability, User } from '../../src/types';
 import { NOTE_MAX } from '../../src/data/unavailability';
 import { toIso, todayIso } from '../../src/data/dates';
@@ -57,10 +57,10 @@ export default function Accounts() {
               {canManage(d.id) && <Badge tone="accent" icon="shield-checkmark" label={t('common.youManage')} />}
               <Icon name="chevron-forward" size={18} color={colors.subtle} style={{ marginLeft: 8 }} />
             </View>
-            <Text style={[s.small, { marginTop: 4 }]}>{admins.length ? t('departmentsScreen.admins', { names: admins.map(displayName).join(', ') }) : t('departmentsScreen.noAdmins', { owner: ownerName })}</Text>
+            <Text style={[s.small, { marginTop: 4 }]}>{admins.length ? withNames(t('departmentsScreen.admins', { names: NAMES_SLOT }), admins.map(u => ({ name: displayName(u), me: u.id === currentUser.id }))) : t('departmentsScreen.noAdmins', { owner: ownerName })}</Text>
             <Text style={[s.label, { marginTop: 10, marginBottom: 6 }]}>{t('ui.rolesLabel')}</Text>
             <View style={s.row}>{d.positions.map(p => <Badge key={p} label={roleName(d.id, p)} />)}</View>
-            <Text style={{ marginTop: 6, color: colors.text }}>{members.length ? t(members.length === 1 ? 'departmentsScreen.member' : 'departmentsScreen.members', { count: members.length, names: members.map(displayName).join(', ') }) : t('departmentsScreen.noMembers')}</Text>
+            <Text style={{ marginTop: 6, color: colors.text }}>{members.length ? withNames(t(members.length === 1 ? 'departmentsScreen.member' : 'departmentsScreen.members', { count: members.length, names: NAMES_SLOT }), members.map(u => ({ name: displayName(u), me: u.id === currentUser.id }))) : t('departmentsScreen.noMembers')}</Text>
           </Card></Pressable>
         );
       })}
@@ -97,7 +97,7 @@ export default function Accounts() {
           style={({ pressed }) => [s.card, { paddingVertical: 12, marginBottom: 8, flexDirection: 'row', alignItems: 'center', opacity: u.active ? 1 : 0.55, backgroundColor: pressed ? colors.soft : colors.card }]}>
           <View style={{ flex: 1, marginRight: 12 }}>
             <View style={[s.row, { flexWrap: 'wrap' }]}>
-              <Text style={[s.h2, { marginRight: 8, flexShrink: 1 }]}>{u.name}{u.id === currentUser.id ? ` ${t('common.you')}` : ''}</Text>
+              <PersonName name={u.name} me={u.id === currentUser.id} size={17} weight="700" numberOfLines={2} testID={u.id === currentUser.id ? 'me-account' : undefined} style={{ marginRight: 8, flexShrink: 1 }} />
               <RoleBadge role={u.role} />{u.active ? null : <Badge tone="danger" label={t('common.deactivated')} />}
             </View>
             <Text style={s.small} numberOfLines={2}>{t('rows.username')}: @{u.username}{u.role === 'admin' ? ` · ${t('accounts.adminOf', { depts: (u.adminOf ?? []).map(depName).join(', ') || t('accounts.noneYet') })}` : ''}{u.departmentIds.length ? ` · ${u.departmentIds.map(id => `${depName(id)}${(u.positions?.[id] ?? []).length ? ` (${sortRoles(data, id, u.positions![id]).map(r => roleName(id, r)).join(', ')})` : ''}`).join(' · ')}` : ` · ${t('accounts.noDeptYet')}`}</Text>

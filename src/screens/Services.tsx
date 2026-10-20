@@ -14,7 +14,7 @@ import { PickerRow, PickerSectionLabel, BusyChoiceSheet } from '../components/ro
 import { pickStatus, sameRoleSlot, roleIdx, planAssign } from '../data/rota';
 import { formatDobInput, useMe } from '../state/AppContext';
 import { awayOn, noteOn } from '../data/unavailability';
-import { Badge, CollapsibleCard, DeptBadge, StatusBadge, Button, DeptTitle, Icon, IconButton, deptIcon, Card, Chip, Empty, Field, Screen, Notice, useColors, useStyles, useDeptAccent } from '../components/ui';
+import { Badge, CollapsibleCard, PersonName, DeptBadge, StatusBadge, Button, DeptTitle, Icon, IconButton, deptIcon, Card, Chip, Empty, Field, Screen, Notice, useColors, useStyles, useDeptAccent } from '../components/ui';
 import { Assignment, Service, SetlistItem, Slot } from '../types';
 import { formatTimeInput, isoToDdmm, toIso, todayIso, upcomingSundayIso } from '../data/dates';
 
@@ -194,7 +194,7 @@ function ServiceDetail({ service: sv, msg, onBack, onDeleted }: { service: Servi
                   <View style={[s.row, { justifyContent: 'space-between' }]}>
                     <Text style={{ fontWeight: '600', color: colors.text }}>{roleName(d.id, sl.position)}{sl.count > 1 ? ` ${i + 1}` : ''}</Text>
                     <View style={s.row}>
-                      {who ? <View style={[s.row, { flexWrap: 'nowrap', flexShrink: 1 }]}><Icon name="checkmark-circle" size={16} color={me ? colors.primary : colors.green} style={{ marginRight: 4 }} /><Text style={{ color: me ? colors.primary : colors.text, fontWeight: me ? '800' : '600', flexShrink: 1 }}>{`${displayName(who)}${me ? ` ${t('common.you')}` : ''}`}</Text></View> : null}
+                      {who ? <View style={[s.row, { flexWrap: 'nowrap', flexShrink: 1 }]}><Icon name="checkmark-circle" size={16} color={me ? colors.primary : colors.green} style={{ marginRight: 4 }} /><PersonName name={displayName(who)} me={me} testID={me ? `me-slot-${key}` : undefined} style={{ flexShrink: 1, alignSelf: 'center' }} /></View> : null}
                       {manage && <Pressable testID={`slot-${d.id}-${sl.position}-${i}`} hitSlop={8} onPress={() => { setErr(null); setOpen(open === key ? null : key); }}><Text style={{ color: colors.primary, fontWeight: '700', marginLeft: 10 }}>{who ? t('common.change') : t('common.fill')}</Text></Pressable>}
                     </View>
                   </View>

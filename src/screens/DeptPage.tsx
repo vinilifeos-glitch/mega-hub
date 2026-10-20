@@ -5,7 +5,7 @@ import { Linking, Platform, Pressable, Text, TextInput, View } from 'react-nativ
 import { router } from 'expo-router';
 import { useMe } from '../state/AppContext';
 import { displayName } from '../display';
-import { CardHeader, GhostButton, SearchField, Badge, Button, Card, DeptTitle, Field, Icon, IconButton, Notice, Screen, useColors, useStyles, useDeptAccent } from '../components/ui';
+import { PersonName, CardHeader, GhostButton, SearchField, Badge, Button, Card, DeptTitle, Field, Icon, IconButton, Notice, Screen, useColors, useStyles, useDeptAccent, withNames, NAMES_SLOT } from '../components/ui';
 import { KIDS_DEPT, MUSIC_DEPT, canEditLessonsRule } from '../state/permissions';
 import { MemberEditor } from './MemberEditor';
 import { roleIdx, sortRoles } from '../data/rota';
@@ -15,7 +15,7 @@ export const openUrl = (u: string) => { if (Platform.OS === 'web') globalThis.op
 
 export function DeptPage({ id }: { id: string }) {
   const colors = useColors(); const s = useStyles();
-  const { data, t, deptName, canEditDept, canViewDept, setDeptAbout } = useMe();
+  const { data, currentUser, t, deptName, canEditDept, canViewDept, setDeptAbout } = useMe();
   const d = data.departments.find(x => x.id === id);
   const [editing, setEditing] = useState(false);
   const [about, setAbout] = useState<string | null>(null);
@@ -44,7 +44,7 @@ export function DeptPage({ id }: { id: string }) {
           </> : <Pressable disabled={!editing} onPress={() => setAbout(d.description ?? '')} testID="dept-about">
             <Text style={{ color: d.description ? colors.text : colors.muted, fontSize: 15, lineHeight: 22 }}>{d.description || t('dept.noAbout')}</Text>
           </Pressable>}
-          <View style={[s.row, { flexWrap: 'nowrap', marginTop: 12, paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.border }]}><Icon name="shield-checkmark-outline" size={16} style={{ marginRight: 6 }} /><Text style={[s.small, { flexShrink: 1 }]}>{leaders.length ? t('dept.leaders', { names: leaders.map(displayName).join(', ') }) : t('dept.noLeaders')}</Text></View>
+          <View style={[s.row, { flexWrap: 'nowrap', marginTop: 12, paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.border }]}><Icon name="shield-checkmark-outline" size={16} style={{ marginRight: 6 }} /><Text style={[s.small, { flexShrink: 1 }]}>{leaders.length ? withNames(t('dept.leaders', { names: NAMES_SLOT }), leaders.map(u => ({ name: displayName(u), me: u.id === currentUser.id }))) : t('dept.noLeaders')}</Text></View>
         </Card>
         {err && <Notice tone="error" text={err} />}
         {/* Sections: Music = Songs + Team; Kids = Team + Lessons; others = Team. */}
@@ -70,7 +70,7 @@ function NoAccess({ id }: { id: string }) {
 /** Everyone in the department with their role(s) in canonical order; same access as the department page. */
 export function DeptTeam({ id }: { id: string }) {
   const deptAcc = useDeptAccent();
-  const colors = useColors(); const s = useStyles(); const { data, t, deptName, roleName, canEditMember, myAdminDeps } = useMe();
+  const colors = useColors(); const s = useStyles(); const { data, currentUser, t, deptName, roleName, canEditMember, myAdminDeps } = useMe();
   const [open, setOpen] = useState<string | null>(null); const [msg, setMsg] = useState<string | null>(null);
   const d = useDept(id); if (!d) return <NoAccess id={id} />;
   // Owner: everywhere. Admins: only in departments they administer (canEditMember keeps the owner/name/contact limits).
@@ -90,7 +90,7 @@ export function DeptTeam({ id }: { id: string }) {
             accessibilityRole={ed ? 'button' : undefined} accessibilityLabel={ed ? t('dept.editMember', { name: displayName(u) }) : undefined}
             style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', borderTopWidth: i ? 1 : 0, borderTopColor: colors.border, paddingVertical: 10, backgroundColor: pressed ? colors.soft : 'transparent' })}>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: colors.text, fontWeight: '700', fontSize: 15 }}>{displayName(u)}</Text>
+              <PersonName name={displayName(u)} me={u.id === currentUser.id} weight="700" testID={u.id === currentUser.id ? `me-team-${u.username}` : undefined} />
               <Text style={s.small}>{roles.length ? roles.map(r => roleName(d.id, r)).join(', ') : t('departmentsScreen.noRoles')}</Text>
             </View>
             {ed && <View testID={`team-edit-${u.username}`}><Icon name="create-outline" size={18} color={colors.primaryText} /></View>}

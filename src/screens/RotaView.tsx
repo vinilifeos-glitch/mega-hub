@@ -41,7 +41,7 @@ export function RotaView({ serviceId }: { serviceId: string }) {
         {mine.filter(a => !data.departments.some(d => d.id === a.departmentId)).map(a => <View key={a.id} testID={`rota-myrole-${a.id}`}><Text style={s.label}>{roleName(a.departmentId, a.position)}</Text></View>)}
         {team.map(g => (
           <RotaTeamCard key={g.departmentId} testID={`rota-team-${g.departmentId}`} title={`${t('myRota.team')} · ${deptName(g.departmentId)}`}
-            rows={g.members.map(m => ({ role: roleName(g.departmentId, m.position), name: displayName({ username: m.username }).replace(/^@/, ''), suffix: m.userId === currentUser.id ? `(${t('myRota.you')})` : undefined, testID: `rota-member-${m.assignmentId}` }))}>
+            rows={g.members.map(m => ({ role: roleName(g.departmentId, m.position), name: displayName({ username: m.username }).replace(/^@/, ''), me: m.userId === currentUser.id, testID: `rota-member-${m.assignmentId}` }))}>
             {g.departmentId === 'd-music' && hasNote ? <AssemblyNoteCard nested value={sv.assemblyNote!} /> : null}
           </RotaTeamCard>))}
         {hasSetlist && <SetlistPreview service={sv} onOpen={() => router.navigate({ pathname: '/', params: { svc: sv.id } })} />}
