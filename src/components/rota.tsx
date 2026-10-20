@@ -5,7 +5,7 @@
 import React from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { useApp } from '../state/AppContext';
-import { Badge, Button, CollapsibleCard, DeptBadge, GhostButton, Icon, radius, space, useColors, useStyles } from './ui';
+import { Badge, Button, CollapsibleCard, PersonName, DeptBadge, GhostButton, Icon, radius, space, useColors, useStyles } from './ui';
 
 export type PickerStatus = 'free' | 'busy' | 'away';
 
@@ -92,7 +92,7 @@ export function RotaRoleCard({ roles, title, testID }: { roles: { dep: { id: str
 }
 
 /** "Your team" card: role left, @name right (blank when unassigned). */
-export function RotaTeamCard({ rows, title, testID, at = true, children }: { at?: boolean; rows: { role: string; name?: string; suffix?: string; testID?: string }[]; title?: string; testID?: string; children?: React.ReactNode }) {
+export function RotaTeamCard({ rows, title, testID, at = true, children }: { at?: boolean; rows: { role: string; name?: string; me?: boolean; testID?: string }[]; title?: string; testID?: string; children?: React.ReactNode }) {
   const c = useColors(); const { t } = useApp();
   const label = title ?? t('rota.yourTeam');
   return (
@@ -104,8 +104,7 @@ export function RotaTeamCard({ rows, title, testID, at = true, children }: { at?
       {rows.map((r, i) => (
         <View key={i} testID={r.testID} style={{ flexDirection: 'row', alignItems: 'center', minHeight: 44, borderTopWidth: i ? 1 : 0, borderTopColor: c.border }}>
           <Text numberOfLines={2} style={{ flex: 1, fontSize: 15, color: c.muted, paddingRight: space.sm }}>{r.role}</Text>
-          {r.name ? <Text numberOfLines={1} style={{ fontSize: 15, fontWeight: '700', color: c.text, maxWidth: '55%' }}>{at ? '@' : ''}{r.name}{r.suffix ? <Text style={{ fontWeight: '500', color: c.primaryText }}>{` ${r.suffix}`}</Text> : null}</Text>
-            : null}
+          {r.name ? <PersonName name={`${at ? '@' : ''}${r.name}`} me={r.me} weight="700" style={{ maxWidth: '55%', alignSelf: 'center' }} /> : null}
         </View>
       ))}
       {children}

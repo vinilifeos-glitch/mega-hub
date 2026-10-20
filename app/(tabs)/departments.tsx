@@ -2,7 +2,7 @@ import { displayName } from '../../src/display';
 import { Pressable, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { useMe } from '../../src/state/AppContext';
-import { Badge, Card, DeptTitle, Icon, Screen, useColors, useStyles, useDeptAccent } from '../../src/components/ui';
+import { Badge, Card, DeptTitle, Icon, Screen, useColors, useStyles, useDeptAccent, withNames, NAMES_SLOT } from '../../src/components/ui';
 import { RolesView } from '../../src/screens/Profile';
 
 export default function Departments() {
@@ -26,10 +26,10 @@ export default function Departments() {
               {canManage(d.id) && <Badge tone="accent" icon="shield-checkmark" label={t('common.youManage')} />}
               <Icon name="chevron-forward" size={18} color={colors.subtle} style={{ marginLeft: 8 }} />
             </View>
-            <Text style={[s.small, { marginTop: 4 }]}>{admins.length ? t('departmentsScreen.admins', { names: admins.map(displayName).join(', ') }) : t('departmentsScreen.noAdmins', { owner: ownerName })}</Text>
+            <Text style={[s.small, { marginTop: 4 }]}>{admins.length ? withNames(t('departmentsScreen.admins', { names: NAMES_SLOT }), admins.map(u => ({ name: displayName(u), me: u.id === currentUser.id }))) : t('departmentsScreen.noAdmins', { owner: ownerName })}</Text>
             <Text style={[s.label, { marginTop: 10, marginBottom: 6 }]}>{t('ui.rolesLabel')}</Text>
             <View style={s.row}>{d.positions.map(p => <Badge key={p} label={roleName(d.id, p)} />)}</View>
-            <Text style={{ marginTop: 6, color: colors.text }}>{members.length ? t(members.length === 1 ? 'departmentsScreen.member' : 'departmentsScreen.members', { count: members.length, names: members.map(displayName).join(', ') }) : t('departmentsScreen.noMembers')}</Text>
+            <Text style={{ marginTop: 6, color: colors.text }}>{members.length ? withNames(t(members.length === 1 ? 'departmentsScreen.member' : 'departmentsScreen.members', { count: members.length, names: NAMES_SLOT }), members.map(u => ({ name: displayName(u), me: u.id === currentUser.id }))) : t('departmentsScreen.noMembers')}</Text>
           </Card></Pressable>
         );
       })}

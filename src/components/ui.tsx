@@ -203,6 +203,28 @@ export function CollapsibleCard({ toggleID, testID, icon, title, badge, header, 
   return <Card style={style}>{body}</Card>;
 }
 
+/* ── The signed-in user's own name ───────────────────────────
+   Replaces the old '(you)' suffix: semi-bold primary-indigo text on a light primary-tint pill
+   (AA in light + dark). `inline` = no pill, for names inside a sentence/list. Screen readers still hear "you". */
+export function PersonName({ name, me, size = 15, weight = '600', color, numberOfLines = 1, inline, testID, style }: { name: string; me?: boolean; size?: number; weight?: '500' | '600' | '700' | '800'; color?: string; numberOfLines?: number; inline?: boolean; testID?: string; style?: any }) {
+  const c = useColors(); const { t } = useApp();
+  if (!me) return <Text testID={testID} numberOfLines={inline ? undefined : numberOfLines} style={[{ fontSize: size, fontWeight: weight, color: color ?? c.text }, style]}>{name}</Text>;
+  const label = `${name}, ${t('myRota.you')}`;
+  if (inline) return <Text testID={testID ?? 'me-name'} accessibilityLabel={label} style={{ color: c.primaryText, fontWeight: '700' }}>{name}</Text>;
+  return (
+    <View testID={testID ?? 'me-name'} accessible accessibilityLabel={label} style={[{ flexDirection: 'row', alignItems: 'center', flexShrink: 1, alignSelf: 'flex-start', backgroundColor: c.primarySoft, borderRadius: radius.pill, paddingHorizontal: 8, paddingVertical: 1 }, style]}>
+      <Text numberOfLines={numberOfLines} style={{ fontSize: size, fontWeight: '700', color: c.primaryText, flexShrink: 1 }}>{name}</Text>
+    </View>
+  );
+}
+
+/** Names inside a translated sentence: pass t(key, { names: NAMES_SLOT }) and the people; the signed-in user's name is highlighted inline. */
+export const NAMES_SLOT = '\u0001';
+export function withNames(text: string, people: { name: string; me?: boolean }[]): React.ReactNode {
+  const [pre, ...rest] = text.split(NAMES_SLOT); const post = rest.join('');
+  return <>{pre}{people.map((p, i) => <React.Fragment key={i}>{i ? ', ' : ''}<PersonName inline name={p.name} me={p.me} /></React.Fragment>)}{post}</>;
+}
+
 /* ── Badges ─────────────────────────────────────────────────── */
 export type BadgeTone = 'accent' | 'neutral' | 'success' | 'warning' | 'danger';
 /** One pill badge for roles, departments and status. Pass `color` for a department tint. */
