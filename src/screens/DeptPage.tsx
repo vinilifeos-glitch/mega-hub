@@ -5,7 +5,7 @@ import { Linking, Platform, Pressable, Text, TextInput, View } from 'react-nativ
 import { router } from 'expo-router';
 import { useMe } from '../state/AppContext';
 import { displayName } from '../display';
-import { CardHeader, GhostButton, SearchField, Badge, Button, Card, DeptTitle, Field, Icon, IconButton, Notice, Screen, useColors, useStyles } from '../components/ui';
+import { CardHeader, GhostButton, SearchField, Badge, Button, Card, DeptTitle, Field, Icon, IconButton, Notice, Screen, useColors, useStyles, useDeptAccent } from '../components/ui';
 import { KIDS_DEPT, MUSIC_DEPT, canEditLessonsRule } from '../state/permissions';
 import { MemberEditor } from './MemberEditor';
 import { roleIdx, sortRoles } from '../data/rota';
@@ -69,6 +69,7 @@ function NoAccess({ id }: { id: string }) {
 
 /** Everyone in the department with their role(s) in canonical order; same access as the department page. */
 export function DeptTeam({ id }: { id: string }) {
+  const deptAcc = useDeptAccent();
   const colors = useColors(); const s = useStyles(); const { data, t, deptName, roleName, canEditMember, myAdminDeps } = useMe();
   const [open, setOpen] = useState<string | null>(null); const [msg, setMsg] = useState<string | null>(null);
   const d = useDept(id); if (!d) return <NoAccess id={id} />;
@@ -82,7 +83,7 @@ export function DeptTeam({ id }: { id: string }) {
   return (
     <Screen title={t('dept.teamTitle', { dept: deptName(d.id) })} subtitle={t('dept.members', { n: people.length })} backTo={{ label: deptName(d.id), onPress: () => goBack(`/dept/${d.id}`) }}>
       {msg && <Notice tone="success" text={msg} />}
-      <Card style={{ borderLeftWidth: 3, borderLeftColor: d.color }}>
+      <Card style={{ borderLeftWidth: 3, borderLeftColor: deptAcc(d) }}>
         {people.length === 0 && <Text style={s.small}>{t('departmentsScreen.noMembers')}</Text>}
         {people.map(({ u, roles }, i) => { const ed = mayEdit(u); return (
           <Pressable key={u.id} testID={`team-row-${u.username}`} disabled={!ed} onPress={() => { setMsg(null); setOpen(u.id); }}

@@ -8,7 +8,7 @@ import { useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { AccountInput, formatDobInput, useMe, validContact, validDob, validEmail } from '../../src/state/AppContext';
-import { Badge, RoleBadge, Button, DeptTitle, Icon, deptIcon, Card, Chip, Empty, Field, Screen, Notice, useColors, useStyles } from '../../src/components/ui';
+import { Badge, RoleBadge, Button, DeptTitle, Icon, deptIcon, Card, Chip, Empty, Field, Screen, Notice, useColors, useStyles, useDeptAccent } from '../../src/components/ui';
 import { Role, Unavailability, User } from '../../src/types';
 import { NOTE_MAX } from '../../src/data/unavailability';
 import { toIso, todayIso } from '../../src/data/dates';
@@ -17,6 +17,7 @@ const order: Role[] = ['owner', 'admin', 'volunteer'];
 const fold = (x: string) => x.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
 export default function Accounts() {
+  const deptAcc = useDeptAccent();
   const colors = useColors(); const s = useStyles();
   const { data, canManage, canManageAccounts, currentUser, t, deptName, roleName, tierName, ownerName } = useMe();
   const [mode, setMode] = useState<{ kind: 'new' } | { kind: 'edit'; id: string } | null>(null);
@@ -51,7 +52,7 @@ export default function Accounts() {
         const admins = data.users.filter(u => u.active && u.role === 'admin' && (u.adminOf ?? []).includes(d.id));
         const members = data.users.filter(u => u.active && u.departmentIds.includes(d.id));
         return (
-          <Pressable key={d.id} testID={`acc-dept-${d.id}`} accessibilityRole="button" accessibilityLabel={t('dept.openA11y', { dept: deptName(d.id) })} onPress={() => router.push(`/dept/${d.id}` as any)}><Card style={{ borderLeftWidth: 3, borderLeftColor: d.color }}>
+          <Pressable key={d.id} testID={`acc-dept-${d.id}`} accessibilityRole="button" accessibilityLabel={t('dept.openA11y', { dept: deptName(d.id) })} onPress={() => router.push(`/dept/${d.id}` as any)}><Card style={{ borderLeftWidth: 3, borderLeftColor: deptAcc(d) }}>
             <View style={[s.row, { justifyContent: 'space-between', flexWrap: 'nowrap' }]}>
               <View style={{ flex: 1 }}><DeptTitle dep={d} /></View>
               {canManage(d.id) && <Badge tone="accent" icon="shield-checkmark" label={t('common.youManage')} />}
@@ -71,14 +72,14 @@ export default function Accounts() {
         <Text style={s.section}>{t('accounts.department')}</Text>
         <View style={s.row}>
           <Chip label={t('common.all')} active={dep === 'all'} onPress={() => { setDep('all'); setPos(null); }} testID="f-dep-all" />
-          {data.departments.map(d => <Chip key={d.id} testID={`f-dep-${d.id}`} icon={deptIcon(d.id)} label={deptName(d.id)} color={d.color} active={dep === d.id} onPress={() => { setDep(d.id); setPos(null); }} />)}
+          {data.departments.map(d => <Chip key={d.id} testID={`f-dep-${d.id}`} icon={deptIcon(d.id)} label={deptName(d.id)} color={deptAcc(d)} active={dep === d.id} onPress={() => { setDep(d.id); setPos(null); }} />)}
           <Chip label={t('accounts.noDepartment')} active={dep === 'none'} onPress={() => { setDep('none'); setPos(null); }} testID="f-dep-none" />
         </View>
         {selDep && <>
           <Text style={s.section}>{t('accounts.roleIn', { dept: deptName(selDep.id) })}</Text>
           <View style={s.row}>
-            <Chip label={t('common.any')} color={selDep.color} active={!pos} onPress={() => setPos(null)} />
-            {selDep.positions.map(r => <Chip key={r} testID={`f-role-${r}`} label={roleName(selDep.id, r)} color={selDep.color} active={pos === r} onPress={() => setPos(pos === r ? null : r)} />)}
+            <Chip label={t('common.any')} color={deptAcc(selDep)} active={!pos} onPress={() => setPos(null)} />
+            {selDep.positions.map(r => <Chip key={r} testID={`f-role-${r}`} label={roleName(selDep.id, r)} color={deptAcc(selDep)} active={pos === r} onPress={() => setPos(pos === r ? null : r)} />)}
           </View>
         </>}
         <Text style={s.section}>{t('fields.accessTier')}</Text>
@@ -110,6 +111,7 @@ export default function Accounts() {
 }
 
 function FullEditor({ user, onClose }: { user: User; onClose: (m?: string) => void }) {
+  const deptAcc = useDeptAccent();
   const colors = useColors(); const s = useStyles();
   const { data, ownerUpdateAccount, saveProfile, addUnavailable, removeUnavailable, allowedRoles, currentUser, t, deptName, roleName, tierName } = useMe();
   const [f, setF] = useState({ firstName: user.firstName, middleNames: user.middleNames, lastName: user.lastName, dob: user.dob, contact: user.contact ?? '', email: user.email ?? '' });
@@ -162,7 +164,7 @@ function FullEditor({ user, onClose }: { user: User; onClose: (m?: string) => vo
         <View style={[s.row, { marginTop: 6 }]}>{allowedRoles.map(r => <Chip key={r} testID={`e-tier-${r}`} label={tierName(r)} active={role === r} onPress={() => !self && setRole(r)} />)}</View>
         {role === 'admin' && <>
           <Text style={s.small}>{t('accounts.administers')}</Text>
-          <View style={[s.row, { marginTop: 6 }]}>{data.departments.map(d => <Chip key={d.id} testID={`e-adminof-${d.id}`} icon={deptIcon(d.id)} label={deptName(d.id)} color={d.color} active={adminOf.includes(d.id)} onPress={() => setAdminOf(toggle(adminOf, d.id))} />)}</View>
+          <View style={[s.row, { marginTop: 6 }]}>{data.departments.map(d => <Chip key={d.id} testID={`e-adminof-${d.id}`} icon={deptIcon(d.id)} label={deptName(d.id)} color={deptAcc(d)} active={adminOf.includes(d.id)} onPress={() => setAdminOf(toggle(adminOf, d.id))} />)}</View>
         </>}
         <Text style={s.small}>{t('fields.status')}</Text>
         <View style={[s.row, { marginTop: 6 }]}>
@@ -175,10 +177,10 @@ function FullEditor({ user, onClose }: { user: User; onClose: (m?: string) => vo
       {data.departments.map(d => {
         const inDep = depIds.includes(d.id);
         return (
-          <Card key={d.id} style={{ borderLeftWidth: 3, borderLeftColor: inDep ? d.color : colors.border }}>
-            <Chip testID={`e-dep-${d.id}`} icon={inDep ? 'checkmark' : deptIcon(d.id)} label={deptName(d.id)} color={d.color} active={inDep}
+          <Card key={d.id} style={{ borderLeftWidth: 3, borderLeftColor: inDep ? deptAcc(d) : colors.border }}>
+            <Chip testID={`e-dep-${d.id}`} icon={inDep ? 'checkmark' : deptIcon(d.id)} label={deptName(d.id)} color={deptAcc(d)} active={inDep}
               onPress={() => { setDepIds(toggle(depIds, d.id)); if (!positions[d.id]) setPositions({ ...positions, [d.id]: [] }); }} />
-            {inDep && <View style={s.row}>{d.positions.map(r => <Chip key={r} testID={`e-role-${d.id}-${r}`} label={roleName(d.id, r)} color={d.color} active={(positions[d.id] ?? []).includes(r)}
+            {inDep && <View style={s.row}>{d.positions.map(r => <Chip key={r} testID={`e-role-${d.id}-${r}`} label={roleName(d.id, r)} color={deptAcc(d)} active={(positions[d.id] ?? []).includes(r)}
               onPress={() => setPositions({ ...positions, [d.id]: toggle(positions[d.id] ?? [], r) })} />)}</View>}
           </Card>
         );
@@ -195,6 +197,7 @@ function FullEditor({ user, onClose }: { user: User; onClose: (m?: string) => vo
 }
 
 function NewAccount({ onClose }: { onClose: (m?: string) => void }) {
+  const deptAcc = useDeptAccent();
   const colors = useColors(); const s = useStyles();
   const { data, allowedRoles, saveAccount, t, deptName, roleName, tierName } = useMe();
   const [f, setF] = useState({ firstName: '', middleNames: '', lastName: '', dob: '', contact: '', email: '' });
@@ -243,17 +246,17 @@ function NewAccount({ onClose }: { onClose: (m?: string) => void }) {
         <View style={[s.row, { marginTop: 6 }]}>{allowedRoles.map(r => <Chip key={r} testID={`n-tier-${r}`} label={tierName(r)} active={role === r} onPress={() => setRole(r)} />)}</View>
         {role === 'admin' && <>
           <Text style={s.small}>{t('accounts.administers')}</Text>
-          <View style={[s.row, { marginTop: 6 }]}>{data.departments.map(d => <Chip key={d.id} testID={`n-adminof-${d.id}`} icon={deptIcon(d.id)} label={deptName(d.id)} color={d.color} active={adminOf.includes(d.id)} onPress={() => setAdminOf(toggle(adminOf, d.id))} />)}</View>
+          <View style={[s.row, { marginTop: 6 }]}>{data.departments.map(d => <Chip key={d.id} testID={`n-adminof-${d.id}`} icon={deptIcon(d.id)} label={deptName(d.id)} color={deptAcc(d)} active={adminOf.includes(d.id)} onPress={() => setAdminOf(toggle(adminOf, d.id))} />)}</View>
         </>}
       </Card>
       {sec(t('profile.departmentsRoles'))}
       {data.departments.map(d => {
         const inDep = depIds.includes(d.id);
         return (
-          <Card key={d.id} style={{ borderLeftWidth: 3, borderLeftColor: inDep ? d.color : colors.border }}>
-            <Chip testID={`n-dep-${d.id}`} icon={inDep ? 'checkmark' : deptIcon(d.id)} label={deptName(d.id)} color={d.color} active={inDep}
+          <Card key={d.id} style={{ borderLeftWidth: 3, borderLeftColor: inDep ? deptAcc(d) : colors.border }}>
+            <Chip testID={`n-dep-${d.id}`} icon={inDep ? 'checkmark' : deptIcon(d.id)} label={deptName(d.id)} color={deptAcc(d)} active={inDep}
               onPress={() => { setDepIds(toggle(depIds, d.id)); if (!positions[d.id]) setPositions({ ...positions, [d.id]: [] }); }} />
-            {inDep && <View style={s.row}>{d.positions.map(r => <Chip key={r} testID={`n-role-${d.id}-${r}`} label={roleName(d.id, r)} color={d.color} active={(positions[d.id] ?? []).includes(r)}
+            {inDep && <View style={s.row}>{d.positions.map(r => <Chip key={r} testID={`n-role-${d.id}-${r}`} label={roleName(d.id, r)} color={deptAcc(d)} active={(positions[d.id] ?? []).includes(r)}
               onPress={() => setPositions({ ...positions, [d.id]: toggle(positions[d.id] ?? [], r) })} />)}</View>}
           </Card>
         );

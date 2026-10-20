@@ -2,10 +2,11 @@ import { displayName } from '../../src/display';
 import { Pressable, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { useMe } from '../../src/state/AppContext';
-import { Badge, Card, DeptTitle, Icon, Screen, useColors, useStyles } from '../../src/components/ui';
+import { Badge, Card, DeptTitle, Icon, Screen, useColors, useStyles, useDeptAccent } from '../../src/components/ui';
 import { RolesView } from '../../src/screens/Profile';
 
 export default function Departments() {
+  const deptAcc = useDeptAccent();
   const colors = useColors(); const s = useStyles();
   const { data, canManage, canManageAccounts, currentUser, t, ownerName, roleName, deptName } = useMe();
   // Membership cards only (RolesView). Dept admins also see departments they administer even if not listed as members.
@@ -19,7 +20,7 @@ export default function Departments() {
         const admins = data.users.filter(u => u.active && u.role === 'admin' && (u.adminOf ?? []).includes(d.id));
         const members = data.users.filter(u => u.active && u.departmentIds.includes(d.id));
         return (
-          <Pressable key={d.id} testID={`open-dept-${d.id}`} accessibilityRole="button" accessibilityLabel={t('dept.openA11y', { dept: deptName(d.id) })} onPress={() => router.push(`/dept/${d.id}` as any)}><Card style={{ borderLeftWidth: 3, borderLeftColor: d.color }}>
+          <Pressable key={d.id} testID={`open-dept-${d.id}`} accessibilityRole="button" accessibilityLabel={t('dept.openA11y', { dept: deptName(d.id) })} onPress={() => router.push(`/dept/${d.id}` as any)}><Card style={{ borderLeftWidth: 3, borderLeftColor: deptAcc(d) }}>
             <View style={[s.row, { justifyContent: 'space-between', flexWrap: 'nowrap' }]}>
               <View style={{ flex: 1 }}><DeptTitle dep={d} /></View>
               {canManage(d.id) && <Badge tone="accent" icon="shield-checkmark" label={t('common.youManage')} />}

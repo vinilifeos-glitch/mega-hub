@@ -63,7 +63,7 @@ export function UnsavedHost() {
   const cancel = () => { if (!go) return; const f = go.fn; setGo(null); if (active) active.current.dirty = false; pushed = false; f(); }; // discard + continue (sentinel abandoned: no async history.back racing the navigation)
   return (
     <Modal visible={!!go} transparent animationType="fade" onRequestClose={cancel}>
-      <View style={{ flex: 1, justifyContent: 'center', padding: 24, backgroundColor: 'rgba(0,0,0,0.45)' }}>
+      <View style={{ flex: 1, justifyContent: 'center', padding: 24, backgroundColor: c.scrim }}>
         {go && <View testID="unsaved-sheet" accessibilityRole="alert" style={{ backgroundColor: c.card, borderRadius: 16, padding: 20, maxWidth: 420, width: '100%', alignSelf: 'center' }}>
           <Text style={{ fontSize: 18, fontWeight: '800', color: c.text, marginBottom: 8 }}>{t('unsaved.title')}</Text>
           <Text style={{ fontSize: 15, color: c.muted, marginBottom: 12 }}>{t('unsaved.msg')}</Text>

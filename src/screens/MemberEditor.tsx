@@ -6,12 +6,13 @@ import { DateField } from '../components/DateField';
 import { useState } from 'react';
 import { Text, View } from 'react-native';
 import { useMe } from '../state/AppContext';
-import { Icon, Button, deptIcon, Card, Chip, Field, Screen, Notice, useColors, useStyles } from '../components/ui';
+import { Icon, Button, deptIcon, Card, Chip, Field, Screen, Notice, useColors, useStyles, useDeptAccent } from '../components/ui';
 import { User } from '../types';
 import { todayIso } from '../data/dates';
 
 /** Admin/owner member editor (existing admin limits: personal fields locked for admins, only their own departments, never the owner). */
 export function MemberEditor({ user, onClose, backLabel }: { user: User; onClose: (m?: string) => void; backLabel?: string }) {
+  const deptAcc = useDeptAccent();
   const colors = useColors(); const s = useStyles();
   const { data, currentUser, myAdminDeps, adminSaveMember, addUnavailable, removeUnavailable, t, ownerName, deptName, roleName } = useMe();
   const deps = data.departments.filter(d => myAdminDeps.includes(d.id));
@@ -36,9 +37,9 @@ export function MemberEditor({ user, onClose, backLabel }: { user: User; onClose
       {deps.map(d => {
         const inDep = dm[d.id] !== null;
         return (
-          <Card key={d.id} style={{ borderLeftWidth: 3, borderLeftColor: inDep ? d.color : colors.border }}>
-            <Chip testID={`m-dep-${d.id}`} icon={inDep ? 'checkmark' : deptIcon(d.id)} label={deptName(d.id)} color={d.color} active={inDep} onPress={() => setDm({ ...dm, [d.id]: inDep ? null : [] })} />
-            {inDep && <View style={s.row}>{d.positions.map(r => <Chip key={r} testID={`m-role-${d.id}-${r}`} label={roleName(d.id, r)} color={d.color} active={dm[d.id]!.includes(r)} onPress={() => toggleRole(d.id, r)} />)}</View>}
+          <Card key={d.id} style={{ borderLeftWidth: 3, borderLeftColor: inDep ? deptAcc(d) : colors.border }}>
+            <Chip testID={`m-dep-${d.id}`} icon={inDep ? 'checkmark' : deptIcon(d.id)} label={deptName(d.id)} color={deptAcc(d)} active={inDep} onPress={() => setDm({ ...dm, [d.id]: inDep ? null : [] })} />
+            {inDep && <View style={s.row}>{d.positions.map(r => <Chip key={r} testID={`m-role-${d.id}-${r}`} label={roleName(d.id, r)} color={deptAcc(d)} active={dm[d.id]!.includes(r)} onPress={() => toggleRole(d.id, r)} />)}</View>}
           </Card>
         );
       })}

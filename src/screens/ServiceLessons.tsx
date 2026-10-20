@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { useMe } from '../state/AppContext';
-import { Badge, Card, CollapsibleCard, CardHeader, GhostButton, Icon, IconButton, SearchField, useColors, useStyles } from '../components/ui';
+import { Badge, Card, CollapsibleCard, CardHeader, GhostButton, Icon, IconButton, SearchField, useColors, useStyles, useDeptAccent } from '../components/ui';
 import { downloadLesson, fmtSize, Lesson, openLesson, useLessons } from '../data/files';
 import { KIDS_DEPT, canSeeServiceLessonsRule } from '../state/permissions';
 import { Service } from '../types';
@@ -10,6 +10,7 @@ import { Service } from '../types';
 export function ServiceLessonsCard({ service, list, onChange, editable, startEditing, readOnly }: { service?: Service; list: string[]; onChange?: (l: string[]) => void; editable?: boolean; startEditing?: boolean; readOnly?: boolean }) {
   const colors = useColors(); const s = useStyles(); const { data, t, currentUser } = useMe();
   const catalog = useLessons(KIDS_DEPT);
+  const deptAcc = useDeptAccent();
   const [editing, setEditing] = useState(!!startEditing && !!editable);
   const [pick, setPick] = useState<string | null>(null);
   if (!canSeeServiceLessonsRule(currentUser)) return null;
@@ -20,7 +21,7 @@ export function ServiceLessonsCard({ service, list, onChange, editable, startEdi
   const move = (i: number, dir: -1 | 1) => { const j = i + dir; if (j < 0 || j >= list.length) return; const n = [...list]; [n[i], n[j]] = [n[j], n[i]]; set(n); };
   const q = (pick ?? '').trim().toLowerCase();
   const offer = catalog.filter(l => !list.includes(l.id) && (!q || l.title.toLowerCase().includes(q) || l.name.toLowerCase().includes(q)));
-  const accent = data.departments.find(d => d.id === KIDS_DEPT)?.color ?? colors.primary;
+  const accent = deptAcc(data.departments.find(d => d.id === KIDS_DEPT) ?? { id: KIDS_DEPT });
   return (
     <View testID="lessons-card"><CollapsibleCard toggleID="lessons-toggle" icon="book-outline" title={t('svcLessons.title')} badge={<Badge label={t('svcLessons.count', { n: list.length })} testID="lessons-count" />}
       style={{ borderLeftWidth: 3, borderLeftColor: accent }}
