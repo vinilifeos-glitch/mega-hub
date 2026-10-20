@@ -93,7 +93,7 @@ await ok('existing services default to published', async () => (await db.query(`
 await ok('volunteer cannot select draft service/slots/assignments', async () => (await as('miguel', `select * from services where id=$1`, [id(150)])).rows.length === 0 && (await as('miguel', `select * from service_slots where service_id=$1`, [id(150)])).rows.length === 0 && (await as('miguel', `select * from assignments where service_id=$1`, [id(150)])).rows.length === 0);
 await ok('volunteer still sees published services', async () => (await as('miguel', `select * from services where id=$1`, [id(100)])).rows.length === 1);
 await ok('owner and admin see draft + its assignment', async () => (await as('owner', `select * from assignments where service_id=$1`, [id(150)])).rows.length === 1 && (await as('lucas', `select * from services where id=$1`, [id(150)])).rows.length === 1);
-await ok('admin cannot publish', async () => { await as('lucas', `update services set status='published' where id=$1`, [id(150)]); return (await db.query(`select status from services where id=$1`, [id(150)])).rows[0].status === 'draft'; });
+await ok('admin cannot publish', async () => { await as('lucas', `update services set status='published' where id=$1`, [id(150)]).catch(() => {}); return (await db.query(`select status from services where id=$1`, [id(150)])).rows[0].status === 'draft'; });
 await ok('owner publishes -> volunteer sees it', async () => (await allowed('owner', `update services set status='published' where id='${id(150)}'`)) && (await as('miguel', `select * from assignments where service_id=$1`, [id(150)])).rows.length === 1);
 // Setlist
 U.pedro = id(7); await db.query(`insert into auth.users values ($1,'pedro@megahub.local')`, [U.pedro]); await db.query(`insert into profiles (id, username, tier, must_change_password) values ($1,'Pedro','volunteer',false)`, [U.pedro]); // plain non-Music volunteer
@@ -234,5 +234,21 @@ await ok('ASSEMBLY: owner can give a volunteer the Assembly role and assign it',
   await ok('SVL: Kids member reads; non-Kids volunteer and Music admin do not', async () => (await rows('ana', `select * from service_lessons`)).length === 2 && (await rows('zoe', `select * from service_lessons`)).length === 0 && (await rows('lucas', `select * from service_lessons`)).length === 0);
   await db.exec(`reset role; select set_config('request.jwt.claim.sub', '', false);`); await db.query(`insert into service_lessons values ($1,$2,1)`, [S2, GONE]);   // e.g. imported/kept after catalog delete
   await ok('SVL: removed-lesson rows are kept and still reorderable', () => allowed('camila', `update service_lessons set position=0 where service_id=$1 and lesson_id=$2`, [S2, GONE]));
+}
+// Assembly note: column on services; owner + admins (tier) may write it; admins can't touch other columns; volunteers can't write; everyone who sees the service reads it
+{ const SN = id(320); await db.exec(`reset role; select set_config('request.jwt.claim.sub', '', false);`);
+  await db.query(`insert into services (id, title, date, start_time, end_time) values ($1,'N','2099-12-13','16:00','21:00')`, [SN]);
+  const note = async () => (await db.query(`select assembly_note from services where id=$1`, [SN])).rows[0].assembly_note;
+  await ok('ASM: defaults to empty for existing/new services', async () => (await note()) === '' && (await db.query(`select count(*)::int n from services where assembly_note <> ''`)).rows[0].n === 0);
+  await ok('ASM: owner writes note', async () => (await allowed('owner', `update services set assembly_note='Owner' where id=$1`, [SN])) && (await note()) === 'Owner');
+  await ok('ASM: Music admin writes note', async () => (await allowed('lucas', `update services set assembly_note='Lucas' where id=$1`, [SN])) && (await note()) === 'Lucas');
+  await ok('ASM: Kids admin writes note', async () => (await allowed('camila', `update services set assembly_note='Camila' where id=$1`, [SN])) && (await note()) === 'Camila');
+  await ok('ASM: admin cannot change title/date with the note', async () => { await as('lucas', `update services set assembly_note='x', title='hack' where id=$1`, [SN]).catch(() => {}); const r = (await db.query(`select title, assembly_note from services where id=$1`, [SN])).rows[0]; return r.title === 'N' && r.assembly_note === 'Camila'; });
+  await ok('ASM: admin cannot change title alone', async () => { await as('camila', `update services set title='hack2' where id=$1`, [SN]).catch(() => {}); return (await db.query(`select title from services where id=$1`, [SN])).rows[0].title === 'N'; });
+  await ok('ASM: volunteer cannot write note', async () => { await as('miguel', `update services set assembly_note='vol' where id=$1`, [SN]).catch(() => {}); return (await note()) === 'Camila'; });
+  await ok('ASM: Teacher/lead volunteer cannot write note', async () => { await as('ana', `update services set assembly_note='ana' where id=$1`, [SN]).catch(() => {}); return (await note()) === 'Camila'; });
+  await ok('ASM: volunteer reads it on a published service', async () => (await as('miguel', `select assembly_note from services where id=$1`, [SN])).rows[0]?.assembly_note === 'Camila');
+  await ok('ASM: admin still cannot insert/delete services', async () => (await denied('lucas', `insert into services (title,date,start_time,end_time) values ('x','2099-01-01','16:00','21:00')`)) && (await denied('lucas', `delete from services where id='${SN}'`)));
+  await ok('ASM: 2000-char limit', async () => { try { await as('owner', `update services set assembly_note=repeat('x',2001) where id=$1`, [SN]); return false; } catch { return true; } });
 }
 console.log(`${n} passed, ${fails} failed`); process.exit(fails ? 1 : 0);

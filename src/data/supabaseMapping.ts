@@ -8,7 +8,7 @@ export type Rows = {
   user_positions: { user_id: string; department_id: string; role: string }[];
   admin_of: { user_id: string; department_id: string }[];
   unavailability: { user_id: string; date: string; date_to?: string | null; note: string | null }[];
-  services: { id: string; title: string; location: string; date: string; start_time: string; end_time: string; status?: 'draft' | 'published' }[];
+  services: { id: string; title: string; location: string; date: string; start_time: string; end_time: string; status?: 'draft' | 'published'; assembly_note?: string }[];
   service_slots: { service_id: string; department_id: string; role: string; count: number }[];
   assignments: { service_id: string; department_id: string; role: string; idx: number; user_id: string }[];
   departments: { id: string; name: string; emoji: string; color: string; sort: number }[];
@@ -63,7 +63,7 @@ export function toRows(d: AppData, idMap: (id: string) => string = x => x): Rows
     for (const x of u.unavailable ?? []) r.unavailability.push({ user_id: id, date: x.date, date_to: x.to && x.to > x.date ? x.to : null, note: blank(x.note) });
   }
   for (const s of d.services) {
-    r.services.push({ id: s.id, title: s.title, location: s.location ?? '', date: s.date, start_time: s.start, end_time: s.end, status: s.status ?? 'published' });
+    r.services.push({ id: s.id, title: s.title, location: s.location ?? '', date: s.date, start_time: s.start, end_time: s.end, status: s.status ?? 'published', assembly_note: s.assemblyNote ?? '' });
     (s.lessons ?? []).forEach((lid, i) => r.service_lessons.push({ service_id: s.id, lesson_id: lid, position: i }));
     (s.setlist ?? []).forEach((x, i) => r.setlist_items.push({ id: x.id, service_id: s.id, position: i, title: x.title, key: blank(x.key), notes: blank(x.notes), song_id: x.songId ?? null }));
     for (const sl of s.slots) r.service_slots.push({ service_id: s.id, department_id: sl.departmentId, role: sl.position, count: sl.count });
@@ -95,7 +95,7 @@ export function fromRows(r: Rows): AppData {
     ...((l => l.length ? { resources: l } : {}))((r.department_resources ?? []).filter(z => z.department_id === x.id).sort((a, b) => a.position - b.position)
       .map(z => ({ id: z.id, title: z.title, url: z.url ?? '', ...(z.kind ? { kind: z.kind } : {}), ...(z.file_ref ? { fileRef: z.file_ref } : {}) }))),
     positions: r.department_roles.filter(p => p.department_id === x.id).sort((a, b) => a.sort - b.sort).map(p => p.role) }));
-  const services = r.services.map(s => ({ id: s.id, title: s.title, location: s.location, date: s.date.slice(0, 10), start: hhmm(s.start_time), end: hhmm(s.end_time), ...(s.status === 'draft' ? { status: 'draft' as const } : {}),
+  const services = r.services.map(s => ({ id: s.id, title: s.title, location: s.location, date: s.date.slice(0, 10), start: hhmm(s.start_time), end: hhmm(s.end_time), ...(s.status === 'draft' ? { status: 'draft' as const } : {}), ...(s.assembly_note ? { assemblyNote: s.assembly_note } : {}),
     ...((l => l.length ? { setlist: l } : {}))((r.setlist_items ?? []).filter(x => x.service_id === s.id).sort((a, b) => a.position - b.position)
       .map(x => ({ id: x.id, title: x.title, ...(x.key ? { key: x.key } : {}), ...(x.notes ? { notes: x.notes } : {}), ...(x.song_id ? { songId: x.song_id } : {}) }))),
     ...((l => l.length ? { lessons: l } : {}))((r.service_lessons ?? []).filter(x => x.service_id === s.id).sort((a, b) => a.position - b.position).map(x => x.lesson_id)),

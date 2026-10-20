@@ -23,6 +23,7 @@ data.__lessons = [
   { id: 'ls-a', deptId: 'd-kids', title: 'Arca de Noé', name: 'Lição 1.pdf', mime: 'application/pdf', size: 13, dataUrl: pdf, createdAt: '2026-10-13T10:00:00Z', by: data.users[0].id },
   { id: 'ls-b', deptId: 'd-kids', title: 'Broken', name: 'x.pdf', mime: 'application/pdf', size: 1, createdAt: '2026-10-13T10:00:00Z', by: 'nobody' }];
 data.services[0].lessons = ['ls-a', 'ls-missing'];
+data.services[0].assemblyNote = 'Chairs first.\nThen the stage.';
 const adapter = {
   findLegacy: async l => (await db.query('select id from profiles where legacy_id=$1', [l])).rows[0]?.id ?? null,
   createAuthUser: async (u, _pw) => { const id = crypto.randomUUID(); await db.query('insert into auth.users values ($1,$2)', [id, u.toLowerCase() + '@megahub.local']); return id; },
@@ -46,6 +47,7 @@ ok(Number((await db.query('select count(*)::int n from lessons')).rows[0].n) ===
 ok(data.users.every(u => !r1.created.some(c => c.username === u.username && (c.password.length < 6))), 'no temp password below Supabase 6-char minimum (current 4-char passwords are replaced)');
 { const r = (await db.query('select * from service_lessons order by position')).rows; const L = (await db.query('select id from lessons')).rows[0].id;
   ok(r.length === 2 && r[0].lesson_id === L && r[0].service_id === data.services[0].id && r[1].position === 1, 'service lessons imported in order, mapped to the imported lesson uuid (missing one kept)'); }
+ok((await db.query('select assembly_note from services where id=$1', [data.services[0].id])).rows[0].assembly_note === 'Chairs first.\nThen the stage.', 'assembly note imported');
 const r2 = await runImport(data, adapter, { log: () => {} });
 ok(r2.created.length === 0, 're-running import is idempotent (no duplicate accounts)');
 ok(Number((await db.query('select count(*)::int n from lessons')).rows[0].n) === 1, 're-run: no duplicate lessons');
@@ -61,7 +63,7 @@ const norm = d => ({
     dob: u.dob, contact: u.contact || '', email: u.email || '', language: u.language ?? null, theme: u.theme ?? null,
     deps: [...u.departmentIds].sort(), pos: JSON.stringify(Object.fromEntries(Object.entries(u.positions ?? {}).filter(([k]) => u.departmentIds.includes(k)).map(([k, v]) => [k, [...v].sort()]).sort())),
     adminOf: u.role === 'admin' ? [...(u.adminOf ?? [])].sort() : [], unavailable: JSON.stringify((u.unavailable ?? []).map(x => ({ date: x.date, note: x.note || null })).sort((a, b) => a.date.localeCompare(b.date))) })).sort((a, b) => a.id.localeCompare(b.id)),
-  services: d.services.map(({ lessons, ...s }) => ({ ...s, ...(lessons ? { lessons } : {}), slots: [...s.slots].sort((a, b) => (a.departmentId + a.position).localeCompare(b.departmentId + b.position)) })),
+  services: d.services.map(({ lessons, assemblyNote, ...s }) => ({ ...s, ...(assemblyNote ? { assemblyNote } : {}), ...(lessons ? { lessons } : {}), slots: [...s.slots].sort((a, b) => (a.departmentId + a.position).localeCompare(b.departmentId + b.position)) })),
   assignments: d.assignments.map(a => ({ ...a, userId: inv.get(a.userId) ?? a.userId })).sort((a, b) => a.id.localeCompare(b.id)),
   departments: d.departments.map(x => ({ ...x, leaderId: null })),
 });

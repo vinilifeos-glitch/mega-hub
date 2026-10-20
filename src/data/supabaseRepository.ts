@@ -58,7 +58,13 @@ export class SupabaseRepository implements Repository {
         }
         continue;
       }
-      if (upsert.length) { const { error } = await this.sb.from(table).upsert(upsert, { onConflict: KEYS[table].join(',') }); if (error) throw error; }
+      if (table === 'services') {
+        // existing services: plain UPDATE (admins may only change assembly_note; upsert would need INSERT rights)
+        const known = new Set(this.snapshot.services.map(s => s.id));
+        for (const row of upsert.filter((r: any) => known.has(r.id))) { const { error } = await this.sb.from('services').update(row).eq('id', (row as any).id); if (error) throw error; }
+        const fresh = upsert.filter((r: any) => !known.has(r.id));
+        if (fresh.length) { const { error } = await this.sb.from('services').upsert(fresh, { onConflict: 'id' }); if (error) throw error; }
+      } else if (upsert.length) { const { error } = await this.sb.from(table).upsert(upsert, { onConflict: KEYS[table].join(',') }); if (error) throw error; }
       for (const row of remove) {
         let q: any = this.sb.from(table).delete();
         for (const k of KEYS[table]) q = q.eq(k, (row as any)[k]);
