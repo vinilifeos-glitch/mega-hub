@@ -58,7 +58,7 @@ draft: 'Draft', saveDraft: 'Save draft', publish: 'Publish', published: 'Service
     busy: '(busy)', away: '(away)', awayNote: 'Away: {note}',
     nobodyHoldsDept: 'No one in {dept} holds {role} yet. Add the role to a member on the Team or Accounts screen.',
     noneAvailable: 'No one available for this role on this date. Check Availability or department members.',
-    assignedCount: '{n} of {total} assigned', noSlots: 'No slots', slotsA11y: '{dept} slots', assignA11y: 'Assign people in {dept}', slotNumber: '{role} {n}',
+    assignedCount: '{n} of {total} assigned', noSlots: 'No slots', slotsA11y: '{dept} slots', assignA11y: 'Assign people in {dept}', slotNumber: '{role} {n}', detailsTitle: 'Service details',
   },
   unav: { from: 'From', to: 'To (optional)', toHint: 'Leave empty for a single day.', note: 'Note (optional)', add: 'Add', remove: 'Remove', days: '{n} days' },
   availability: {

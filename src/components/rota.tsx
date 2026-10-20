@@ -5,7 +5,7 @@
 import React from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { useApp } from '../state/AppContext';
-import { Badge, Button, DeptBadge, GhostButton, Icon, radius, space, useColors, useStyles } from './ui';
+import { Badge, Button, CollapsibleCard, DeptBadge, GhostButton, Icon, radius, space, useColors, useStyles } from './ui';
 
 export type PickerStatus = 'free' | 'busy' | 'away';
 
@@ -92,14 +92,15 @@ export function RotaRoleCard({ roles, title, testID }: { roles: { dep: { id: str
 }
 
 /** "Your team" card: role left, @name right (blank when unassigned). */
-export function RotaTeamCard({ rows, title, testID, at = true }: { at?: boolean; rows: { role: string; name?: string; suffix?: string; testID?: string }[]; title?: string; testID?: string }) {
-  const c = useColors(); const s = useStyles(); const { t } = useApp();
+export function RotaTeamCard({ rows, title, testID, at = true, children }: { at?: boolean; rows: { role: string; name?: string; suffix?: string; testID?: string }[]; title?: string; testID?: string; children?: React.ReactNode }) {
+  const c = useColors(); const { t } = useApp();
+  const label = title ?? t('rota.yourTeam');
   return (
-    <View testID={testID} style={s.card}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: space.xs }}>
+    <CollapsibleCard toggleID={`${testID ?? 'rota-team'}-toggle`} testID={testID} a11yLabel={label}
+      header={<View style={{ flexDirection: 'row', alignItems: 'center' }}>
         <Icon name="people" size={18} color={c.primary} style={{ marginRight: 8 }} />
-        <Text style={{ fontSize: 13, fontWeight: '800', letterSpacing: 0.5, textTransform: 'uppercase', color: c.muted }}>{title ?? t('rota.yourTeam')}</Text>
-      </View>
+        <Text style={{ flexShrink: 1, fontSize: 13, fontWeight: '800', letterSpacing: 0.5, textTransform: 'uppercase', color: c.muted }}>{label}</Text>
+      </View>}>
       {rows.map((r, i) => (
         <View key={i} testID={r.testID} style={{ flexDirection: 'row', alignItems: 'center', minHeight: 44, borderTopWidth: i ? 1 : 0, borderTopColor: c.border }}>
           <Text numberOfLines={2} style={{ flex: 1, fontSize: 15, color: c.muted, paddingRight: space.sm }}>{r.role}</Text>
@@ -107,7 +108,8 @@ export function RotaTeamCard({ rows, title, testID, at = true }: { at?: boolean;
             : null}
         </View>
       ))}
-    </View>
+      {children}
+    </CollapsibleCard>
   );
 }
 

@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { useMe } from '../state/AppContext';
-import { Badge, Card, CardHeader, GhostButton, Icon, IconButton, SearchField, useColors, useStyles } from '../components/ui';
+import { Badge, Card, CollapsibleCard, CardHeader, GhostButton, Icon, IconButton, SearchField, useColors, useStyles } from '../components/ui';
 import { downloadLesson, fmtSize, Lesson, openLesson, useLessons } from '../data/files';
 import { KIDS_DEPT, canSeeServiceLessonsRule } from '../state/permissions';
 import { Service } from '../types';
@@ -22,22 +22,14 @@ export function ServiceLessonsCard({ service, list, onChange, editable, startEdi
   const offer = catalog.filter(l => !list.includes(l.id) && (!q || l.title.toLowerCase().includes(q) || l.name.toLowerCase().includes(q)));
   const accent = data.departments.find(d => d.id === KIDS_DEPT)?.color ?? colors.primary;
   return (
-    <View testID="lessons-card"><Card style={{ borderLeftWidth: 3, borderLeftColor: accent }}>
-      <View style={[s.row, { justifyContent: 'space-between', flexWrap: 'nowrap' }]}>
-        <View style={[s.row, { flexWrap: 'nowrap', flex: 1 }]}>
-          <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center', marginRight: 10 }}>
-            <Icon name="book-outline" size={18} color={colors.primaryText} />
-          </View>
-          <Text style={[s.h2, { marginRight: 8 }]}>{t('svcLessons.title')}</Text>
-          <Badge label={t('svcLessons.count', { n: list.length })} testID="lessons-count" />
-        </View>
-        {editable && !readOnly && !editing && <Pressable testID="lessons-edit" accessibilityRole="button" onPress={() => setEditing(true)} hitSlop={8} style={{ flexDirection: 'row', alignItems: 'center', minHeight: 44, paddingHorizontal: 8 }}>
+    <View testID="lessons-card"><CollapsibleCard toggleID="lessons-toggle" icon="book-outline" title={t('svcLessons.title')} badge={<Badge label={t('svcLessons.count', { n: list.length })} testID="lessons-count" />}
+      style={{ borderLeftWidth: 3, borderLeftColor: accent }}
+      right={editable && !readOnly && !editing ? <Pressable testID="lessons-edit" accessibilityRole="button" onPress={() => setEditing(true)} hitSlop={8} style={{ flexDirection: 'row', alignItems: 'center', minHeight: 40, paddingHorizontal: 8 }}>
           <Icon name="create-outline" size={16} color={colors.primaryText} style={{ marginRight: 4 }} />
           <Text style={{ color: colors.primaryText, fontWeight: '700' }}>{t('svcLessons.edit')}</Text>
-        </Pressable>}
-      </View>
+        </Pressable> : null}>
       {list.length === 0 && <Text style={[s.small, { textAlign: 'center', paddingVertical: 16 }]} testID="lessons-empty">{t('svcLessons.empty')}</Text>}
-      <View style={{ marginTop: 8 }}>
+      <View>
         {list.map((id, i) => { const l: Lesson | undefined = byId.get(id); const title = l?.title ?? t('svcLessons.removed'); return (
           <View key={id} testID={`svl-row-${id}`} style={[s.row, { flexWrap: 'nowrap', alignItems: 'center', borderTopWidth: i ? 1 : 0, borderTopColor: colors.border, paddingVertical: 10 }]}>
             <View style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: colors.soft, alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
@@ -70,6 +62,6 @@ export function ServiceLessonsCard({ service, list, onChange, editable, startEdi
             <Text style={{ color: colors.text, fontWeight: '700' }}>{l.title}</Text><Text style={s.small}>{l.name}</Text>
           </Pressable>)}
         </View>)}
-    </Card></View>
+    </CollapsibleCard></View>
   );
 }

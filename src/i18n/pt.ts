@@ -60,7 +60,7 @@ draft: 'Rascunho', saveDraft: 'Salvar rascunho', publish: 'Publicar', published:
     busy: '(ocupado)', away: '(indisponível)', awayNote: 'Ausente: {note}',
     nobodyHoldsDept: 'Ninguém em {dept} tem a função {role} ainda. Adicione a função a um membro na tela Equipe ou Contas.',
     noneAvailable: 'Ninguém disponível para esta função nesta data. Verifique a disponibilidade ou os membros do departamento.',
-    assignedCount: '{n} de {total} atribuídos', noSlots: 'Sem vagas', slotsA11y: 'Vagas de {dept}', assignA11y: 'Atribuir pessoas em {dept}', slotNumber: '{role} {n}',
+    assignedCount: '{n} de {total} atribuídos', noSlots: 'Sem vagas', slotsA11y: 'Vagas de {dept}', assignA11y: 'Atribuir pessoas em {dept}', slotNumber: '{role} {n}', detailsTitle: 'Detalhes do culto',
   },
   unav: { from: 'De', to: 'Até (opcional)', toHint: 'Deixe vazio para um único dia.', note: 'Observação (opcional)', add: 'Adicionar', remove: 'Remover', days: '{n} dias' },
   availability: {
