@@ -31,7 +31,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
-    "export:web": "expo export --platform web",
+    "export:web": "expo export --platform web --clear",
     "test:supabase": "node supabase/tests/rls.test.mjs && node supabase/tests/import.test.mjs",
     "test:perms": "node scripts/test-admin-perms.mjs"
   },
