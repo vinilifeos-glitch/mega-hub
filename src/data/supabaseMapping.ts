@@ -18,6 +18,7 @@ export type Rows = {
   department_roles: { department_id: string; role: string; sort: number; default_count?: number }[];
   setlist_items: { id: string; service_id: string; position: number; title: string; key: string | null; notes: string | null; song_id: string | null }[];
   service_lessons: { service_id: string; lesson_id: string; position: number }[];
+  rota_acks: { service_id: string; user_id: string; status: 'pending' | 'acknowledged' | 'unavailable'; ack_at: string | null; last_notified_at: string | null }[];
 };
 
 /** Default slot counts for new services (mirrors Services.tsx DOUBLE; DB column department_roles.default_count). */
@@ -30,11 +31,11 @@ export const KEYS: Record<keyof Rows, string[]> = {
   profiles: ['id'], profile_private: ['user_id'], user_departments: ['user_id', 'department_id'],
   user_positions: ['user_id', 'department_id', 'role'], admin_of: ['user_id', 'department_id'],
   unavailability: ['user_id', 'date'], services: ['id'], service_slots: ['service_id', 'department_id', 'role'],
-  assignments: ['service_id', 'department_id', 'role', 'idx'], departments: ['id'], department_pages: ['department_id'], department_roles: ['department_id', 'role'], setlist_items: ['id'], department_resources: ['id'], songs: ['id'], service_lessons: ['service_id', 'lesson_id'],
+  assignments: ['service_id', 'department_id', 'role', 'idx'], rota_acks: ['service_id', 'user_id'], departments: ['id'], department_pages: ['department_id'], department_roles: ['department_id', 'role'], setlist_items: ['id'], department_resources: ['id'], songs: ['id'], service_lessons: ['service_id', 'lesson_id'],
 };
 /** Write order (parents first); deletes run in reverse. */
 export const ORDER: (keyof Rows)[] = ['departments', 'department_pages', 'department_roles', 'profiles', 'profile_private', 'user_departments', 'user_positions',
-  'admin_of', 'unavailability', 'services', 'service_slots', 'assignments', 'department_resources', 'songs', 'setlist_items', 'service_lessons'];
+  'admin_of', 'unavailability', 'services', 'service_slots', 'assignments', 'rota_acks', 'department_resources', 'songs', 'setlist_items', 'service_lessons'];
 
 const ddmmToIso = (v: string) => { const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(v ?? ''); return m ? `${m[3]}-${m[2]}-${m[1]}` : null; };
 const isoToDdmm = (v: string | null) => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(v ?? ''); return m ? `${m[3]}/${m[2]}/${m[1]}` : ''; };
@@ -44,7 +45,7 @@ const blank = (v?: string) => (v && v.trim() ? v.trim() : null);
 /** AppData -> rows. `idMap` remaps user ids (legacy 'u-ana' -> auth uuid) during import. */
 export function toRows(d: AppData, idMap: (id: string) => string = x => x): Rows {
   const r: Rows = { profiles: [], profile_private: [], user_departments: [], user_positions: [], admin_of: [], unavailability: [],
-    services: [], service_slots: [], assignments: [], departments: [], department_pages: [], department_roles: [], setlist_items: [], department_resources: [], songs: [], service_lessons: [] };
+    services: [], service_slots: [], assignments: [], rota_acks: [], departments: [], department_pages: [], department_roles: [], setlist_items: [], department_resources: [], songs: [], service_lessons: [] };
   d.departments.forEach((x, i) => {
     r.departments.push({ id: x.id, name: x.name, emoji: x.emoji, color: x.color, sort: i }); if (blank(x.description)) r.department_pages.push({ department_id: x.id, description: blank(x.description) });
     (x.resources ?? []).forEach((z, j) => r.department_resources.push({ id: z.id, department_id: x.id, position: j, title: z.title, url: z.url || null, kind: z.kind ?? 'link', file_ref: z.fileRef ?? null }));
@@ -70,6 +71,7 @@ export function toRows(d: AppData, idMap: (id: string) => string = x => x): Rows
   }
   for (const g of d.songs ?? []) r.songs.push({ id: g.id, department_id: g.deptId, title: g.title, composer: blank(g.composer ?? g.artist), key: blank(g.key), time_signature: blank(g.timeSignature), bpm: g.bpm ?? null, sections: g.sections ?? [], chords: g.chords?.trim() ? g.chords : null, link: blank(g.link) });
   for (const a of d.assignments) r.assignments.push({ service_id: a.serviceId, department_id: a.departmentId, role: a.position, idx: a.index, user_id: idMap(a.userId) });
+  for (const a of d.rotaAcks ?? []) r.rota_acks.push({ service_id: a.serviceId, user_id: idMap(a.userId), status: a.status, ack_at: a.ackAt ?? null, last_notified_at: a.lastNotifiedAt ?? null });
   return r;
 }
 
@@ -101,8 +103,9 @@ export function fromRows(r: Rows): AppData {
     ...((l => l.length ? { lessons: l } : {}))((r.service_lessons ?? []).filter(x => x.service_id === s.id).sort((a, b) => a.position - b.position).map(x => x.lesson_id)),
     slots: r.service_slots.filter(x => x.service_id === s.id).map(x => ({ departmentId: x.department_id, position: x.role, count: x.count })) }));
   const assignments: Assignment[] = r.assignments.map(a => ({ id: `${a.service_id}:${a.department_id}:${a.role}:${a.idx}`, serviceId: a.service_id, departmentId: a.department_id, position: a.role, index: a.idx, userId: a.user_id }));
+  const rotaAcks = (r.rota_acks ?? []).map(a => ({ serviceId: a.service_id, userId: a.user_id, status: a.status, ...(a.ack_at ? { ackAt: a.ack_at } : {}), ...(a.last_notified_at ? { lastNotifiedAt: a.last_notified_at } : {}) }));
   const songs = (r.songs ?? []).map(g => ({ id: g.id, deptId: g.department_id, title: g.title, ...(g.composer ? { composer: g.composer } : {}), ...(g.time_signature ? { timeSignature: g.time_signature } : {}), ...(g.bpm ? { bpm: g.bpm } : {}), ...(g.sections?.length ? { sections: g.sections } : {}), ...(g.key ? { key: g.key } : {}), ...(g.chords ? { chords: g.chords } : {}), ...(g.link ? { link: g.link } : {}) }));
-  return { users, departments, services, availability: [], assignments, ...(songs.length ? { songs } : {}) };
+  return { users, departments, services, availability: [], assignments, ...(rotaAcks.length ? { rotaAcks } : {}), ...(songs.length ? { songs } : {}) };
 }
 
 const keyOf = (t: keyof Rows, row: any) => KEYS[t].map(k => String(row[k])).join('\u0001');

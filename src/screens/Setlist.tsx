@@ -23,10 +23,10 @@ export const setlistOps = {
 };
 
 /** Service setlist card. Controlled: `list` is the pending setlist, `onChange` updates it (nothing persists until the screen's Save). */
-export function SetlistCard({ service: sv, list, onChange, startEditing }: { service?: Service; list: SetlistItem[]; onChange: (l: SetlistItem[]) => void; startEditing?: boolean }) {
+export function SetlistCard({ service: sv, list, onChange, startEditing, editable }: { service?: Service; list: SetlistItem[]; onChange: (l: SetlistItem[]) => void; startEditing?: boolean; editable?: boolean }) {
   const colors = useColors(); const s = useStyles();
   const { data, t, canEditSetlist } = useMe();
-  const editor = canEditSetlist(sv);
+  const editor = editable === false ? false : canEditSetlist(sv);
   const deptAcc = useDeptAccent();
   const addSong = (_: unknown, song: Parameters<typeof setlistOps.add>[1]) => { if (!song.title.trim()) return t('errors.songTitle'); onChange(setlistOps.add(list, song)); return null; };
   const updateSong = (_: unknown, id: string, p: { title: string; key?: string; notes?: string }) => { if (!p.title.trim()) return t('errors.songTitle'); onChange(setlistOps.update(list, id, p)); return null; };

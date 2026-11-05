@@ -22,29 +22,35 @@ import { formatTimeInput, isoToDdmm, toIso, todayIso, upcomingSundayIso } from '
 export const DEFAULT_LOCATION = '1 Main St, Farcet, Peterborough PE7 3AN';
 const DOUBLE: Record<string, number> = { 'd-kids:Assistant': 2, 'd-music:Backing Vocals': 2, 'd-music:Assembly': 3 };
 
-export function ServicesHome() {
+export function ServicesHome({ readOnly = false }: { readOnly?: boolean } = {}) {
   const colors = useColors(); const s = useStyles();
-  const { data, currentUser, t, fmtDate, roleName } = useMe();
+  const { data, currentUser, t, fmtDate, roleName, refreshData } = useMe();
   const [view, setView] = useState<{ kind: 'detail' | 'edit'; id: string } | { kind: 'new' } | null>(null);
   useTabReset(() => { setView(null); setMsg(null); });
   const { svc } = useLocalSearchParams<{ svc?: string }>();
   useEffect(() => { if (svc) { setView({ kind: 'detail', id: svc }); router.setParams({ svc: undefined }); } }, [svc]);
   const [msg, setMsg] = useState<string | null>(null);
   const isOwner = currentUser.role === 'owner';
-  if (view?.kind === 'new') return <ServiceForm onClose={(m, id) => { setMsg(m ?? null); setView(id ? { kind: 'detail', id } : null); }} />;
+  if (view?.kind === 'new') {
+    if (readOnly) { setView(null); return null; }
+    return <ServiceForm onClose={(m, id) => { setMsg(m ?? null); setView(id ? { kind: 'detail', id } : null); }} />;
+  }
   if (view) {
     const sv = data.services.find(x => x.id === view.id);
     if (!sv) { setView(null); return null; }
     if (view.kind === 'edit') { setView({ kind: 'detail', id: sv.id }); return null; } // separate edit screen retired: details are edited inline
-    return <ServiceDetail service={sv} msg={msg} onBack={m => { setMsg(m ?? null); setView(null); }} onDeleted={m => { setMsg(m); setView(null); }} />;
+    return <ServiceDetail service={sv} msg={msg} readOnly={readOnly} onBack={m => { setMsg(m ?? null); setView(null); }} onDeleted={m => { setMsg(m); setView(null); }} />;
   }
   const upcoming = data.services.filter(x => x.date >= todayIso()).sort((a, b) => (a.date + a.start).localeCompare(b.date + b.start));
+  const title = readOnly ? t('events.title') : t('services.title');
+  const subtitle = readOnly ? t('events.greeting', { name: currentUser.firstName }) : t('services.greeting', { name: currentUser.firstName });
   return (
-    <Screen title={t('services.title')} subtitle={t('services.greeting', { name: currentUser.firstName })}>
+    <Screen title={title} subtitle={subtitle}>
       {msg && <Notice text={msg} />}
-      {isOwner && <Button label={t('services.newService')} onPress={() => { setMsg(null); setView({ kind: 'new' }); }} testID="new-service" />}
+      <Button label={t('myRota.refresh')} outline onPress={() => { refreshData(); }} testID="events-refresh" />
+      {isOwner && !readOnly && <Button label={t('services.newService')} onPress={() => { setMsg(null); setView({ kind: 'new' }); }} testID="new-service" />}
       <View style={{ height: 12 }} />
-      {upcoming.length === 0 && <Empty text={isOwner ? t('services.emptyOwner') : t('services.empty')} />}
+      {upcoming.length === 0 && <Empty text={readOnly ? t('events.empty') : isOwner ? t('services.emptyOwner') : t('services.empty')} />}
       {upcoming.map(sv => {
         const mine = data.assignments.filter(a => a.serviceId === sv.id && a.userId === currentUser.id);
         return (
@@ -70,10 +76,10 @@ export function ServicesHome() {
   );
 }
 
-function ServiceDetail({ service: sv, msg, onBack, onDeleted }: { service: Service; msg: string | null; onBack: (msg?: string) => void; onDeleted: (msg: string) => void }) {
+function ServiceDetail({ service: sv, msg, onBack, onDeleted, readOnly = false }: { service: Service; msg: string | null; onBack: (msg?: string) => void; onDeleted: (msg: string) => void; readOnly?: boolean }) {
   const deptAcc = useDeptAccent();
   const colors = useColors(); const s = useStyles();
-  const { data, currentUser, canManage, saveServiceEdits, saveService, canEditSetlist, canEditServiceLessons, canEditAssemblyNote, deleteService, publishService, t, fmtDate, deptName, roleName } = useMe();
+  const { data, currentUser, canManage, saveServiceEdits, saveService, canEditSetlist, canEditServiceLessons, canEditAssemblyNote, deleteService, publishService, t, fmtDate, deptName, roleName, getRotaAck, isStaff } = useMe();
   // Pending edits (nothing persists until Save). null = no pending change for that part (shows stored data).
   const stored = data.assignments.filter(a => a.serviceId === sv.id);
   const [pAsg, setPAsg] = useState<Assignment[] | null>(null);
@@ -81,7 +87,7 @@ function ServiceDetail({ service: sv, msg, onBack, onDeleted }: { service: Servi
   const [pLes, setPLes] = useState<string[] | null>(null);
   const [pNote, setPNote] = useState<string | null>(null);
   // Inline details (owner only, as before: saveService is owner-only)
-  const canDetails = currentUser.role === 'owner';
+  const canDetails = !readOnly && currentUser.role === 'owner';
   const storedDet = { title: sv.title, location: sv.location ?? '', date: isoToDdmm(sv.date), start: sv.start, end: sv.end };
   const [pDet, setPDet] = useState<typeof storedDet | null>(null);
   const det = pDet ?? storedDet;
@@ -122,7 +128,7 @@ function ServiceDetail({ service: sv, msg, onBack, onDeleted }: { service: Servi
   // People who would be dropped because they're away on the new (unsaved) date
   const awayNames = newIso && newIso !== sv.date ? asg.flatMap(a => { const u = data.users.find(x => x.id === a.userId); return u && awayOn(u, newIso) ? [`${displayName(u)} (${roleName(a.departmentId, a.position)})`] : []; }) : [];
   const saveAndBack = () => { const m = commit(); if (m !== false) onBack(m || undefined); };
-  const canEditAny = canDetails || data.departments.some(d => canManage(d.id) && sv.slots.some(z => z.departmentId === d.id)) || canEditSetlist(sv) || canEditServiceLessons(sv) || canEditAssemblyNote;
+  const canEditAny = !readOnly && (canDetails || data.departments.some(d => canManage(d.id) && sv.slots.some(z => z.departmentId === d.id)) || canEditSetlist(sv) || canEditServiceLessons(sv) || canEditAssemblyNote);
   const [open, setOpen] = useState<string | null>(null); // slot key being filled
   const [err, setErr] = useState<string | null>(null);
   const [busyPick, setBusyPick] = useState<{ m: { firstName: string; username: string }; detail: string; run: (mode: 'double' | 'swap') => void } | null>(null);
@@ -135,7 +141,7 @@ function ServiceDetail({ service: sv, msg, onBack, onDeleted }: { service: Servi
   const [secOpen, setSecOpen] = useState<Record<string, boolean>>({});
   const [noteOpen, setNoteOpen] = useState(false);
   const showNote = canEditAssemblyNote || note.trim().length > 0;
-  const noteCard = (nested: boolean) => showNote ? <AssemblyNoteCard key="note" nested={nested} value={note} onChange={v => setPNote(v)} editable={canEditAssemblyNote} open={noteOpen} onToggle={setNoteOpen} /> : null;
+  const noteCard = (nested: boolean) => showNote ? <AssemblyNoteCard key="note" nested={nested} value={note} onChange={v => setPNote(v)} editable={!readOnly && canEditAssemblyNote} open={noteOpen} onToggle={setNoteOpen} /> : null;
   return (
     <Screen title={sv.title} subtitle={`${fmtDate(sv.date)} · ${isoToDdmm(sv.date)} · ${sv.start}–${sv.end}${sv.location ? ` · ${sv.location}` : ''}`} backTo={{ label: t('services.title'), onPress: () => leaveGuarded(m => onBack(m)) }}>
       {msg && !savedMsg && <Notice text={msg} />}
@@ -169,15 +175,15 @@ function ServiceDetail({ service: sv, msg, onBack, onDeleted }: { service: Servi
         </View>
       </Modal>
       {/* Setlist sits right after Music's slots; if Music isn't shown it falls back to after all departments. */}
-      {(() => { const setCard = <SetlistCard key="setlist" service={sv} list={setlist} onChange={l => setPSet(l)} />;
+      {(() => { const setCard = <SetlistCard key="setlist" service={sv} list={setlist} onChange={l => setPSet(l)} editable={!readOnly} />;
         const musicShown = sv.slots.some(z => z.departmentId === 'd-music');
-        const lesCard = <ServiceLessonsCard key="lessons" service={sv} list={lessons} onChange={l => setPLes(l)} editable={canEditServiceLessons(sv)} />;
+        const lesCard = <ServiceLessonsCard key="lessons" service={sv} list={lessons} onChange={l => setPLes(l)} editable={!readOnly && canEditServiceLessons(sv)} />;
         const kidsShown = sv.slots.some(z => z.departmentId === 'd-kids');
         return <>{!musicShown && noteCard(false)}{data.departments.map(d => {
         const slots = sv.slots.filter(z => z.departmentId === d.id).sort((a, b) => roleIdx(data, d.id, a.position) - roleIdx(data, d.id, b.position));
         if (!slots.length) return null;
         const after = d.id === 'd-music' ? setCard : d.id === 'd-kids' ? lesCard : null;
-        const manage = canManage(d.id);
+        const manage = !readOnly && canManage(d.id);
         const members = data.users.filter(u => u.active && u.departmentIds.includes(d.id));
         return (<React.Fragment key={d.id}>
           <CollapsibleCard toggleID={`svd-dept-toggle-${d.id}`} testID={`svd-dept-${d.id}`} style={{ borderLeftWidth: 3, borderLeftColor: deptAcc(d) }} a11yLabel={t('services.slotsA11y', { dept: deptName(d.id) })}
@@ -194,7 +200,7 @@ function ServiceDetail({ service: sv, msg, onBack, onDeleted }: { service: Servi
                   <View style={[s.row, { justifyContent: 'space-between' }]}>
                     <Text style={{ fontWeight: '600', color: colors.text }}>{roleName(d.id, sl.position)}{sl.count > 1 ? ` ${i + 1}` : ''}</Text>
                     <View style={s.row}>
-                      {who ? <View style={[s.row, { flexWrap: 'nowrap', flexShrink: 1 }]}><Icon name="checkmark-circle" size={16} color={me ? colors.primary : colors.green} style={{ marginRight: 4 }} /><PersonName name={displayName(who)} me={me} testID={me ? `me-slot-${key}` : undefined} style={{ flexShrink: 1, alignSelf: 'center' }} /></View> : null}
+                      {who ? <View style={[s.row, { flexWrap: 'nowrap', flexShrink: 1 }]}><Icon name="checkmark-circle" size={16} color={me ? colors.primary : colors.green} style={{ marginRight: 4 }} /><PersonName name={displayName(who)} me={me} testID={me ? `me-slot-${key}` : undefined} style={{ flexShrink: 1, alignSelf: 'center' }} />{isStaff ? <StatusBadge status={getRotaAck(sv.id, who.id)} label={t(`myRota.${getRotaAck(sv.id, who.id)}`)} /> : null}</View> : null}
                       {manage && <Pressable testID={`slot-${d.id}-${sl.position}-${i}`} hitSlop={8} onPress={() => { setErr(null); setOpen(open === key ? null : key); }}><Text style={{ color: colors.primary, fontWeight: '700', marginLeft: 10 }}>{who ? t('common.change') : t('common.fill')}</Text></Pressable>}
                     </View>
                   </View>
@@ -228,10 +234,10 @@ function ServiceDetail({ service: sv, msg, onBack, onDeleted }: { service: Servi
       })}{!musicShown && setCard}{!kidsShown && lesCard}</>; })()}
       <View style={[s.row, { marginTop: 4, marginBottom: 4 }]}>{([['checkmark-circle-outline', t('services.legendAvailable')], ['close-circle-outline', t('services.legendAway')], ['time-outline', t('services.legendBusy')]] as const).map(([n, l]) => <View key={l} style={[s.row, { marginRight: 16, marginBottom: 4 }]}><Icon name={n} size={16} style={{ marginRight: 4 }} /><Text style={s.small}>{l}</Text></View>)}</View>
       <Text style={s.small}>{t('services.onlyHolders')}</Text>
-      {isOwner && draft && <Button label={t('services.publish')} onPress={() => { publishService(sv.id); setPubMsg(t('services.published')); }} testID="publish-service" />}
+      {isOwner && !readOnly && draft && <Button label={t('services.publish')} onPress={() => { publishService(sv.id); setPubMsg(t('services.published')); }} testID="publish-service" />}
       {err && <Notice tone="error" text={err} />}
       {canEditAny && <Button label={t('services.saveEdits')} disabled={!dirty} onPress={() => awayNames.length ? setAwayAsk(true) : saveAndBack()} testID="svd-save" />}
-      {isOwner && <Button label={draft ? t('services.deleteDraft') : t('services.deleteService')} danger onPress={del} testID={draft ? 'delete-draft' : 'delete-service'} />}
+      {isOwner && !readOnly && <Button label={draft ? t('services.deleteDraft') : t('services.deleteService')} danger onPress={del} testID={draft ? 'delete-draft' : 'delete-service'} />}
     </Screen>
   );
 }

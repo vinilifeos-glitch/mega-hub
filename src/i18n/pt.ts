@@ -11,7 +11,7 @@ export const pt: Dict = {
     you: '(você)', viewOnly: 'Somente visualização', youManage: 'Você gerencia', unfilled: 'Vago', results: '{count} resultados', result: '1 resultado',
     loading: 'Carregando…',
   },
-  tabs: { services: 'Cultos', departments: 'Deptos', availability: 'Disponível', myRota: 'Minha Escala', team: 'Equipe', profile: 'Perfil', accounts: 'Contas' },
+  tabs: { services: 'Eventos', events: 'Eventos', admin: 'Admin', departments: 'Deptos', availability: 'Disponível', myRota: 'Minha Escala', team: 'Equipe', profile: 'Perfil', accounts: 'Contas' },
   tiers: { owner: 'Proprietário', admin: 'Administrador', volunteer: 'Voluntário' },
   language: { title: 'Idioma', hint: 'Escolha o idioma da sua conta.', pt: 'Português', en: 'English' },
   departments: { 'd-music': 'Música', 'd-kids': 'Infantil', 'd-obreiros': 'Obreiros' },
@@ -46,9 +46,19 @@ export const pt: Dict = {
     confirmPassword: 'Confirme a nova senha', savePassword: 'Salvar senha', passwordsDontMatch: 'As novas senhas não coincidem.', passwordChanged: 'Senha alterada.',
   },
   unsaved: { title: 'Salvar alterações?', msg: 'Você tem alterações não salvas neste culto.', save: 'Salvar', cancel: 'Cancelar' },
+  events: {
+    title: 'Eventos', greeting: 'Olá {name}. Próximos cultos — só visualização. Admins editam na aba Admin.',
+    empty: 'Nenhum evento próximo ainda. Volte em breve.',
+  },
+  admin: {
+    title: 'Admin', subtitle: 'Criar e editar eventos, e gerir contas.',
+    events: 'Gerir eventos', eventsHint: 'Criar cultos, escalar pessoas, editar setlists e notas',
+    accounts: 'Contas', accountsHint: 'Criar e gerir o acesso de todos',
+    back: 'Voltar ao Admin', staffOnly: 'Só o dono e os admins podem abrir as ferramentas de Admin.',
+  },
   services: {
     saveEdits: 'Salvar', awayWillRemove: 'Estas pessoas estão ausentes e serão removidas: {names}', awayConfirmTitle: 'Salvar alterações?', discardEdits: 'Descartar alterações', unsavedBadge: 'Alterações não salvas', changesSaved: 'Alterações salvas.',
-    title: 'Cultos', greeting: 'Olá, {name}. Próximos cultos e quem vai servir.', newService: 'Novo culto', editService: 'Editar culto',
+    title: 'Eventos', greeting: 'Olá, {name}. Próximos cultos e quem vai servir.', newService: 'Novo culto', editService: 'Editar culto',
 draft: 'Rascunho', saveDraft: 'Salvar rascunho', publish: 'Publicar', published: 'Culto publicado.', draftSaved: 'Rascunho salvo.', deleteDraft: 'Excluir rascunho', deleteDraftConfirm: 'Excluir o rascunho {title} em {date}? As escalas também serão removidas.', draftDeleted: 'Rascunho excluído.', draftHint: 'Rascunho — só o dono e os admins podem ver.',
     alreadyInRole: 'Já está nesta função', deleteService: 'Excluir culto', deleteConfirmTitle: 'Excluir culto?', deleteConfirm: 'Excluir {title} em {date}?', backToServices: 'Voltar aos cultos',
     createService: 'Criar culto', saveService: 'Salvar culto', created: 'Culto criado.', updated: 'Culto atualizado.', deleted: 'Culto excluído.',
@@ -71,10 +81,20 @@ draft: 'Rascunho', saveDraft: 'Salvar rascunho', publish: 'Publicar', published:
     noteLabel: 'Observação (opcional)', notePlaceholder: 'ex.: viagem', noteA11y: 'Observação: {note}',
     misses: 'Vai perder: {services}', noServices: 'Nenhum culto agendado nesse dia', unavailableDates: 'Datas indisponíveis', noDates: 'Nenhuma data indisponível.',
   },
-  myRota: { view: 'Ver detalhes', yourRoles: 'Suas funções', team: 'Equipe neste culto', you: 'você', notFound: 'Este culto não está na sua escala.', title: 'Minha Escala', subtitle: 'Cultos em que você está escalado.', empty: 'Você ainda não está em nenhuma escala. Mantenha suas datas indisponíveis atualizadas para os administradores planejarem.' },
+  myRota: {
+    view: 'Ver detalhes', yourRoles: 'Seus papéis', team: 'Equipe neste culto', you: 'você', notFound: 'Este culto não está na sua escala.',
+    title: 'Minha Escala', subtitle: 'Cultos em que você está escalado.', empty: 'Você ainda não está em nenhuma escala. Mantenha suas datas indisponíveis atualizadas para os admins planejarem.',
+    refresh: 'Atualizar', pending: 'Precisa responder', acknowledged: 'Confirmado', unavailable: 'Indisponível',
+    acknowledge: 'Confirmar', ackTitle: 'Confirmar esta escala?', ackMsg: 'Confirme que pode servir, ou diga que não está disponível.',
+    confirmAck: 'Confirmar', notAvailable: 'Não estou disponível', unavailTitle: 'Marcar como indisponível?', unavailMsg: 'Os admins verão que você não pode servir neste culto. Cancele se tocou por engano.',
+    confirmUnavail: 'Confirmar indisponível', cancel: 'Cancelar', ackSaved: 'Obrigado — marcado como confirmado.', unavailSaved: 'Marcado como indisponível.',
+    enableNotices: 'Ativar notificações do telefone', noticesOn: 'Notificações do telefone estão ativas.', noticesDenied: 'As notificações foram bloqueadas. Você pode ativá-las nas configurações do telefone ou do navegador.',
+    noticesUnsupported: 'Este navegador não pode mostrar notificações do Mega Hub.', noticesNeedHome: 'No iPhone, adicione o Mega Hub à Tela de Início primeiro e depois ative as notificações.',
+    noticesNoKey: 'As notificações ainda não estão totalmente configuradas no servidor (funcionará após o upload).',
+  },
   departmentsScreen: {
     title: 'Departamentos', subtitle: 'Onde você serve e suas funções.', mine: 'Meus departamentos e funções', all: 'Todos os departamentos',
-    assignedBy: 'Departamentos e funções são definidos por {owner} (proprietário).', manageInAccounts: 'Para ver e gerenciar todos os departamentos, abra Perfil → Contas.', admins: 'Administradores: {names}', noAdmins: 'Nenhum administrador ainda. O proprietário ({owner}) cuida deste departamento.',
+    assignedBy: 'Departamentos e funções são definidos por {owner} (proprietário).', manageInAccounts: 'Para ver e gerenciar todos os departamentos, abra Admin → Contas.', admins: 'Administradores: {names}', noAdmins: 'Nenhum administrador ainda. O proprietário ({owner}) cuida deste departamento.',
     roles: 'Funções: {roles}', people: '{count} pessoas: {names}', member: '1 membro: {names}', members: '{count} membros: {names}', noMembers: 'Nenhum membro ainda', notAssigned: 'Ainda não está em nenhum departamento.', noRoles: 'Nenhuma função atribuída ainda.', adminSuffix: ' · Administrador',
   },
   team: {
@@ -129,7 +149,7 @@ draft: 'Rascunho', saveDraft: 'Salvar rascunho', publish: 'Publicar', published:
   },
   // ── UI v2 (Tina) ──
   appearance: { title: 'Aparência', hint: 'Escolha o modo claro ou escuro.', light: 'Claro', dark: 'Escuro' },
-  badges: { assigned: 'Escalado', open: 'Em aberto', away: 'Ausente', draft: 'Rascunho' },
+  badges: { assigned: 'Escalado', open: 'Em aberto', away: 'Ausente', draft: 'Rascunho', pending: 'Precisa responder', acknowledged: 'Confirmado', unavailable: 'Indisponível' },
   more: {
     exportData: 'Exportar dados', exportHint: 'Baixa todos os dados do app e os arquivos das aulas do Kids em um arquivo JSON (para a mudança para o banco de dados online). Guarde em sigilo.', exported: 'Salvo {file}', exportFailed: 'Falha ao exportar.',
     title: 'Mais', subtitle: 'Seu perfil, configurações e ferramentas de administração.', back: 'Voltar para Mais',

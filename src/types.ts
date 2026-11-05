@@ -37,4 +37,7 @@ export interface Service { id: string; title: string; location: string; date: st
 export interface SetlistItem { id: string; title: string; key?: string; notes?: string; songId?: string | null; }
 export interface Availability { userId: string; serviceId: string; available: boolean; }
 export interface Assignment { id: string; serviceId: string; departmentId: string; position: string; index: number; userId: string; }
-export interface AppData { users: User[]; departments: Department[]; services: Service[]; availability: Availability[]; assignments: Assignment[]; songs?: Song[]; settings?: { lastLocation?: string }; }
+/** One acknowledgement per person per service (My Rota card colour + push stop). Missing = pending. */
+export type AckStatus = 'pending' | 'acknowledged' | 'unavailable';
+export interface RotaAck { serviceId: string; userId: string; status: AckStatus; ackAt?: string; lastNotifiedAt?: string; }
+export interface AppData { users: User[]; departments: Department[]; services: Service[]; availability: Availability[]; assignments: Assignment[]; rotaAcks?: RotaAck[]; songs?: Song[]; settings?: { lastLocation?: string }; }

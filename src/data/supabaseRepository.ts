@@ -79,7 +79,20 @@ export class SupabaseRepository implements Repository {
     }
     this.snapshot = next;
   }
-  async getSession() { const { data } = await this.sb.auth.getSession(); return data.session?.user.id ?? null; }
+  async reload(): Promise<AppData | null> {
+    try { return await this.load(); } catch { return null; }
+  }
+  /** Debounced realtime: any change to rota-related tables triggers onChange (caller reloads). */
+  subscribeLive(onChange: () => void): () => void {
+    let t: ReturnType<typeof setTimeout> | null = null;
+    const kick = () => { if (t) clearTimeout(t); t = setTimeout(() => { t = null; onChange(); }, 400); };
+    const tables = ['assignments', 'services', 'service_slots', 'setlist_items', 'service_lessons', 'rota_acks'];
+    let ch = this.sb.channel('megahub-live');
+    for (const table of tables) ch = ch.on('postgres_changes', { event: '*', schema: 'public', table }, kick);
+    ch.subscribe();
+    return () => { if (t) clearTimeout(t); this.sb.removeChannel(ch); };
+  }
+    async getSession() { const { data } = await this.sb.auth.getSession(); return data.session?.user.id ?? null; }
   async setSession(id: string | null) { if (!id) await this.sb.auth.signOut(); }   // sign-in goes through auth.signIn
   async getDeviceLanguage() { const v = await AsyncStorage.getItem(LANG_KEY); return v === 'pt' || v === 'en' ? v : null; }
   async setDeviceLanguage(lang: 'pt' | 'en') { await AsyncStorage.setItem(LANG_KEY, lang); }

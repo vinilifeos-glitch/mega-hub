@@ -46,7 +46,8 @@ export function migrate(d0: AppData): AppData {
   const services1 = services.map(s => s.lessons === undefined ? s : Array.isArray(s.lessons) ? { ...s, lessons: s.lessons.filter((x, i, a) => typeof x === 'string' && a.indexOf(x) === i) } : (({ lessons, ...r }) => r)(s) as typeof s);
   // assembly note (additive): missing = empty; a non-string value is dropped
   const services2 = services1.map(s => s.assemblyNote === undefined || typeof s.assemblyNote === 'string' ? s : (({ assemblyNote, ...r }) => r)(s) as typeof s);
-  return { ...d, users, services: services2, departments: departments.map(x => ({ ...x, leaderId: null })), assignments: asg };
+  const rotaAcks = Array.isArray((d as any).rotaAcks) ? (d as any).rotaAcks.filter((a: any) => a && typeof a.serviceId === 'string' && typeof a.userId === 'string' && ['pending','acknowledged','unavailable'].includes(a.status)) : undefined;
+  return { ...d, users, services: services2, departments: departments.map(x => ({ ...x, leaderId: null })), assignments: asg, ...(rotaAcks?.length ? { rotaAcks } : {}) };
 }
 
 /**
@@ -59,6 +60,10 @@ export interface Repository {
   save(data: AppData): Promise<void>;
   getSession(): Promise<string | null>;
   setSession(userId: string | null): Promise<void>;
+  /** Supabase: reload from server (live sync). Local: no-op returns null. */
+  reload?(): Promise<AppData | null>;
+  /** Supabase realtime; returns unsubscribe. Local: no-op. */
+  subscribeLive?(onChange: () => void): () => void;
   /** Last language used on this device, so the sign-in screen matches before anyone signs in. */
   getDeviceLanguage(): Promise<'pt' | 'en' | null>;
   setDeviceLanguage(lang: 'pt' | 'en'): Promise<void>;

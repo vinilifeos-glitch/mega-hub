@@ -1,0 +1,22 @@
+# Every 4 hours: ask the Supabase edge function to send Web Push for unacknowledged rotas.
+# Enable after upload: set repo secrets NOTIFY_CRON_SECRET and NOTIFY_FUNCTION_URL
+# (https://<ref>.supabase.co/functions/v1/notify-rota)
+name: Notify pending rota acks
+on:
+  schedule:
+    - cron: '0 */4 * * *'
+  workflow_dispatch:
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call notify-rota
+        env:
+          URL: ${{ secrets.NOTIFY_FUNCTION_URL }}
+          SECRET: ${{ secrets.NOTIFY_CRON_SECRET }}
+        run: |
+          if [ -z "$URL" ] || [ -z "$SECRET" ]; then
+            echo "Secrets not set — skipping (configure after upload)."
+            exit 0
+          fi
+          curl -fsS -X POST "$URL" -H "x-cron-secret: $SECRET" -H "Content-Type: application/json" -d '{}'

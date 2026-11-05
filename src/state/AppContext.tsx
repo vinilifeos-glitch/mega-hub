@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { AppData, Department, Resource, Role, Service, SetlistItem, Song, Theme, Unavailability, User, Assignment } from '../types';
+import { AppData, AckStatus, Department, Resource, Role, RotaAck, Service, SetlistItem, Song, Theme, Unavailability, User, Assignment } from '../types';
+import { ensurePushSubscription, pushSupported } from '../data/push';
 import { planAssign, AssignMode, sameRoleSlot, newSameRoleDup, sortRoles } from '../data/rota';
 import { NOTE_MAX, awayOn, covers, getUnavailableFor, rangeError } from '../data/unavailability';
 import { todayIso as todayIsoFn } from '../data/dates';
@@ -105,6 +106,16 @@ interface Ctx {
   saveAccount: (id: string | null, input: AccountInput) => Promise<string | null>;
   resetPassword: (id: string, tempPassword: string) => Promise<string | null>;
   setActive: (id: string, active: boolean) => string | null;
+  /** Owner or admin — Admin tab. */
+  isStaff: boolean;
+  /** Pull latest from server (Supabase) or other tabs (local). */
+  refreshData: () => Promise<void>;
+  /** My Rota ack for a service (missing = pending). */
+  getRotaAck: (serviceId: string, userId?: string) => AckStatus;
+  /** Acknowledge or mark unavailable for a service on My Rota. */
+  acknowledgeRota: (serviceId: string, status: 'acknowledged' | 'unavailable') => string | null;
+  /** Request OS notification permission + save web push subscription (best free path). */
+  enablePush: () => Promise<'ok' | 'denied' | 'unsupported' | 'no-vapid' | 'error'>;
 }
 
 const AppContext = createContext<Ctx | null>(null);
@@ -129,16 +140,34 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       // Supabase mode: if the server (RLS) rejects a write, resync to the server's truth
       if (repository.auth) saving.catch(async () => setData(await repository.load()));
       return next; });
-  // keep this tab in sync when another tab/window changes the data (and when returning to a backgrounded tab)
+  // Local: other tabs via storage. Supabase: reload on focus/visibility (realtime is below).
   useEffect(() => {
     if (typeof window === 'undefined' || !window.addEventListener) return;
-    const sync = () => { if (repository.auth) return; const d = newerFromOtherTab(); if (d) setData(d); };
-    const onStorage = (e: StorageEvent) => { if (!e.key || e.key === DATA_STORAGE_KEY) sync(); };
-    const onVis = () => { if (typeof document === 'undefined' || document.visibilityState === 'visible') sync(); };
+    const syncLocal = () => { if (repository.auth) return; const d = newerFromOtherTab(); if (d) setData(d); };
+    let reloading = false;
+    const syncRemote = async () => {
+      if (!repository.auth || !repository.reload || reloading) return;
+      if (typeof document !== 'undefined' && document.visibilityState && document.visibilityState !== 'visible') return;
+      reloading = true;
+      try { const d = await repository.reload(); if (d) setData(d); } finally { reloading = false; }
+    };
+    const onStorage = (e: StorageEvent) => { if (!e.key || e.key === DATA_STORAGE_KEY) syncLocal(); };
+    const onVis = () => { syncLocal(); syncRemote(); };
     window.addEventListener('storage', onStorage); window.addEventListener('focus', onVis); window.addEventListener('pageshow', onVis);
     if (typeof document !== 'undefined') document.addEventListener('visibilitychange', onVis);
     return () => { window.removeEventListener('storage', onStorage); window.removeEventListener('focus', onVis); window.removeEventListener('pageshow', onVis); if (typeof document !== 'undefined') document.removeEventListener('visibilitychange', onVis); };
   }, []);
+
+  // Supabase realtime: when anyone changes assignments/services/acks, reload (debounced in repository).
+  useEffect(() => {
+    if (!repository.auth || !repository.subscribeLive || !sessionId) return;
+    let busy = false;
+    const unsub = repository.subscribeLive(() => {
+      if (busy) return; busy = true;
+      repository.reload?.().then(d => { if (d) setData(d); }).finally(() => { busy = false; });
+    });
+    return unsub;
+  }, [sessionId]);
 
   const setSession = (id: string | null) => { setSessionId(id); repository.setSession(id); };
 
@@ -436,7 +465,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (mode === 'swap') { const from = d.assignments.find(a => a.serviceId === serviceId && a.userId === userId && a.id !== `${serviceId}:${departmentId}:${position}:${index}`); if (from && !canManage(from.departmentId)) return t('errors.slotScope'); }
         const r = planAssign(d.assignments, { serviceId, departmentId, position, index, userId }, mode);
         if ('error' in r) return t('errors.alreadyServing', { name: u.firstName });
-        update(x => { const q = planAssign(x.assignments, { serviceId, departmentId, position, index, userId }, mode); return 'error' in q ? x : { ...x, assignments: q.assignments }; });
+        update(x => { const q = planAssign(x.assignments, { serviceId, departmentId, position, index, userId }, mode); if ('error' in q) return x;
+          const before = new Set(x.assignments.filter(a => a.serviceId === serviceId).map(a => a.userId));
+          const after = new Set(q.assignments.filter(a => a.serviceId === serviceId).map(a => a.userId));
+          let rotaAcks = x.rotaAcks ?? [];
+          for (const u of before) if (!after.has(u)) rotaAcks = rotaAcks.filter(r => !(r.serviceId === serviceId && r.userId === u));
+          if (!before.has(userId) && after.has(userId)) rotaAcks = rotaAcks.filter(r => !(r.serviceId === serviceId && r.userId === userId)); // new assignee starts pending
+          return { ...x, assignments: q.assignments, rotaAcks }; });
         return null;
       },
       saveService: (id, sv, picks) => {
@@ -462,13 +497,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           const nc = newSameRoleDup(nx, x0().assignments.filter(a => a.serviceId === sid));
           if (nc) { const u = x0().users.find(z => z.id === nc[0].userId); return t('errors.sameRole', { name: u?.firstName ?? '?', role: roleLabel(nc[1].departmentId, nc[1].position, language) }); }
         }
-        update(x => ({
-          ...x,
-          services: (id ? x.services.map(s => s.id === id ? { ...s, ...clean, id } : s) : [...x.services, { id: sid, ...clean }]).map(s => s.id === sid && !s.assemblyNote && 'assemblyNote' in s ? (({ assemblyNote, ...r }) => r)(s) as typeof s : s),
-          // drop assignments for removed / shrunk slots, or people now unavailable on a moved date
-          assignments: picks ? [
+        update(x => {
+          const assignments = picks ? [
             ...x.assignments.filter(a => a.serviceId !== sid),
-            ...picks.filter((pk, i, arr) => {
+            ...picks.filter((pk) => {
               const sl = slots.find(z => z.departmentId === pk.departmentId && z.position === pk.position);
               const u = x.users.find(z => z.id === pk.userId);
               return !!sl && pk.index < sl.count && !!u?.active && (u.positions?.[pk.departmentId] ?? []).includes(pk.position)
@@ -479,9 +511,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             const sl = slots.find(z => z.departmentId === a.departmentId && z.position === a.position);
             const u = x.users.find(z => z.id === a.userId);
             return !!sl && a.index < sl.count && !awayOn(u, clean.date);
-          }),
+          });
+          const before = new Set(x.assignments.filter(a => a.serviceId === sid).map(a => a.userId));
+          const after = new Set(assignments.filter(a => a.serviceId === sid).map(a => a.userId));
+          let rotaAcks = x.rotaAcks ?? [];
+          for (const u of before) if (!after.has(u)) rotaAcks = rotaAcks.filter(r => !(r.serviceId === sid && r.userId === u));
+          for (const u of after) if (!before.has(u)) rotaAcks = rotaAcks.filter(r => !(r.serviceId === sid && r.userId === u));
+          return {
+          ...x,
+          services: (id ? x.services.map(s => s.id === id ? { ...s, ...clean, id } : s) : [...x.services, { id: sid, ...clean }]).map(s => s.id === sid && !s.assemblyNote && 'assemblyNote' in s ? (({ assemblyNote, ...r }) => r)(s) as typeof s : s),
+          assignments, rotaAcks,
           settings: { ...x.settings, lastLocation: clean.location || x.settings?.lastLocation },
-        }));
+        }; });
         return null;
       },
       saveServiceEdits: (sid, edits) => {
@@ -521,9 +562,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
         const m = mine;
         const withNote = (s: Service): Service => note === null ? s : note ? { ...s, assemblyNote: note } : (({ assemblyNote, ...r }) => r)(s) as Service;
-        update(x => ({ ...x,
-          assignments: m ? [...x.assignments.filter(a => a.serviceId !== sid || !canManage(a.departmentId)), ...m] : x.assignments,
-          services: list || les || note !== null ? x.services.map(s => s.id === sid ? withNote({ ...s, ...(list ? { setlist: list } : {}), ...(les ? { lessons: les } : {}) }) : s) : x.services }));
+        update(x => {
+          const assignments = m ? [...x.assignments.filter(a => a.serviceId !== sid || !canManage(a.departmentId)), ...m] : x.assignments;
+          let rotaAcks = x.rotaAcks ?? [];
+          if (m) {
+            const before = new Set(x.assignments.filter(a => a.serviceId === sid).map(a => a.userId));
+            const after = new Set(assignments.filter(a => a.serviceId === sid).map(a => a.userId));
+            for (const u of before) if (!after.has(u)) rotaAcks = rotaAcks.filter(r => !(r.serviceId === sid && r.userId === u));
+            for (const u of after) if (!before.has(u)) rotaAcks = rotaAcks.filter(r => !(r.serviceId === sid && r.userId === u));
+          }
+          return { ...x, assignments, rotaAcks,
+          services: list || les || note !== null ? x.services.map(s => s.id === sid ? withNote({ ...s, ...(list ? { setlist: list } : {}), ...(les ? { lessons: les } : {}) }) : s) : x.services };
+        });
         return null;
       },
       canEditSetlist: sv => canEditServiceSetlistRule(currentUser, sv?.id, d.assignments),
@@ -567,8 +617,37 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       removeLibSong: id => { if (canEditSongsRule(currentUser)) update(x => ({ ...x, songs: (x.songs ?? []).filter(z => z.id !== id),
         services: x.services.map(s => s.setlist?.some(i => i.songId === id) ? { ...s, setlist: s.setlist.map(i => i.songId === id ? (({ songId, ...r }) => r)(i) : i) } : s) })); },
       publishService: id => isOwner && update(x => ({ ...x, services: x.services.map(s => s.id === id ? { ...s, status: 'published' } : s) })),
-      deleteService: id => isOwner && update(x => ({ ...x, services: x.services.filter(s => s.id !== id), assignments: x.assignments.filter(a => a.serviceId !== id), availability: x.availability.filter(a => a.serviceId !== id) })),
-      unassign: id => { const a0 = d.assignments.find(a => a.id === id); if (!a0 || !canManage(a0.departmentId)) return; update(x => ({ ...x, assignments: x.assignments.filter(a => a.id !== id) })); },
+      deleteService: id => isOwner && update(x => ({ ...x, services: x.services.filter(s => s.id !== id), assignments: x.assignments.filter(a => a.serviceId !== id), availability: x.availability.filter(a => a.serviceId !== id), rotaAcks: (x.rotaAcks ?? []).filter(a => a.serviceId !== id) })),
+      unassign: id => { const a0 = d.assignments.find(a => a.id === id); if (!a0 || !canManage(a0.departmentId)) return; update(x => {
+        const assignments = x.assignments.filter(a => a.id !== id);
+        const still = assignments.some(a => a.serviceId === a0.serviceId && a.userId === a0.userId);
+        return { ...x, assignments, rotaAcks: still ? x.rotaAcks : (x.rotaAcks ?? []).filter(r => !(r.serviceId === a0.serviceId && r.userId === a0.userId)) };
+      }); },
+      isStaff: !!currentUser && (isOwner || role === 'admin'),
+      refreshData: async () => {
+        if (repository.auth && repository.reload) { const d = await repository.reload(); if (d) setData(d); return; }
+        const d = newerFromOtherTab(); if (d) setData(d);
+      },
+      getRotaAck: (serviceId, userId) => {
+        const uid = userId ?? currentUser?.id; if (!uid) return 'pending';
+        return (d.rotaAcks ?? []).find(a => a.serviceId === serviceId && a.userId === uid)?.status ?? 'pending';
+      },
+      acknowledgeRota: (serviceId, status) => {
+        if (!currentUser) return t('errors.notSignedIn');
+        if (!d.assignments.some(a => a.serviceId === serviceId && a.userId === currentUser.id)) return t('errors.notFound');
+        const now = new Date().toISOString();
+        update(x => {
+          const rest = (x.rotaAcks ?? []).filter(a => !(a.serviceId === serviceId && a.userId === currentUser.id));
+          const row: RotaAck = { serviceId, userId: currentUser.id, status, ackAt: now };
+          return { ...x, rotaAcks: [...rest, row] };
+        });
+        return null;
+      },
+      enablePush: async () => {
+        if (!pushSupported()) return 'unsupported';
+        const r = await ensurePushSubscription();
+        return r;
+      },
     };
   }, [data, sessionId, deviceLang, deviceTheme]);
 

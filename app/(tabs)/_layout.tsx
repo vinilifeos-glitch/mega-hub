@@ -12,19 +12,20 @@ const icon = (name: string) => ({ focused, color, size }: { focused: boolean; co
 
 export default function TabsLayout() {
   const colors = useColors();
-  const { ready, currentUser, t } = useApp();
+  const { ready, currentUser, t, isStaff } = useApp();
   if (!ready) return <View style={{ flex: 1, justifyContent: 'center', backgroundColor: colors.bg }}><ActivityIndicator color={colors.primary} /></View>;
   if (!currentUser) return <SignInScreen />;
   if (currentUser.mustChangePassword) return <ChangePasswordScreen firstTime />;
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
     <Tabs screenListeners={({ route }) => ({ tabPress: (e: any) => { e.preventDefault(); leaveGuarded(() => { emitTabReset(); router.navigate((route.name === 'index' ? '/' : `/${route.name}`) as any); }); } })} screenOptions={{ headerShown: false, tabBarActiveTintColor: colors.primary, tabBarInactiveTintColor: colors.muted, tabBarLabel: ({ children, color }: { children: string; color: any }) => <Text numberOfLines={2} allowFontScaling style={{ color, fontSize: 11, lineHeight: 13, fontWeight: '600', textAlign: 'center', paddingHorizontal: 1 }}>{children}</Text>, tabBarStyle: { backgroundColor: colors.tabBar, borderTopColor: colors.border, borderTopWidth: 1, height: 64, paddingTop: 6, paddingBottom: 10, width: '100%', shadowOpacity: 0, elevation: 0 }, sceneStyle: { backgroundColor: colors.bg } }}>
-      <Tabs.Screen name="index" options={{ title: t('tabs.services'), headerTitle: t('common.appName'), tabBarIcon: icon('home') }} />
+      <Tabs.Screen name="index" options={{ title: t('tabs.events'), headerTitle: t('common.appName'), tabBarIcon: icon('home') }} />
       <Tabs.Screen name="my-rota" options={{ title: t('tabs.myRota'), tabBarIcon: icon('clipboard') }} />
       <Tabs.Screen name="availability" options={{ title: t('tabs.availability'), headerTitle: t('availability.title'), tabBarIcon: icon('calendar') }} />
       <Tabs.Screen name="departments" options={{ title: t('tabs.departments'), headerTitle: t('departmentsScreen.title'), tabBarIcon: icon('grid') }} />
+      <Tabs.Screen name="admin" options={{ title: t('tabs.admin'), href: isStaff ? undefined : null, tabBarIcon: icon('shield') }} />
       <Tabs.Screen name="more" options={{ href: null }} />
-      {/* Profile: header avatar. Accounts: link on the profile screen (owner). Team: redirects to Departments (per-department Team pages). */}
+      {/* Profile: header avatar. Accounts: under Admin (owner). Team: redirects to Departments. */}
       <Tabs.Screen name="profile" options={{ href: null, title: t('tabs.profile') }} />
       <Tabs.Screen name="team" options={{ href: null, title: t('tabs.team') }} />
       <Tabs.Screen name="accounts" options={{ href: null, title: t('tabs.accounts') }} />

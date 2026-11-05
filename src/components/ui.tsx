@@ -250,8 +250,8 @@ export function DeptBadge({ dep, label }: { dep: { id: string; color: string }; 
   const { deptName } = useApp(); const accent = useDeptAccent();
   return <Badge label={label ?? deptName(dep.id)} color={accent(dep)} icon={deptIcon(dep.id)} />;
 }
-const STATUS_BADGE: Record<'assigned' | 'open' | 'away' | 'draft', [BadgeTone, IconName]> = { assigned: ['success', 'checkmark-circle'], open: ['neutral', 'ellipse-outline'], away: ['danger', 'airplane'], draft: ['warning', 'create-outline'] };
-export function StatusBadge({ status, label, testID }: { status: 'assigned' | 'open' | 'away' | 'draft'; label?: string; testID?: string }) {
+const STATUS_BADGE: Record<'assigned' | 'open' | 'away' | 'draft' | 'pending' | 'acknowledged' | 'unavailable', [BadgeTone, IconName]> = { assigned: ['success', 'checkmark-circle'], open: ['neutral', 'ellipse-outline'], away: ['danger', 'airplane'], draft: ['warning', 'create-outline'], pending: ['warning', 'alert-circle'], acknowledged: ['success', 'checkmark-circle'], unavailable: ['danger', 'close-circle'] };
+export function StatusBadge({ status, label, testID }: { status: 'assigned' | 'open' | 'away' | 'draft' | 'pending' | 'acknowledged' | 'unavailable'; label?: string; testID?: string }) {
   const { t } = useApp(); const [tone, icon] = STATUS_BADGE[status];
   return <Badge label={label ?? t(`badges.${status}`)} tone={tone} icon={icon} testID={testID} />;
 }
